@@ -93,8 +93,8 @@ El sistema es una aplicación web accesible desde un navegador (PHP, PostgreSQL,
 
 | Ciclo | Requisitos | Estado |
 |---|---|---|
-| Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios | En curso |
-| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes | Pendiente |
+| Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios · RF14 Cuenta y perfil del paciente | En curso |
+| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | Pendiente |
 
 ---
 
@@ -178,7 +178,7 @@ Proceso: **Programar cita médica** (CUN-03).
 ```mermaid
 flowchart TD
     A([Inicio: el paciente solicita una cita]) --> B{¿Paciente registrado?}
-    B -- No --> C[Recepcionista registra al paciente]
+    B -- No --> C["Se registra el paciente (Recepcionista o autorregistro)"]
     B -- Sí --> D[Recepcionista busca al paciente]
     C --> E[Elegir especialidad y médico]
     D --> E
@@ -218,6 +218,7 @@ Se aplican independientemente de lo que el usuario escriba en los formularios.
 | RN12 | Solo los usuarios autorizados podrán realizar cada operación. |
 | RN13 | La programación y reprogramación verificarán la disponibilidad en el servidor. |
 | RN14 | Los datos se almacenarán de forma persistente en PostgreSQL. |
+| RN15 | El Paciente solo podrá cancelar o reprogramar una cita con al menos 24 horas de anticipación; la Recepcionista no tiene esta restricción (Ciclo #2). |
 
 ---
 
@@ -233,8 +234,8 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 | RF02 | Gestión de pacientes (registrar, listar, buscar, modificar, desactivar) | Enunciado | 1 |
 | RF03 | Gestión de médicos | Enunciado | 1 |
 | RF04 | Gestión de especialidades médicas | Enunciado | 1 |
-| RF05 | Gestión de horarios de atención y duración de cita | Enunciado | 1 |
-| RF14 | Cuenta y perfil del paciente: registro propio con datos mínimos, vínculo con su ficha, y consulta de su información médica y contacto de emergencia (solo lectura) | Derivado de 3.4 | 1 |
+| RF05 | Gestión de horarios de atención (la duración de la cita se define por especialidad) | Enunciado | 1 |
+| RF14 | Cuenta y perfil del paciente: registro propio o alta por la Recepcionista (contraseña temporal), verificación de la ficha, y consulta de su información médica y contacto de emergencia (solo lectura) | Derivado de 3.4 | 1 |
 | RF06 | Registro de citas médicas (Recepcionista o Paciente) | Enunciado + 3.4 | 2 |
 | RF07 | Prevención de citas duplicadas | Enunciado | 2 |
 | RF08 | Reprogramación de citas | Enunciado + 3.4 | 2 |
@@ -248,8 +249,14 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 
 **Decisiones de alcance** (tomadas para este proyecto, donde el enunciado no es explícito):
 
-- **Registro propio del Paciente:** solo nombre, correo, teléfono y contraseña (la contraseña es necesaria por RF01). El CI y el resto de la ficha los completa la Recepcionista.
-- **Vínculo cuenta-ficha:** manual. La Recepcionista completa el CI y vincula la cuenta con la ficha. No hay emparejamiento automático por correo, porque el correo no está verificado (riesgo de acceso a información médica ajena) y es opcional en RF02. Una mejora futura es sugerir la coincidencia por correo para que la Recepcionista la confirme.
+- **Identificador de acceso:** el Paciente inicia sesión con su **CI**; el personal (Administrador, Recepcionista, Médico) con su correo. El correo del Paciente es opcional.
+- **Modelo de identidad:** una entidad `Persona` guarda los datos comunes (CI, nombres, apellidos, fecha de nacimiento, sexo, teléfono, correo, dirección). De ella cuelgan `Paciente` (ficha clínica y verificación), `Medico` (registro profesional) y `Usuario` (credenciales y rol). Una persona puede ser paciente y médico a la vez, y el personal administrativo es una persona con cuenta y sin ficha. El CI es único en `Persona`.
+- **Duración de la cita:** es un parámetro de la **especialidad** (en minutos), no del horario ni del médico. La cita hereda la duración de la especialidad elegida al reservar. Como la agenda de un médico puede mezclar duraciones, el anti-duplicados compara **intervalos**, no solo la hora de inicio (RF07, RNF17).
+- **Códigos:** el código del paciente (`PAC-0001`) y del médico (`MED-0001`) lo genera el sistema de forma correlativa.
+- **Registro propio del Paciente:** nombres y apellidos, CI, celular y contraseña obligatorios; correo opcional. Se crea la cuenta y la ficha del paciente en estado **pendiente de verificación**. Si el CI ya tiene ficha, el registro propio se rechaza y se indica pedir el acceso en recepción.
+- **Alta de cuenta por la Recepcionista:** para reducir la fricción, la Recepcionista también puede crear la cuenta del Paciente. El sistema genera una **contraseña temporal** aleatoria con vigencia de **72 horas**, la muestra **una sola vez** en pantalla (botones Copiar e Imprimir) y la Recepcionista se la entrega impresa o por mensaje de texto o WhatsApp. El sistema no envía correos ni mensajes. En su primer ingreso el Paciente debe cambiarla; si venció, no puede entrar hasta que se renueve.
+- **Renovación y contraseña olvidada:** la Recepcionista o el Administrador pueden generar una nueva contraseña temporal en cualquier momento (porque venció o porque el titular olvidó la suya): se genera otra con nuevas 72 horas y la anterior deja de servir. El titular la solicita a recepción; la pantalla de inicio de sesión muestra el celular de la clínica para ese fin. Para evitar suplantaciones, la contraseña nueva se envía solo al celular registrado en la ficha del paciente (mensaje o WhatsApp) o se entrega en persona con documento, nunca a un número nuevo que indique quien llama.
+- **Verificación de la ficha:** una ficha de registro propio queda pendiente hasta que la Recepcionista compare el documento en persona y la marque como verificada; en ese acto puede renovar la contraseña, para sacar de la cuenta a quien se haya registrado con un CI ajeno. Mientras está pendiente, el Paciente puede iniciar sesión, ver su perfil básico y reservar citas, pero **no ve su información médica ni sus notas clínicas**. Una ficha creada por la Recepcionista queda verificada de inmediato.
 - **Información médica y contacto de emergencia:** los registra y edita la Recepcionista. El Paciente los ve en solo lectura. El Médico los ve en solo lectura.
 - **Edición del Paciente:** solo teléfono y contraseña. No edita nombre (identidad) ni correo (usuario de acceso).
 - **RF15 Recordatorios:** aviso dentro del sistema, sin correo. Al iniciar sesión, el Paciente ve un banner con sus próximas citas (los siguientes 2 días).
@@ -258,14 +265,27 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 - **Modalidad:** la cita tiene un campo `modalidad` (presencial o virtual).
 - **Sucursal:** la base de datos incluye la tabla `sucursales` con una sola sucursal cargada y `sucursal_id` en horarios de atención y citas, para poder escalar. No hay pantalla de gestión de sucursales. El `consultorio` se registra en el horario de atención. No hay filtro por ubicación.
 
+**Opcionales abiertos** (el enunciado los marca como opcionales; se implementan solo si el tiempo del Ciclo #2 lo permite):
+
+- Feriados y bloqueos de agenda para excluir fechas de la disponibilidad (RF05).
+- Exportación de reportes a CSV o PDF (RF13).
+
+**Fuera del alcance** (descartado a propósito):
+
+- Lista de espera.
+- Recordatorios por SMS o correo (el aviso es solo dentro del sistema).
+- Seguros médicos, pagos y verificación en dos pasos.
+
+La lista de espera y los recordatorios por SMS o correo se mencionan como mejoras futuras en las conclusiones.
+
 ### 4.2 Requisitos no funcionales
 
 | Código | Categoría | Requisito |
 |---|---|---|
-| RNF01 | Tecnología | Backend en PHP, base de datos PostgreSQL y conexión mediante PDO (`pdo_pgsql`). |
-| RNF02 | Tecnología | Frontend con HTML5 y CSS3; JavaScript para validaciones e interacción. |
-| RNF03 | Despliegue | Ejecución en servidor local Apache (XAMPP o entorno PHP equivalente). |
-| RNF04 | Seguridad | Contraseñas almacenadas con `password_hash()` y verificadas con `password_verify()`. |
+| RNF01 | Tecnología | Backend en PHP con el framework Laravel, base de datos PostgreSQL y acceso a datos sobre PDO (`pdo_pgsql`). |
+| RNF02 | Tecnología | Interfaz con HTML5 y CSS3 generados en el servidor mediante plantillas Blade de Laravel; JavaScript para validaciones e interacción. |
+| RNF03 | Despliegue | Ejecución en servidor local Apache (XAMPP o entorno PHP equivalente), con el directorio `public/` de Laravel como raíz web. |
+| RNF04 | Seguridad | Contraseñas almacenadas con un hash seguro (`password_hash()` de PHP, que usa internamente el hasher de Laravel) y verificadas con `password_verify()` o su equivalente. |
 | RNF05 | Seguridad | Consultas SQL parametrizadas para evitar inyección SQL. |
 | RNF06 | Seguridad | Uso de sesiones; las páginas internas rechazan el acceso sin sesión válida. |
 | RNF07 | Seguridad | Los errores no muestran credenciales ni detalles internos al usuario. |
@@ -274,15 +294,21 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 | RNF10 | Mantenibilidad | Separación razonable entre interfaz, lógica de negocio y acceso a datos. |
 | RNF11 | Mantenibilidad | Código comentado, con buenas prácticas, publicado en GitHub. |
 | RNF12 | Usabilidad | Diseño profesional y mensajes de error comprensibles. |
+| RNF13 | Seguridad | Bitácora de auditoría: se registra usuario, acción, entidad afectada y fecha al iniciar sesión y al crear o modificar usuarios, pacientes, información médica y notas clínicas, y al crear o renovar cuentas y verificar fichas. Solo escrituras, sin registrar lecturas. |
+| RNF14 | Seguridad | Cierre automático de la sesión tras 30 minutos de inactividad. |
+| RNF15 | Seguridad | Bloqueo temporal de la cuenta tras 5 intentos fallidos de inicio de sesión, y token CSRF en los formularios que modifican datos. |
+| RNF16 | Privacidad | Los avisos y recordatorios muestran solo fecha, hora y médico, nunca motivo, diagnóstico ni datos médicos. |
+| RNF17 | Integridad | Además de la validación en PHP, la base de datos impide por restricción citas superpuestas del mismo médico (Ciclo #2). |
+| RNF18 | Seguridad | Las contraseñas temporales se generan de forma aleatoria con un generador criptográfico, vencen a las 72 horas, se muestran una sola vez, se guardan solo como hash y obligan a cambiarlas en el primer ingreso. |
 
 ### 4.3 Actores del sistema
 
 | Actor | Descripción | Origen |
 |---|---|---|
-| **Administrador** | Configura y supervisa el sistema: usuarios, roles, médicos, especialidades, horarios y reportes. | Enunciado 3.1 |
-| **Recepcionista** | Gestiona pacientes (incluida su información médica y contacto de emergencia), vincula cuentas con fichas, gestiona citas y registra asistencia. | Enunciado 3.2 |
+| **Administrador** | Configura y supervisa el sistema: usuarios, roles, médicos, especialidades, horarios y reportes; renueva contraseñas temporales. | Enunciado 3.1 |
+| **Recepcionista** | Gestiona pacientes (incluida su información médica y contacto de emergencia), crea cuentas de paciente con contraseña temporal, verifica fichas, renueva contraseñas temporales, gestiona citas y registra asistencia. | Enunciado 3.2 |
 | **Médico** | Consulta su agenda, marca citas atendidas y registra sus notas clínicas. | Enunciado 3.3 |
-| **Paciente** | Tiene cuenta propia; ve su perfil e información médica en solo lectura, edita su teléfono y contraseña, y gestiona sus propias citas. | Enunciado 3.4 |
+| **Paciente** | Tiene cuenta propia y entra con su CI; ve su perfil e información médica en solo lectura (una vez verificada su ficha), edita su teléfono y contraseña, y gestiona sus propias citas. | Enunciado 3.4 |
 
 ### 4.4 Diagrama de casos de uso
 
@@ -330,7 +356,7 @@ flowchart LR
 | CU-01 Iniciar y cerrar sesión | RF01 | Alta | 1 | Base de seguridad; todo lo demás depende de él. |
 | CU-02 Registrarse como paciente | RF14 | Alta | 1 | Permite que el Paciente tenga cuenta. |
 | CU-03 Gestionar usuarios y roles | RF01 | Alta | 1 | Habilita al personal y sus permisos. |
-| CU-04 Gestionar pacientes | RF02, RF14 | Alta | 1 | Dato maestro requerido por las citas; incluye información médica, contacto de emergencia y vínculo de cuenta. |
+| CU-04 Gestionar pacientes | RF02, RF14 | Alta | 1 | Dato maestro requerido por las citas; incluye información médica, contacto de emergencia, creación de cuenta y verificación de la ficha. |
 | CU-05 Gestionar médicos | RF03 | Alta | 1 | Dato maestro requerido por las citas. |
 | CU-06 Gestionar especialidades | RF04 | Alta | 1 | Dato maestro requerido por médicos. |
 | CU-07 Gestionar horarios de atención | RF05 | Alta | 1 | Define la disponibilidad que usa el Ciclo #2. |
@@ -362,7 +388,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 | **Postcondición** | Existe una sesión válida con el rol del usuario, o la sesión queda cerrada. |
 
 **Flujo principal**
-1. El usuario ingresa su nombre de usuario o correo y su contraseña.
+1. El usuario ingresa su identificador (el Paciente su CI; el personal su correo) y su contraseña.
 2. El sistema valida los datos en el servidor y verifica la contraseña con `password_verify()`.
 3. El sistema inicia la sesión e identifica el rol.
 4. El sistema muestra el menú correspondiente al rol.
@@ -371,6 +397,11 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 **Flujos alternos**
 - 2a. Credenciales incorrectas: se muestra un mensaje genérico y no se inicia sesión.
 - 2b. Cuenta inactiva: se rechaza el acceso.
+- 2c. Contraseña temporal vigente: tras validar, el sistema obliga a cambiarla antes de continuar.
+- 2d. Contraseña temporal vencida: se rechaza el acceso y se indica pedir su renovación a recepción.
+- 2e. El usuario olvidó su contraseña: la pantalla de inicio de sesión muestra el celular de la clínica para pedir a recepción una contraseña temporal nueva.
+- 2f. Cuenta bloqueada: tras 5 intentos fallidos se bloquea temporalmente y se informa el tiempo de espera.
+- *. Inactividad: tras 30 minutos sin actividad la sesión se cierra.
 - *. Acceso a una página interna sin sesión válida: se redirige al inicio de sesión.
 
 #### CU-02 Registrarse como paciente
@@ -380,17 +411,18 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 | **Actores** | Paciente |
 | **Requisito** | RF14, RF02 |
 | **Precondición** | El visitante no tiene cuenta. |
-| **Postcondición** | Queda creada una cuenta con rol Paciente, aún sin ficha vinculada. La Recepcionista completa el CI y la vincula (CU-04). |
+| **Postcondición** | Queda creada la cuenta con rol Paciente y su ficha en estado pendiente de verificación. La Recepcionista la verifica con el documento (CU-04). |
 
 **Flujo principal**
-1. El visitante completa el formulario (nombre, correo, teléfono, contraseña).
-2. El sistema valida los datos en cliente y servidor.
-3. El sistema verifica que el correo no esté registrado.
-4. El sistema guarda la contraseña con `password_hash()` y crea la cuenta.
+1. El visitante completa el formulario (nombres y apellidos, CI, celular, contraseña; correo opcional).
+2. El sistema valida los datos en cliente y servidor (incluido el formato del celular).
+3. El sistema verifica que el CI no tenga ya una ficha y que el correo, si se ingresó, no esté registrado.
+4. El sistema guarda la contraseña con `password_hash()` y crea la ficha del paciente en estado pendiente de verificación junto con su cuenta.
 5. El sistema confirma el registro.
 
 **Flujos alternos**
-- 3a. Correo ya registrado: se rechaza el registro con un mensaje.
+- 3a. El CI ya tiene ficha: se rechaza el registro y se indica pedir el acceso en recepción.
+- 3b. Correo ya registrado: se rechaza el registro con un mensaje.
 - 2a. Datos inválidos: se indican los campos a corregir.
 
 #### CU-03 Gestionar usuarios y roles
@@ -403,14 +435,16 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 | **Postcondición** | El usuario queda creado, modificado, con rol asignado o activado/desactivado. |
 
 **Flujo principal**
-1. El Administrador abre la lista de usuarios.
-2. Elige crear o modificar un usuario e ingresa nombre de usuario, correo, contraseña y rol.
-3. El sistema valida los datos y que el usuario o correo sean únicos.
-4. El sistema guarda el cambio.
+1. El Administrador abre la lista de usuarios del personal (las cuentas de pacientes se gestionan en CU-02 y CU-04).
+2. Elige crear o modificar un usuario e ingresa los datos de la persona (CI, nombres, apellidos, teléfono, correo) y el rol. Si el rol es Médico, selecciona el médico (CU-05) al que se vincula la cuenta.
+3. El sistema valida los datos y que el CI y el correo sean únicos.
+4. El sistema guarda el cambio. Al crear un usuario, genera una contraseña temporal aleatoria con vigencia de 72 horas y la muestra una sola vez, con botones Copiar e Imprimir; el Administrador se la entrega al empleado, quien debe cambiarla en su primer ingreso.
 5. El Administrador puede activar o desactivar la cuenta.
+6. Si el titular olvidó su contraseña o la temporal venció, el Administrador puede renovarla en cualquier momento: el sistema genera otra con nuevas 72 horas, la muestra una sola vez e invalida la anterior.
 
 **Flujos alternos**
-- 3a. Usuario o correo repetido: se rechaza el cambio.
+- 3a. CI o correo repetido: se rechaza el cambio.
+- 3b. El médico seleccionado ya tiene una cuenta vinculada: se rechaza el cambio.
 
 #### CU-04 Gestionar pacientes
 
@@ -419,20 +453,24 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 | **Actores** | Recepcionista |
 | **Requisito** | RF02, RF14 |
 | **Precondición** | La Recepcionista inició sesión. |
-| **Postcondición** | El paciente queda registrado, modificado, vinculado a su cuenta o desactivado sin perder su historial. |
+| **Postcondición** | El paciente queda registrado, modificado, verificado, con su cuenta creada o renovada, o desactivado sin perder su historial. |
 
 **Flujo principal**
 1. La Recepcionista busca por CI, nombre o apellido, o abre el formulario de alta.
 2. Registra o modifica los datos personales (código, CI, nombres, apellidos, fecha de nacimiento, sexo, teléfono, correo, dirección), la información médica (tipo de sangre, alergias, enfermedades crónicas, medicamentos, antecedentes relevantes) y el contacto de emergencia (nombre, parentesco, teléfono).
 3. El sistema valida los datos y la unicidad del CI.
 4. El sistema guarda los cambios.
-5. Si el paciente tiene cuenta propia (CU-02), la Recepcionista verifica su CI y vincula la cuenta con la ficha.
-6. Para dar de baja, la Recepcionista desactiva el registro; no se elimina.
+5. Si el paciente no tiene cuenta, la Recepcionista la crea: el sistema genera una contraseña temporal aleatoria con vigencia de 72 horas y la muestra una sola vez, con botones Copiar e Imprimir. La Recepcionista se la entrega al paciente, impresa o por mensaje de texto o WhatsApp. El paciente entra con su CI.
+6. Si el paciente se registró solo (CU-02), la Recepcionista compara su documento y marca la ficha como verificada; en ese acto puede renovar la contraseña.
+7. Si el paciente olvidó su contraseña o la temporal venció, la Recepcionista puede renovarla en cualquier momento: el sistema genera otra con nuevas 72 horas e invalida la anterior.
+8. Para dar de baja, la Recepcionista desactiva el registro; no se elimina.
 
 **Flujos alternos**
 - 3a. CI duplicado: se rechaza el registro (RN01).
-- 5a. La cuenta ya está vinculada a otra ficha: se rechaza el vínculo.
-- 6a. Paciente con citas históricas: solo se permite desactivar (RN11).
+- 5a. El paciente ya tiene cuenta: no se crea otra.
+- 6a. El documento no coincide con la ficha: la ficha sigue pendiente de verificación.
+- 8a. Paciente con citas históricas: solo se permite desactivar (RN11).
+- *. Una ficha creada por la Recepcionista queda verificada de inmediato.
 
 #### CU-05 Gestionar médicos
 
@@ -465,7 +503,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 
 **Flujo principal**
 1. El Administrador abre el listado de especialidades.
-2. Registra o modifica nombre, descripción (opcional) y estado.
+2. Registra o modifica nombre, descripción (opcional), duración de la cita en minutos (por ejemplo, 30) y estado.
 3. El sistema valida y comprueba que el nombre normalizado no exista.
 4. El sistema guarda los cambios.
 
@@ -483,7 +521,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 
 **Flujo principal**
 1. El Administrador selecciona un médico.
-2. Registra día, hora inicial, hora final, duración de la cita (por ejemplo, 30 minutos) y consultorio. La sucursal es la única registrada, por lo que se asigna automáticamente.
+2. Registra día, hora inicial, hora final y consultorio. La duración de la cita no se define aquí: la determina la especialidad con la que se reserva (CU-06). La sucursal es la única registrada, por lo que se asigna automáticamente.
 3. El sistema valida que la hora final sea posterior a la inicial y que no se superponga con otro horario del médico.
 4. El sistema guarda el horario.
 
@@ -500,7 +538,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 | **Postcondición** | El teléfono y/o la contraseña del Paciente quedan actualizados. |
 
 **Flujo principal**
-1. El Paciente abre su perfil, donde ve sus datos personales, su información médica y su contacto de emergencia en solo lectura.
+1. El Paciente abre su perfil, donde ve sus datos personales y, si su ficha está verificada, su información médica y su contacto de emergencia en solo lectura.
 2. Modifica su teléfono o su contraseña.
 3. El sistema valida los datos en cliente y servidor.
 4. El sistema guarda los cambios.
@@ -515,11 +553,199 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 
 ### 5.1 Diagrama de clases de análisis
 
+Modelo del sistema completo (Ciclos #1 y #2), porque el diseño de datos del Ciclo #1 ya necesita las clases de citas y notas clínicas.
+
+```mermaid
+classDiagram
+    class Persona {
+        <<entity>>
+        ci
+        nombres
+        apellidos
+        fechaNacimiento
+        sexo
+        telefono
+        correo
+        direccion
+    }
+    class Usuario {
+        <<entity>>
+        contrasenaHash
+        rol
+        estado
+        intentosFallidos
+        bloqueadoHasta
+        debeCambiarPassword
+        passwordTemporalVence
+    }
+    class Paciente {
+        <<entity>>
+        codigo
+        verificado
+        estado
+        tipoSangre
+        alergias
+        enfermedadesCronicas
+        medicamentos
+        antecedentes
+        emergenciaNombre
+        emergenciaParentesco
+        emergenciaTelefono
+    }
+    class Medico {
+        <<entity>>
+        codigo
+        nroRegistroProfesional
+        estado
+    }
+    class Especialidad {
+        <<entity>>
+        nombre
+        descripcion
+        duracionMin
+        estado
+    }
+    class Sucursal {
+        <<entity>>
+        nombre
+        direccion
+        estado
+    }
+    class HorarioAtencion {
+        <<entity>>
+        diaSemana
+        horaInicio
+        horaFin
+        consultorio
+    }
+    class Cita {
+        <<entity>>
+        codigo
+        fecha
+        horaInicio
+        horaFin
+        motivo
+        modalidad
+        estado
+        motivoCancelacion
+        fechaCreacion
+    }
+    class NotaClinica {
+        <<entity>>
+        motivoConsulta
+        diagnostico
+        tratamiento
+        observaciones
+        fechaRegistro
+        fechaUltimaModificacion
+    }
+    class Bitacora {
+        <<entity>>
+        fecha
+        accion
+        entidad
+        entidadId
+    }
+
+    Persona "1" -- "0..1" Usuario : accede con
+    Persona "1" -- "0..1" Paciente : es
+    Persona "1" -- "0..1" Medico : es
+    Usuario "1" -- "*" Bitacora : genera
+    Paciente "1" -- "*" Cita : tiene
+    Medico "1" -- "*" Cita : atiende
+    Especialidad "1" -- "*" Cita : de
+    Sucursal "1" -- "*" Cita : en
+    Medico "*" -- "*" Especialidad : ejerce
+    Medico "1" -- "*" HorarioAtencion : atiende en
+    Sucursal "1" -- "*" HorarioAtencion : ubica
+    Cita "1" -- "0..1" NotaClinica : genera
+    Medico "1" -- "*" NotaClinica : autor
+```
+
+**Clases de interfaz y de control del Ciclo #1** (cada caso de uso tiene su `«boundary»` y su `«control»`; las `«entity»` son las del diagrama):
+
+| Caso de uso | «boundary» | «control» | «entity» |
+|---|---|---|---|
+| CU-01 Iniciar y cerrar sesión | FormLogin, MenuPrincipal | ControlAcceso | Persona, Usuario, Bitacora |
+| CU-02 Registrarse como paciente | FormRegistro | ControlRegistro | Persona, Paciente, Usuario |
+| CU-03 Gestionar usuarios y roles | ListaUsuarios, FormUsuario | ControlUsuario | Persona, Usuario, Medico, Bitacora |
+| CU-04 Gestionar pacientes | ListaPacientes, FormPaciente | ControlPaciente | Persona, Paciente, Usuario, Bitacora |
+| CU-05 Gestionar médicos | ListaMedicos, FormMedico | ControlMedico | Persona, Medico, Especialidad |
+| CU-06 Gestionar especialidades | ListaEspecialidades, FormEspecialidad | ControlEspecialidad | Especialidad |
+| CU-07 Gestionar horarios de atención | ListaHorarios, FormHorario | ControlHorario | HorarioAtencion, Medico, Sucursal |
+| CU-08 Gestionar mi perfil | VistaPerfil | ControlPerfil | Persona, Paciente, Usuario |
+
 ### 5.2 Diagramas de comunicación / colaboración
+
+Se presentan CU-01, CU-02 y CU-04 del Ciclo #1. Los números en las flechas indican el orden de los mensajes. Los demás casos se agregan en la segunda presentación.
+
+**CU-01 Iniciar y cerrar sesión**
+
+```mermaid
+flowchart LR
+    U([Usuario]) -- "1: ingresar(identificador, contraseña)" --> B[FormLogin]
+    B -- "2: autenticar(identificador, contraseña)" --> C[ControlAcceso]
+    C -- "3: buscarPorCIoCorreo(identificador)" --> P[Persona]
+    C -- "4: obtenerCuenta(persona)" --> E[Usuario]
+    C -- "5: registrar(login)" --> L[Bitacora]
+    C -- "6: rol, sesión iniciada" --> M[MenuPrincipal]
+    M -- "7: mostrar menú según rol" --> U
+```
+
+**CU-02 Registrarse como paciente**
+
+```mermaid
+flowchart LR
+    V([Visitante]) -- "1: registrar(nombres, apellidos, CI, celular, contraseña)" --> B[FormRegistro]
+    B -- "2: crearCuenta(datos)" --> C[ControlRegistro]
+    C -- "3: existeCI(ci)" --> P[Persona]
+    C -- "4: crearPersona(datos)" --> P
+    C -- "5: crearFicha(pendiente)" --> F[Paciente]
+    C -- "6: crearCuenta(hash)" --> E[Usuario]
+    C -- "7: confirmación" --> B
+    B -- "8: mostrar resultado" --> V
+```
+
+**CU-04 Gestionar pacientes**
+
+```mermaid
+flowchart LR
+    R([Recepcionista]) -- "1: guardar(datos, info médica, emergencia)" --> B[FormPaciente]
+    B -- "2: guardarPaciente(datos)" --> C[ControlPaciente]
+    C -- "3: existeCI(ci)" --> P[Persona]
+    C -- "4: guardar(persona y ficha)" --> P
+    C -- "5: crearCuenta(contraseña temporal) / verificar ficha" --> U[Usuario]
+    C -- "6: registrar(alta/modificación)" --> L[Bitacora]
+    C -- "7: resultado" --> B
+    B -- "8: mostrar resultado" --> R
+```
 
 ### 5.3 Diagrama de estados de la cita
 
-<!-- Programada → Confirmada → Atendida / Cancelada / Inasistencia -->
+```mermaid
+stateDiagram-v2
+    [*] --> Programada : registrar cita
+    Programada --> Confirmada : confirmar asistencia (Recepcionista o Paciente)
+    Programada --> Cancelada : cancelar
+    Confirmada --> Cancelada : cancelar
+    Programada --> Atendida : marcar atendida
+    Confirmada --> Atendida : marcar atendida
+    Programada --> Inasistencia : paciente no se presentó
+    Confirmada --> Inasistencia : paciente no se presentó
+    Atendida --> [*]
+    Cancelada --> [*]
+    Inasistencia --> [*]
+```
+
+| Estado | Ocupa horario | Reprogramable | Cancelable |
+|---|---|---|---|
+| Programada | Sí | Sí | Sí |
+| Confirmada | Sí | Sí | Sí |
+| Atendida | Sí (histórico) | No | No |
+| Cancelada | No (RN09) | No | No |
+| Inasistencia | Sí (histórico) | No | No |
+
+Una cita cancelada no puede marcarse como atendida sin un procedimiento autorizado (RF10); ese procedimiento queda por definir en el Ciclo #2.
 
 ---
 
@@ -529,17 +755,413 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 
 #### 6.1.1 Arquitectura lógica
 
+Arquitectura en capas sobre el patrón MVC de Laravel. Cada estereotipo del análisis (sección 5) se materializa en un artefacto concreto.
+
+```mermaid
+flowchart TB
+    subgraph Presentacion["Presentación"]
+        V["Vistas Blade + Bootstrap 5 + JavaScript\n(«boundary»)"]
+    end
+    subgraph Aplicacion["Aplicación"]
+        R["Rutas (routes/web.php)"]
+        M["Middleware: autenticación, rol,\ncambio obligatorio de contraseña,\ncierre por inactividad"]
+        C["Controladores + Form Requests\n(«control»)"]
+        S["Servicios: ContraseñaTemporal,\nBitácora, Códigos"]
+    end
+    subgraph Dominio["Dominio y datos"]
+        E["Modelos Eloquent\n(«entity»)"]
+        D[("PostgreSQL")]
+    end
+
+    V --> R --> M --> C --> S
+    C --> E
+    S --> E
+    E --> D
+```
+
+| Estereotipo del análisis | Artefacto en Laravel | Ubicación |
+|---|---|---|
+| «boundary» (FormLogin, ListaPacientes...) | Vistas Blade | `resources/views/` |
+| «control» (ControlAcceso, ControlPaciente...) | Controladores y Form Requests (validación) | `app/Http/Controllers/`, `app/Http/Requests/` |
+| «entity» (Persona, Usuario, Paciente...) | Modelos Eloquent | `app/Models/` |
+| Reglas transversales (contraseña temporal, bitácora, códigos) | Servicios | `app/Services/` |
+| Control de acceso (RNF06, RNF14, RNF15) | Middleware | `app/Http/Middleware/` |
+
+**Reglas de la arquitectura**
+- Las vistas no contienen lógica de negocio ni consultas.
+- Los controladores no escriben SQL: usan los modelos y los servicios.
+- Toda validación se hace en el servidor (Form Requests) y se refuerza en el cliente con JavaScript (RNF08).
+- Las consultas pasan por Eloquent o por el constructor de consultas de Laravel, que usan sentencias parametrizadas (RNF05).
+
 #### 6.1.2 Arquitectura física (despliegue)
 
+```mermaid
+flowchart LR
+    subgraph Cliente["Equipo del usuario"]
+        N["Navegador web\nHTML5 · Bootstrap 5 · JavaScript"]
+    end
+    subgraph Servidor["Servidor local (XAMPP o equivalente)"]
+        A["Apache + PHP\nLaravel (public/ como raíz web)"]
+    end
+    subgraph BD["Base de datos"]
+        P[("PostgreSQL\n(pdo_pgsql)")]
+    end
+    N -- "HTTP(S)" --> A
+    A -- "PDO" --> P
+```
+
+| Nodo | Software | Responsabilidad |
+|---|---|---|
+| Cliente | Navegador moderno | Muestra la interfaz y ejecuta las validaciones de JavaScript. |
+| Servidor de aplicación | Apache, PHP y Laravel | Procesa las solicitudes, aplica las reglas de negocio y mantiene las sesiones. |
+| Servidor de datos | PostgreSQL | Almacena los datos de forma persistente (RN14). |
+
+Los archivos de Bootstrap se sirven desde `public/`, sin depender de una conexión a internet.
+
 ### 6.2 Diseño de casos de uso (diagramas de secuencia)
+
+Se diseñan CU-01, CU-02 y CU-04 (creación de cuenta con contraseña temporal). Los demás casos del Ciclo #1 siguen el mismo patrón de controlador, Form Request, servicio y modelo.
+
+**CU-01 Iniciar sesión**
+
+```mermaid
+sequenceDiagram
+    actor U as Usuario
+    participant V as FormLogin (Blade)
+    participant C as AccesoController
+    participant P as Persona
+    participant S as Usuario
+    participant B as BitacoraService
+
+    U->>V: ingresa identificador y contraseña
+    V->>C: POST /login
+    C->>P: buscar por CI o correo
+    P-->>C: persona
+    C->>S: obtener cuenta
+    alt cuenta inactiva o bloqueada
+        C-->>V: mensaje genérico o tiempo de espera
+    else contraseña incorrecta
+        C->>S: sumar intento fallido (bloquear al 5.º)
+        C->>B: registrar login fallido
+        C-->>V: mensaje genérico
+    else contraseña correcta
+        alt contraseña temporal vencida
+            C-->>V: rechazar y pedir renovación a recepción
+        else
+            C->>S: reiniciar intentos fallidos
+            C->>B: registrar login
+            C-->>U: redirigir (cambiar contraseña si es temporal; si no, menú del rol)
+        end
+    end
+```
+
+**CU-02 Registrarse como paciente**
+
+```mermaid
+sequenceDiagram
+    actor V as Visitante
+    participant F as FormRegistro (Blade)
+    participant C as RegistroController
+    participant R as RegistroRequest
+    participant P as Persona
+    participant D as Base de datos
+    participant B as BitacoraService
+
+    V->>F: completa nombres, apellidos, CI, celular, contraseña
+    F->>C: POST /registro
+    C->>R: validar datos
+    R-->>C: datos válidos
+    C->>P: ¿existe el CI?
+    alt el CI ya tiene ficha
+        C-->>F: rechazar, pedir el acceso en recepción
+    else
+        C->>D: transacción: crear persona, ficha (verificado = falso) y cuenta (hash)
+        D-->>C: confirmación
+        C->>B: registrar alta de paciente
+        C-->>V: redirigir al inicio de sesión
+    end
+```
+
+**CU-04 Crear o renovar la cuenta de un paciente**
+
+```mermaid
+sequenceDiagram
+    actor R as Recepcionista
+    participant F as FormPaciente (Blade)
+    participant C as PacienteController
+    participant T as ContraseñaTemporalService
+    participant U as Usuario
+    participant B as BitacoraService
+
+    R->>F: pide crear o renovar el acceso del paciente
+    F->>C: POST /pacientes/{id}/acceso
+    C->>T: generar contraseña temporal
+    T-->>C: contraseña (14 caracteres) y vencimiento (72 h)
+    C->>U: crear o actualizar cuenta (hash, debe_cambiar_password, vencimiento)
+    C->>B: registrar creación o renovación
+    C-->>F: mostrar la contraseña una sola vez (Copiar / Imprimir)
+    F-->>R: la entrega al paciente, impresa o por mensaje
+```
 
 ### 6.3 Diseño de datos
 
 #### 6.3.1 Modelo lógico
 
+```mermaid
+erDiagram
+    PERSONAS ||--o| USUARIOS : "accede con"
+    PERSONAS ||--o| PACIENTES : "es"
+    PERSONAS ||--o| MEDICOS : "es"
+    USUARIOS ||--o{ BITACORA : "genera"
+    PACIENTES ||--o{ CITAS : "tiene"
+    MEDICOS ||--o{ CITAS : "atiende"
+    ESPECIALIDADES ||--o{ CITAS : "de"
+    SUCURSALES ||--o{ CITAS : "en"
+    MEDICOS ||--o{ MEDICO_ESPECIALIDAD : "ejerce"
+    ESPECIALIDADES ||--o{ MEDICO_ESPECIALIDAD : "agrupa"
+    MEDICOS ||--o{ HORARIOS_ATENCION : "atiende en"
+    SUCURSALES ||--o{ HORARIOS_ATENCION : "ubica"
+    CITAS ||--o| NOTAS_CLINICAS : "genera"
+    MEDICOS ||--o{ NOTAS_CLINICAS : "escribe"
+
+    PERSONAS {
+        bigint id PK
+        string ci UK
+        string nombres
+        string apellidos
+        date fecha_nacimiento
+        string correo UK
+    }
+    USUARIOS {
+        bigint id PK
+        bigint persona_id FK
+        string rol
+        boolean debe_cambiar_password
+        timestamptz password_temporal_vence
+    }
+    PACIENTES {
+        bigint id PK
+        bigint persona_id FK
+        string codigo UK
+        boolean verificado
+    }
+    MEDICOS {
+        bigint id PK
+        bigint persona_id FK
+        string codigo UK
+        string nro_registro_profesional UK
+    }
+    ESPECIALIDADES {
+        smallint id PK
+        string nombre UK
+        smallint duracion_min
+    }
+    HORARIOS_ATENCION {
+        bigint id PK
+        bigint medico_id FK
+        smallint sucursal_id FK
+        smallint dia_semana
+        time hora_inicio
+        time hora_fin
+    }
+    CITAS {
+        bigint id PK
+        string codigo UK
+        bigint paciente_id FK
+        bigint medico_id FK
+        date fecha
+        string estado
+    }
+    NOTAS_CLINICAS {
+        bigint id PK
+        bigint cita_id FK
+        bigint medico_id FK
+    }
+```
+
+**Decisiones del modelo**
+- `usuarios.rol` es un único rol por cuenta (`ADMINISTRADOR`, `RECEPCIONISTA`, `MEDICO`, `PACIENTE`), validado con una restricción `CHECK`.
+- El estado activo/inactivo vive en cada especialización (`pacientes.estado`, `medicos.estado`), no en `personas`: desactivar a un paciente no debe desactivar a la misma persona como médico (RN11).
+- `ON DELETE RESTRICT` en las claves hacia pacientes, médicos y citas: nada con historial se elimina, solo se desactiva (RN10, RN11).
+- El CI es único en `personas`; el correo es único sin distinguir mayúsculas y solo cuando existe.
+- Los datos del personal administrativo (Administrador, Recepcionista) viven en `personas` y `usuarios`, sin ficha.
+- El correo es obligatorio para el personal y para el Paciente es opcional; esa regla la valida la aplicación, porque depende del rol.
+- La superposición de horarios de atención de un mismo médico se valida en la aplicación (CU-07). La de citas se refuerza además con una restricción de exclusión en la base de datos (RNF17).
+
 #### 6.3.2 Modelo físico (DDL PostgreSQL)
 
+Script verificado en PostgreSQL 16. Se comprobó que la restricción de `citas` rechaza horarios superpuestos del mismo médico, acepta citas contiguas y libera el horario al cancelar. En Laravel, estas tablas se crearán mediante migraciones; el script es la referencia del diseño. Las tablas propias del framework (`migrations`, `sessions`) no se listan.
+
+```sql
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+CREATE TABLE sucursales (
+    id         SMALLSERIAL  PRIMARY KEY,
+    nombre     VARCHAR(100) NOT NULL UNIQUE,
+    direccion  VARCHAR(200),
+    estado     BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE personas (
+    id               BIGSERIAL    PRIMARY KEY,
+    ci               VARCHAR(20)  NOT NULL UNIQUE,
+    nombres          VARCHAR(100) NOT NULL,
+    apellidos        VARCHAR(100) NOT NULL,
+    fecha_nacimiento DATE,
+    sexo             CHAR(1)      CHECK (sexo IN ('M', 'F')),
+    telefono         VARCHAR(20),
+    correo           VARCHAR(150),
+    direccion        VARCHAR(200),
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX personas_correo_uq ON personas (lower(correo)) WHERE correo IS NOT NULL;
+
+CREATE TABLE usuarios (
+    id                      BIGSERIAL    PRIMARY KEY,
+    persona_id              BIGINT       NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
+    password_hash           VARCHAR(255) NOT NULL,
+    rol                     VARCHAR(15)  NOT NULL
+                            CHECK (rol IN ('ADMINISTRADOR', 'RECEPCIONISTA', 'MEDICO', 'PACIENTE')),
+    estado                  BOOLEAN      NOT NULL DEFAULT TRUE,
+    intentos_fallidos       SMALLINT     NOT NULL DEFAULT 0,
+    bloqueado_hasta         TIMESTAMPTZ,
+    debe_cambiar_password   BOOLEAN      NOT NULL DEFAULT FALSE,
+    password_temporal_vence TIMESTAMPTZ,
+    created_at              TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at              TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CHECK (debe_cambiar_password OR password_temporal_vence IS NULL)
+);
+
+CREATE TABLE pacientes (
+    id                    BIGSERIAL    PRIMARY KEY,
+    persona_id            BIGINT       NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
+    codigo                VARCHAR(12)  NOT NULL UNIQUE,
+    verificado            BOOLEAN      NOT NULL DEFAULT FALSE,
+    estado                BOOLEAN      NOT NULL DEFAULT TRUE,
+    tipo_sangre           VARCHAR(3),
+    alergias              TEXT,
+    enfermedades_cronicas TEXT,
+    medicamentos          TEXT,
+    antecedentes          TEXT,
+    emergencia_nombre     VARCHAR(150),
+    emergencia_parentesco VARCHAR(50),
+    emergencia_telefono   VARCHAR(20),
+    created_at            TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at            TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE TABLE medicos (
+    id                       BIGSERIAL   PRIMARY KEY,
+    persona_id               BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
+    codigo                   VARCHAR(12) NOT NULL UNIQUE,
+    nro_registro_profesional VARCHAR(30) NOT NULL UNIQUE,
+    estado                   BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE especialidades (
+    id           SMALLSERIAL  PRIMARY KEY,
+    nombre       VARCHAR(100) NOT NULL,
+    descripcion  VARCHAR(300),
+    duracion_min SMALLINT     NOT NULL DEFAULT 30 CHECK (duracion_min BETWEEN 5 AND 240),
+    estado       BOOLEAN      NOT NULL DEFAULT TRUE
+);
+CREATE UNIQUE INDEX especialidades_nombre_uq ON especialidades (lower(btrim(nombre)));
+
+CREATE TABLE medico_especialidad (
+    medico_id       BIGINT   NOT NULL REFERENCES medicos (id) ON DELETE CASCADE,
+    especialidad_id SMALLINT NOT NULL REFERENCES especialidades (id) ON DELETE RESTRICT,
+    PRIMARY KEY (medico_id, especialidad_id)
+);
+
+CREATE TABLE horarios_atencion (
+    id          BIGSERIAL   PRIMARY KEY,
+    medico_id   BIGINT      NOT NULL REFERENCES medicos (id) ON DELETE CASCADE,
+    sucursal_id SMALLINT    NOT NULL REFERENCES sucursales (id) ON DELETE RESTRICT,
+    dia_semana  SMALLINT    NOT NULL CHECK (dia_semana BETWEEN 1 AND 7),
+    hora_inicio TIME        NOT NULL,
+    hora_fin    TIME        NOT NULL,
+    consultorio VARCHAR(50),
+    CHECK (hora_fin > hora_inicio)
+);
+
+-- Ciclo #2
+CREATE TABLE citas (
+    id                 BIGSERIAL   PRIMARY KEY,
+    codigo             VARCHAR(12) NOT NULL UNIQUE,
+    paciente_id        BIGINT      NOT NULL REFERENCES pacientes (id) ON DELETE RESTRICT,
+    medico_id          BIGINT      NOT NULL REFERENCES medicos (id) ON DELETE RESTRICT,
+    especialidad_id    SMALLINT    NOT NULL REFERENCES especialidades (id) ON DELETE RESTRICT,
+    sucursal_id        SMALLINT    NOT NULL REFERENCES sucursales (id) ON DELETE RESTRICT,
+    fecha              DATE        NOT NULL,
+    hora_inicio        TIME        NOT NULL,
+    hora_fin           TIME        NOT NULL,
+    modalidad          VARCHAR(10) NOT NULL DEFAULT 'PRESENCIAL'
+                       CHECK (modalidad IN ('PRESENCIAL', 'VIRTUAL')),
+    estado             VARCHAR(12) NOT NULL DEFAULT 'PROGRAMADA'
+                       CHECK (estado IN ('PROGRAMADA', 'CONFIRMADA', 'ATENDIDA', 'CANCELADA', 'INASISTENCIA')),
+    motivo             VARCHAR(300),
+    motivo_cancelacion VARCHAR(300),
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (hora_fin > hora_inicio),
+    periodo TSRANGE GENERATED ALWAYS AS (tsrange(fecha + hora_inicio, fecha + hora_fin)) STORED,
+    EXCLUDE USING gist (medico_id WITH =, periodo WITH &&) WHERE (estado <> 'CANCELADA')
+);
+
+CREATE TABLE notas_clinicas (
+    id               BIGSERIAL   PRIMARY KEY,
+    cita_id          BIGINT      NOT NULL UNIQUE REFERENCES citas (id) ON DELETE RESTRICT,
+    medico_id        BIGINT      NOT NULL REFERENCES medicos (id) ON DELETE RESTRICT,
+    motivo_consulta  TEXT,
+    diagnostico      TEXT,
+    tratamiento      TEXT,
+    observaciones    TEXT,
+    modificado_por   BIGINT      REFERENCES usuarios (id) ON DELETE SET NULL,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE bitacora (
+    id         BIGSERIAL   PRIMARY KEY,
+    usuario_id BIGINT      REFERENCES usuarios (id) ON DELETE SET NULL,
+    accion     VARCHAR(50) NOT NULL,
+    entidad    VARCHAR(50),
+    entidad_id BIGINT,
+    fecha      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
 ### 6.4 Diseño de interfaces
+
+Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones dependen del rol, formularios con validación en cliente y mensajes de error junto a cada campo.
+
+**Pantallas del Ciclo #1**
+
+| Pantalla | Rol | Caso de uso | Contenido principal |
+|---|---|---|---|
+| Inicio de sesión | Público | CU-01 | CI o correo, contraseña, celular de la clínica para pedir una contraseña nueva |
+| Registro de paciente | Público | CU-02 | Nombres, apellidos, CI, celular, contraseña; correo opcional |
+| Cambio de contraseña | Todos | CU-01, CU-08 | Obligatoria en el primer ingreso con una contraseña temporal |
+| Mi perfil | Paciente | CU-08 | Datos personales; información médica y contacto de emergencia en solo lectura si la ficha está verificada; edición de teléfono y contraseña |
+| Lista de pacientes | Recepcionista | CU-04 | Búsqueda por CI, nombre o apellido; estado de verificación |
+| Formulario de paciente | Recepcionista | CU-04 | Datos personales, información médica, contacto de emergencia; acciones: crear o renovar acceso, verificar ficha, desactivar |
+| Credenciales temporales | Recepcionista, Administrador | CU-03, CU-04 | Contraseña mostrada una sola vez, con vencimiento y botones Copiar e Imprimir |
+| Lista y formulario de usuarios | Administrador | CU-03 | Alta del personal, rol, vínculo con médico, activar o desactivar, renovar contraseña |
+| Lista y formulario de médicos | Administrador | CU-05 | Datos, registro profesional, especialidades, estado |
+| Lista y formulario de especialidades | Administrador | CU-06 | Nombre, descripción, duración de la cita, estado |
+| Horarios de atención | Administrador | CU-07 | Horarios por médico: día, hora inicial, hora final y consultorio |
+
+**Menú por rol**
+
+| Rol | Opciones |
+|---|---|
+| Administrador | Usuarios · Médicos · Especialidades · Horarios |
+| Recepcionista | Pacientes |
+| Médico | (Ciclo #2: agenda y notas clínicas) |
+| Paciente | Mi perfil (Ciclo #2: mis citas) |
 
 ---
 
