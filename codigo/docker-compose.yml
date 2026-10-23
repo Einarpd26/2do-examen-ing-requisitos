@@ -1,0 +1,18 @@
+# Base de datos local para desarrollo.
+# La aplicación Laravel corre en el host (php artisan serve) y se conecta a este contenedor.
+services:
+  db:
+    image: postgres:16
+    container_name: clinica_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: clinica_vida_salud
+      POSTGRES_USER: clinica
+      POSTGRES_PASSWORD: clinica_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - clinica_pgdata:/var/lib/postgresql/data
+
+volumes:
+  clinica_pgdata:
