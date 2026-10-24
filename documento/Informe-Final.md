@@ -253,7 +253,7 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 - **Identificador de acceso:** el Paciente inicia sesión con su **CI**; el personal (Administrador, Recepcionista, Médico) con su correo. El correo del Paciente es opcional.
 - **Modelo de identidad:** una entidad `Persona` guarda los datos comunes (CI, nombres, apellidos, fecha de nacimiento, sexo, teléfono, correo, dirección). De ella cuelgan `Paciente` (ficha clínica y verificación), `Medico` (registro profesional) y `Usuario` (credenciales y rol). Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico); como paciente la atiende la Recepcionista. El personal administrativo es una persona con cuenta y sin ficha. El CI es único en `Persona`.
 - **Duración de la cita:** es un parámetro de la **especialidad** (en minutos), no del horario ni del médico. La cita hereda la duración de la especialidad elegida al reservar. Como la agenda de un médico puede mezclar duraciones, el anti-duplicados compara **intervalos**, no solo la hora de inicio (RF07, RNF17).
-- **Códigos:** el código del paciente (`PAC-0001`) y del médico (`MED-0001`) lo genera el sistema de forma correlativa.
+- **Códigos:** el código del paciente (`PAC-000001`), del médico (`MED-000001`) y de la cita (`CM-000001`) lo genera el sistema a partir del `id`, con 6 dígitos y sin truncarse pasado el 999999. Nadie lo escribe a mano.
 - **Registro propio del Paciente:** nombres y apellidos, CI, celular y contraseña obligatorios; correo opcional. Se crea la cuenta y la ficha del paciente en estado **pendiente de verificación**. Si el CI ya tiene ficha, el registro propio se rechaza y se indica pedir el acceso en recepción.
 - **Alta de cuenta por la Recepcionista:** para reducir la fricción, la Recepcionista también puede crear la cuenta del Paciente. El sistema genera una **contraseña temporal** aleatoria con vigencia de **72 horas**, la muestra **una sola vez** en pantalla (botones Copiar e Imprimir) y la Recepcionista se la entrega impresa o por mensaje de texto o WhatsApp. El sistema no envía correos ni mensajes. En su primer ingreso el Paciente debe cambiarla; si venció, no puede entrar hasta que se renueve.
 - **Renovación y contraseña olvidada:** la Recepcionista o el Administrador pueden generar una nueva contraseña temporal en cualquier momento (porque venció o porque el titular olvidó la suya): se genera otra con nuevas 72 horas y la anterior deja de servir. El titular la solicita a recepción; la pantalla de inicio de sesión muestra el celular de la clínica para ese fin. Para evitar suplantaciones, la contraseña nueva se envía solo al celular registrado en la ficha del paciente (mensaje o WhatsApp) o se entrega en persona con documento, nunca a un número nuevo que indique quien llama.
@@ -991,7 +991,7 @@ erDiagram
 - El correo es obligatorio para el personal y para el Paciente es opcional; esa regla la valida la aplicación, porque depende del rol.
 - Una restricción de exclusión impide horarios de atención superpuestos del mismo médico en el mismo día (CU-07) y citas superpuestas del mismo médico (RNF17); las citas canceladas no cuentan.
 - Una clave foránea compuesta exige que el médico de una cita ejerza la especialidad elegida, y otra ata la nota clínica al médico de su cita. Consecuencia: no se puede quitar una especialidad a un médico que tiene citas con ella.
-- Los códigos `PAC-0001`, `MED-0001` y `CM-0001` salen de secuencias de la base de datos, así que dos altas simultáneas no repiten código. Pueden quedar saltos en la numeración, porque una secuencia no se revierte si el alta falla.
+- Los códigos `PAC-000001`, `MED-000001` y `CM-000001` son columnas generadas a partir del `id`: siempre coinciden con él, son únicos y no se pueden escribir a mano. Pueden quedar saltos en la numeración, porque el `id` no se revierte si el alta falla. Las listas se ordenan por `id`, no por el texto del código.
 - La bitácora es de solo escritura: un disparador impide modificar, borrar o vaciar sus filas.
 - Las claves foráneas llevan índice, porque PostgreSQL no los crea solo.
 - Las reglas que cruzan tablas (cita dentro del horario del médico, duración de la cita, médico activo, fecha futura, transiciones de estado, que un médico no se atienda a sí mismo) las valida la aplicación y se cubren con pruebas.
@@ -1007,13 +1007,11 @@ El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #
 
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
--- Códigos correlativos legibles (PAC-0001, MED-0001, CM-0001) que no se truncan pasado el 9999.
+-- Códigos legibles (PAC-000001, MED-000001, CM-000001) derivados del id: 6 dígitos y, pasado
+-- el 999999, el número completo sin truncar. Cada tabla los calcula con una columna generada.
 CREATE FUNCTION codigo_con_prefijo(prefijo TEXT, n BIGINT) RETURNS TEXT
     LANGUAGE sql IMMUTABLE
-    AS $$ SELECT prefijo || CASE WHEN n < 10000 THEN lpad(n::TEXT, 4, '0') ELSE n::TEXT END $$;
-
-CREATE SEQUENCE seq_codigo_paciente;
-CREATE SEQUENCE seq_codigo_medico;
+    AS $$ SELECT prefijo || CASE WHEN n < 1000000 THEN lpad(n::TEXT, 6, '0') ELSE n::TEXT END $$;
 
 CREATE TABLE sucursales (
     id         BIGSERIAL   PRIMARY KEY,
@@ -1058,9 +1056,7 @@ CREATE TABLE usuarios (
 CREATE TABLE pacientes (
     id                    BIGSERIAL   PRIMARY KEY,
     persona_id            BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
-    codigo                TEXT        NOT NULL UNIQUE
-                          DEFAULT codigo_con_prefijo('PAC-', nextval('seq_codigo_paciente'))
-                          CHECK (codigo ~ '^PAC-[0-9]{4,}$'),
+    codigo                TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('PAC-', id)) STORED UNIQUE,
     verificado            BOOLEAN     NOT NULL DEFAULT FALSE,
     estado                BOOLEAN     NOT NULL DEFAULT TRUE,
     tipo_sangre           TEXT        CHECK (tipo_sangre IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
@@ -1074,20 +1070,16 @@ CREATE TABLE pacientes (
     created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-ALTER SEQUENCE seq_codigo_paciente OWNED BY pacientes.codigo;
 
 CREATE TABLE medicos (
     id                       BIGSERIAL   PRIMARY KEY,
     persona_id               BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
-    codigo                   TEXT        NOT NULL UNIQUE
-                             DEFAULT codigo_con_prefijo('MED-', nextval('seq_codigo_medico'))
-                             CHECK (codigo ~ '^MED-[0-9]{4,}$'),
+    codigo                   TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('MED-', id)) STORED UNIQUE,
     nro_registro_profesional TEXT        NOT NULL UNIQUE CHECK (btrim(nro_registro_profesional) <> ''),
     estado                   BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at               TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-ALTER SEQUENCE seq_codigo_medico OWNED BY medicos.codigo;
 
 CREATE TABLE especialidades (
     id           BIGSERIAL   PRIMARY KEY,
@@ -1153,13 +1145,9 @@ CREATE TRIGGER bitacora_sin_vaciar
 -- Ciclo #2: citas médicas y notas clínicas.
 -- Referencia de diseño: documento/Informe-Final.md, sección 6.3.2.
 
-CREATE SEQUENCE seq_codigo_cita;
-
 CREATE TABLE citas (
     id                 BIGSERIAL   PRIMARY KEY,
-    codigo             TEXT        NOT NULL UNIQUE
-                       DEFAULT codigo_con_prefijo('CM-', nextval('seq_codigo_cita'))
-                       CHECK (codigo ~ '^CM-[0-9]{4,}$'),
+    codigo             TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('CM-', id)) STORED UNIQUE,
     paciente_id        BIGINT      NOT NULL REFERENCES pacientes (id) ON DELETE RESTRICT,
     medico_id          BIGINT      NOT NULL,
     especialidad_id    BIGINT      NOT NULL,
@@ -1185,7 +1173,6 @@ CREATE TABLE citas (
     -- Permite que la nota clínica se ate al médico de la cita.
     UNIQUE (id, medico_id)
 );
-ALTER SEQUENCE seq_codigo_cita OWNED BY citas.codigo;
 CREATE INDEX citas_paciente_idx ON citas (paciente_id);
 CREATE INDEX citas_especialidad_idx ON citas (especialidad_id);
 CREATE INDEX citas_sucursal_idx ON citas (sucursal_id);
