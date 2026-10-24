@@ -501,7 +501,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 2. Registra o modifica los datos de la persona (CI, primer nombre, segundo nombre, apellido paterno, apellido materno, teléfono, correo), el número de registro profesional y las especialidades. El teléfono y el correo son obligatorios (RF03; con el correo el médico entra al sistema) y hay que elegir al menos una especialidad activa. Si el CI ya existe como persona sin ficha de médico (por ejemplo, un paciente), reutiliza esa persona sin modificar sus datos personales.
 3. El sistema valida los datos y comprueba que el registro profesional (guardado en mayúsculas y sin espacios de más) y el correo no pertenezcan a otra persona.
 4. El sistema guarda los cambios y los registra en la bitácora.
-5. El Administrador desactiva o reactiva al médico; nunca se elimina. Su cuenta de médico, si la tiene, sigue el mismo estado.
+5. El Administrador desactiva o reactiva al médico; nunca se elimina. Al desactivarlo, su cuenta de médico, si la tiene, también se desactiva. Al reactivarlo, la cuenta no se reactiva sola: el Administrador la reactiva en CU-03.
 
 **Flujos alternos**
 - 3a. Registro profesional o correo repetido: se rechaza. Lo garantiza también la base de datos.

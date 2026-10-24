@@ -90,7 +90,7 @@
                                     @endif
                                     <a href="{{ route('medicos.edit', $medico) }}" class="btn btn-outline-secondary btn-sm">Editar</a>
                                     <form method="POST" action="{{ route('medicos.estado', $medico) }}" class="d-inline"
-                                          onsubmit="return confirm('{{ $medico->estado ? 'Se desactivará al médico: no recibirá citas nuevas y su cuenta de acceso, si la tiene, quedará desactivada. El historial se conserva.' : 'Se reactivará al médico y su cuenta de acceso.' }}')">
+                                          onsubmit="return confirm('{{ $medico->estado ? 'Se desactivará al médico: no recibirá citas nuevas y su cuenta de acceso, si la tiene, quedará desactivada. El historial se conserva.' : 'Se reactivará al médico. Su cuenta de acceso no se reactiva sola: hágalo en Usuarios.' }}')">
                                         @csrf
                                         @method('PATCH')
                                         <input type="hidden" name="activo" value="{{ $medico->estado ? 0 : 1 }}">

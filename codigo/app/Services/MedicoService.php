@@ -75,8 +75,10 @@ class MedicoService
 
     /**
      * Desactiva o reactiva al médico sin borrar nada (RN04, RN11). Un médico inactivo no recibe
-     * citas nuevas y conserva las históricas. Su cuenta de médico, si la tiene, sigue el mismo
-     * estado: un médico dado de baja no puede iniciar sesión.
+     * citas nuevas y conserva las históricas. Al darlo de baja, su cuenta de médico, si la tiene,
+     * también se desactiva: un médico dado de baja no puede iniciar sesión. Al reactivarlo la
+     * cuenta no se reactiva sola: el Administrador decide en CU-03, porque pudo haberla
+     * desactivado por otro motivo.
      */
     public function cambiarEstado(Medico $medico, bool $activo, Usuario $actor): void
     {
@@ -84,8 +86,8 @@ class MedicoService
             $medico->update(['estado' => $activo]);
 
             $cuenta = $medico->persona->usuario;
-            if ($cuenta !== null && $cuenta->rol->codigo === 'MEDICO') {
-                $cuenta->update(['estado' => $activo]);
+            if (! $activo && $cuenta !== null && $cuenta->rol->codigo === 'MEDICO') {
+                $cuenta->update(['estado' => false]);
             }
 
             $this->bitacora->registrar(

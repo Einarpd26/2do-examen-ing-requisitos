@@ -571,7 +571,7 @@ class MedicoTest extends TestCase
         $this->assertSame(['medico_desactivado', 'medico_reactivado'], $acciones);
     }
 
-    public function test_desactivar_y_reactivar_siguen_a_la_cuenta_de_medico(): void
+    public function test_desactivar_baja_la_cuenta_de_medico_pero_reactivar_no_la_reactiva(): void
     {
         $e = $this->especialidad();
         $cuenta = $this->crearCuenta('MEDICO');
@@ -583,7 +583,21 @@ class MedicoTest extends TestCase
         $this->assertFalse($cuenta->fresh()->estado, 'un médico de baja no puede iniciar sesión');
 
         $this->patch(route('medicos.estado', $medico), ['activo' => 1]);
-        $this->assertTrue($cuenta->fresh()->estado);
+        $this->assertTrue($medico->fresh()->estado);
+        $this->assertFalse($cuenta->fresh()->estado, 'la cuenta la reactiva el Administrador en CU-03');
+    }
+
+    public function test_reactivar_al_medico_no_reactiva_una_cuenta_desactivada_a_proposito(): void
+    {
+        $e = $this->especialidad();
+        $cuenta = $this->crearCuenta('MEDICO', [], ['estado' => false]);
+        $medico = Medico::create(['persona_id' => $cuenta->persona_id, 'nro_registro_profesional' => 'MP-7', 'estado' => false])->refresh();
+        $medico->especialidades()->sync([$e->id]);
+
+        $this->actingAs($this->administrador())->patch(route('medicos.estado', $medico), ['activo' => 1]);
+
+        $this->assertTrue($medico->fresh()->estado);
+        $this->assertFalse($cuenta->fresh()->estado);
     }
 
     public function test_desactivar_al_medico_no_toca_una_cuenta_de_otro_rol_de_la_misma_persona(): void
