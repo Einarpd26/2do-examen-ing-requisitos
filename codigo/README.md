@@ -15,13 +15,15 @@ cp .env.example .env
 composer install
 php artisan key:generate
 
-docker compose up -d                  # PostgreSQL en el puerto 5432
+docker compose up -d                  # PostgreSQL en el puerto 5433
 docker exec clinica_db psql -U clinica -d postgres -c "CREATE DATABASE clinica_test;"   # base de las pruebas
 
 php artisan migrate                   # crea el esquema y carga sucursal, roles y permisos
 php artisan db:seed                   # crea el administrador inicial
 php artisan serve                     # http://localhost:8000
 ```
+
+La base de datos escucha en el puerto **5433** (y no en el 5432 habitual) para no chocar con otro PostgreSQL del equipo. Verifique que el `.env` tenga `DB_PORT=5433`; las pruebas ya lo usan en `phpunit.xml`.
 
 `db:seed` muestra **una sola vez** la contraseña temporal del administrador, que vence a las 72 horas y se debe cambiar en el primer ingreso. El correo y el CI del administrador se cambian con `ADMIN_CORREO` y `ADMIN_CI` en `.env` antes de cargar los datos.
 
