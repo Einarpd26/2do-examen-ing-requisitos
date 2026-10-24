@@ -2,6 +2,7 @@
 
 namespace Tests\Concerns;
 
+use App\Models\Paciente;
 use App\Models\Persona;
 use App\Models\Rol;
 use App\Models\Usuario;
@@ -55,6 +56,56 @@ trait CreaCuentas
         $mensajes = is_array($errores) ? ($errores['default']['messages'] ?? []) : [];
 
         return (new MessageBag($mensajes))->first($campo);
+    }
+
+    /**
+     * Crea una persona con su ficha de paciente (sin cuenta), verificada por defecto.
+     *
+     * @param  array<string, mixed>  $persona
+     * @param  array<string, mixed>  $ficha
+     */
+    protected function crearPaciente(array $persona = [], array $ficha = []): Paciente
+    {
+        $persona = Persona::create(array_merge([
+            'ci' => (string) ++self::$secuenciaCi,
+            'primer_nombre' => 'Ana',
+            'apellido_paterno' => 'Paz',
+        ], $persona));
+
+        return Paciente::create(array_merge([
+            'persona_id' => $persona->id,
+            'verificado' => true,
+        ], $ficha))->refresh()->load('persona');
+    }
+
+    /**
+     * Datos válidos del formulario de paciente, con un CI nuevo en cada llamada.
+     *
+     * @param  array<string, mixed>  $reemplazo
+     * @return array<string, mixed>
+     */
+    protected function datosPaciente(array $reemplazo = []): array
+    {
+        return array_merge([
+            'ci' => (string) ++self::$secuenciaCi,
+            'primer_nombre' => 'María',
+            'segundo_nombre' => 'Elena',
+            'apellido_paterno' => 'López',
+            'apellido_materno' => 'Vega',
+            'fecha_nacimiento' => '1990-05-12',
+            'sexo' => 'F',
+            'telefono' => '70012345',
+            'correo' => 'maria'.self::$secuenciaCi.'@mail.com',
+            'direccion' => 'Av. Principal 123',
+            'tipo_sangre' => 'O+',
+            'alergias' => 'Penicilina',
+            'enfermedades_cronicas' => 'Hipertensión',
+            'medicamentos' => 'Enalapril',
+            'antecedentes' => 'Ninguno relevante',
+            'emergencia_nombre' => 'Carlos López',
+            'emergencia_parentesco' => 'Hermano',
+            'emergencia_telefono' => '71234567',
+        ], $reemplazo);
     }
 
     /** Datos del formulario de acceso. */
