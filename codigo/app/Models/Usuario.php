@@ -65,6 +65,26 @@ class Usuario extends Authenticatable
         return $this->hasMany(Bitacora::class);
     }
 
+    // Estado del acceso, en palabras, para mostrarlo en pantalla.
+    public function estadoAcceso(): string
+    {
+        if (! $this->estado) {
+            return 'Desactivada';
+        }
+
+        if ($this->bloqueado_hasta?->isFuture()) {
+            return 'Bloqueada hasta las '.$this->bloqueado_hasta->format('H:i');
+        }
+
+        if ($this->debe_cambiar_password) {
+            return $this->password_temporal_vence->isPast()
+                ? 'Contraseña temporal vencida'
+                : 'Contraseña temporal vigente hasta el '.$this->password_temporal_vence->format('d/m/Y H:i');
+        }
+
+        return 'Activa';
+    }
+
     // ¿El rol de la cuenta concede este permiso (formato recurso:accion)?
     public function tienePermiso(string $codigo): bool
     {
