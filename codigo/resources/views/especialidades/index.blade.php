@@ -2,14 +2,35 @@
 
 @section('titulo', 'Especialidades · Clínica Vida Salud')
 
+@php
+    $pestanas = ['activas' => 'Activas', 'inactivas' => 'Inactivas', 'todas' => 'Todas'];
+    $vacio = [
+        'activas' => 'No hay especialidades activas.',
+        'inactivas' => 'No hay especialidades inactivas.',
+        'todas' => 'Todavía no hay especialidades registradas.',
+    ];
+@endphp
+
 @section('contenido')
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h3 fw-semibold mb-0">Especialidades</h1>
         <a href="{{ route('especialidades.create') }}" class="btn btn-clinica">Registrar especialidad</a>
     </div>
 
+    <ul class="nav nav-pills mb-3" aria-label="Estado de las especialidades">
+        @foreach ($pestanas as $clave => $etiqueta)
+            <li class="nav-item">
+                <a class="nav-link {{ $vista === $clave ? 'active' : '' }}"
+                   @if ($vista === $clave) aria-current="page" @endif
+                   href="{{ route('especialidades.index', $clave === 'activas' ? [] : ['estado' => $clave]) }}">
+                    {{ $etiqueta }} <span class="badge text-bg-light ms-1">{{ $cuentas[$clave] }}</span>
+                </a>
+            </li>
+        @endforeach
+    </ul>
+
     @if ($especialidades->isEmpty())
-        <div class="alert alert-info">Todavía no hay especialidades registradas.</div>
+        <div class="alert alert-info">{{ $vacio[$vista] }}</div>
     @else
         <div class="card shadow-sm">
             <div class="table-responsive">
@@ -26,9 +47,9 @@
                     </thead>
                     <tbody>
                         @foreach ($especialidades as $especialidad)
-                            <tr>
+                            <tr @class(['text-secondary' => ! $especialidad->estado])>
                                 <td class="fw-semibold">{{ $especialidad->nombre }}</td>
-                                <td class="small text-secondary">{{ $especialidad->descripcion ?? '—' }}</td>
+                                <td class="small">{{ $especialidad->descripcion ?? '—' }}</td>
                                 <td class="text-end text-nowrap">{{ $especialidad->duracion_min }} min</td>
                                 <td class="text-end">{{ $especialidad->medicos_count }}</td>
                                 <td>
@@ -45,10 +66,12 @@
                                         @csrf
                                         @method('PATCH')
                                         <input type="hidden" name="activa" value="{{ $especialidad->estado ? 0 : 1 }}">
-                                        <button type="submit"
-                                                class="btn btn-sm {{ $especialidad->estado ? 'btn-outline-danger' : 'btn-outline-success' }}">
-                                            {{ $especialidad->estado ? 'Desactivar' : 'Reactivar' }}
-                                        </button>
+                                        <input type="hidden" name="vista" value="{{ $vista }}">
+                                        @if ($especialidad->estado)
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">Desactivar</button>
+                                        @else
+                                            <button type="submit" class="btn btn-success btn-sm">Reactivar</button>
+                                        @endif
                                     </form>
                                 </td>
                             </tr>
