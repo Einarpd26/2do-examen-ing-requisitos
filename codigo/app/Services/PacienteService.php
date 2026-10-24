@@ -26,6 +26,15 @@ class PacienteService
         'emergencia_nombre', 'emergencia_parentesco', 'emergencia_telefono',
     ];
 
+    /**
+     * Formas válidas de comprobar la identidad del titular antes de renovar su contraseña
+     * (CU-19). Una persona que llama y pide la contraseña en otro número no cuenta.
+     */
+    public const VERIFICACION_IDENTIDAD = [
+        'documento' => 'documento de identidad en persona',
+        'celular' => 'mensaje al celular registrado en la ficha',
+    ];
+
     public function __construct(
         private readonly ContrasenaTemporalService $contrasenas,
         private readonly BitacoraService $bitacora,
@@ -108,7 +117,8 @@ class PacienteService
             $paciente->update(['verificado' => true]);
             $this->bitacora->registrar('paciente_verificado', $actor, 'pacientes', $paciente->id);
 
-            return $renovarAcceso ? $this->renovarAcceso($paciente, $actor) : null;
+            // Al verificar se compara el documento, así que esa es la comprobación de identidad.
+            return $renovarAcceso ? $this->renovarAcceso($paciente, $actor, 'documento') : null;
         });
     }
 
@@ -149,12 +159,17 @@ class PacienteService
     }
 
     /**
-     * Genera una contraseña temporal nueva (venció u olvidada). La anterior deja de servir.
+     * CU-19: genera una contraseña temporal nueva (venció u olvidada). La anterior deja de
+     * servir. Exige indicar cómo se verificó la identidad del titular, y eso queda en la bitácora.
      *
+     * @param  string  $verificacion  una clave de VERIFICACION_IDENTIDAD
      * @return array{contrasena: string, vence: \Carbon\CarbonImmutable, usuario: string}
      */
-    public function renovarAcceso(Paciente $paciente, Usuario $actor): array
+    public function renovarAcceso(Paciente $paciente, Usuario $actor, string $verificacion): array
     {
+        $formaDeVerificar = self::VERIFICACION_IDENTIDAD[$verificacion]
+            ?? throw new ReglaDeNegocioException('Indique cómo verificó la identidad del titular.');
+
         $cuenta = $paciente->persona->usuario;
 
         if ($cuenta === null) {
@@ -169,9 +184,11 @@ class PacienteService
             throw new ReglaDeNegocioException('No se puede renovar el acceso de un paciente desactivado.');
         }
 
-        return DB::transaction(function () use ($paciente, $cuenta, $actor) {
+        return DB::transaction(function () use ($paciente, $cuenta, $actor, $formaDeVerificar) {
             $emitida = $this->contrasenas->emitirPara($cuenta);
-            $this->bitacora->registrar('acceso_renovado', $actor, 'usuarios', $cuenta->id);
+            $this->bitacora->registrar(
+                'acceso_renovado', $actor, 'usuarios', $cuenta->id, "Identidad verificada con: {$formaDeVerificar}"
+            );
 
             return $emitida + ['usuario' => $paciente->persona->ci];
         });

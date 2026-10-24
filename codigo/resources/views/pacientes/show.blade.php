@@ -134,8 +134,26 @@
                         @can('accesos:renovar')
                             @if ($paciente->estado)
                                 <form method="POST" action="{{ route('pacientes.acceso.renovar', $paciente) }}"
-                                      onsubmit="return confirm('Se generará una contraseña temporal nueva y la anterior dejará de servir.')">
+                                      class="needs-validation" novalidate
+                                      onsubmit="return !this.checkValidity() || confirm('Se generará una contraseña temporal nueva y la anterior dejará de servir.')">
                                     @csrf
+                                    <label for="verificacion" class="form-label small mb-1">
+                                        ¿Cómo verificó la identidad del titular? <span class="text-danger" aria-hidden="true">*</span>
+                                    </label>
+                                    <select id="verificacion" name="verificacion" required
+                                            class="form-select form-select-sm mb-2 @error('verificacion') is-invalid @enderror">
+                                        <option value="">Elija una opción</option>
+                                        @foreach (\App\Services\PacienteService::VERIFICACION_IDENTIDAD as $clave => $etiqueta)
+                                            <option value="{{ $clave }}" @selected(old('verificacion') === $clave)>{{ ucfirst($etiqueta) }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="invalid-feedback mb-2">
+                                        @error('verificacion') {{ $message }} @else Indique cómo verificó la identidad del titular. @enderror
+                                    </div>
+                                    <p class="form-text mt-0">
+                                        La contraseña se entrega en persona o por mensaje al celular registrado en la ficha,
+                                        nunca a otro número.
+                                    </p>
                                     <button type="submit" class="btn btn-outline-secondary btn-sm">Renovar contraseña temporal</button>
                                 </form>
                             @endif

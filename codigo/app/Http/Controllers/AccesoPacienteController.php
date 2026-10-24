@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\RenovarAccesoRequest;
 use App\Models\Paciente;
 use App\Services\PacienteService;
 use Illuminate\Http\RedirectResponse;
@@ -20,9 +21,13 @@ class AccesoPacienteController extends Controller
         return $this->mostrar($paciente, $pacientes->crearAcceso($paciente, $request->user()));
     }
 
-    public function renovar(Request $request, Paciente $paciente, PacienteService $pacientes): RedirectResponse
+    /** CU-19: renovar la contraseña temporal, indicando cómo se verificó la identidad del titular. */
+    public function renovar(RenovarAccesoRequest $request, Paciente $paciente, PacienteService $pacientes): RedirectResponse
     {
-        return $this->mostrar($paciente, $pacientes->renovarAcceso($paciente, $request->user()));
+        return $this->mostrar(
+            $paciente,
+            $pacientes->renovarAcceso($paciente, $request->user(), $request->validated('verificacion'))
+        );
     }
 
     public function verificar(Request $request, Paciente $paciente, PacienteService $pacientes): RedirectResponse
