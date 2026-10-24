@@ -1,58 +1,61 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Clínica Vida Salud: sistema web de gestión de citas médicas
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Segundo examen parcial de Ingeniería de Requisitos. Aplicación en **Laravel 13** (PHP 8.3 o superior), **PostgreSQL 16**, plantillas Blade y Bootstrap 5. El informe con el análisis y el diseño está en `../documento/Informe-Final.md`.
 
-## About Laravel
+## Requisitos
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.3 o superior con la extensión `pdo_pgsql`
+- Composer
+- Docker (para PostgreSQL)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Puesta en marcha
 
 ```bash
-composer require laravel/boost --dev
+cp .env.example .env
+composer install
+php artisan key:generate
 
-php artisan boost:install
+docker compose up -d                  # PostgreSQL en el puerto 5432
+docker exec clinica_db psql -U clinica -d postgres -c "CREATE DATABASE clinica_test;"   # base de las pruebas
+
+php artisan migrate                   # crea el esquema y carga sucursal, roles y permisos
+php artisan db:seed                   # crea el administrador inicial
+php artisan serve                     # http://localhost:8000
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+`db:seed` muestra **una sola vez** la contraseña temporal del administrador, que vence a las 72 horas y se debe cambiar en el primer ingreso. El correo y el CI del administrador se cambian con `ADMIN_CORREO` y `ADMIN_CI` en `.env` antes de cargar los datos.
 
-## Contributing
+## Pruebas
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+php artisan test
+```
 
-## Code of Conduct
+Las pruebas usan la base `clinica_test` y la recrean con las migraciones.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Reiniciar la base de desarrollo
 
-## Security Vulnerabilities
+```bash
+docker exec clinica_db psql -U clinica -d clinica_vida_salud \
+  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+php artisan migrate && php artisan db:seed
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+`migrate:rollback` falla a propósito si ya hay citas o cuentas que dependen del catálogo.
 
-## License
+## Estructura
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Ruta | Contenido |
+|---|---|
+| `database/sql/` | Esquema en SQL puro: `001` (Ciclo #1), `002` (citas y notas, Ciclo #2) y `003` (catálogos iniciales) |
+| `database/migrations/` | Migraciones que ejecutan esos archivos SQL |
+| `app/Models/` | Modelos Eloquent (las entidades del análisis) |
+| `app/Services/` | Reglas transversales: autenticación, contraseñas temporales, bitácora |
+| `app/Http/` | Controladores, solicitudes de validación y middleware |
+| `config/menu.php` | Opciones del menú y el permiso que exige cada una |
+| `resources/views/` | Vistas Blade |
+| `tests/` | Pruebas unitarias y de funcionalidad |
+
+## Estado
+
+**Ciclo #1:** base de datos con control de acceso (RBAC), modelos y **CU-01 iniciar y cerrar sesión** (sesión con cookie, bloqueo por intentos, contraseña temporal, menú por permisos y bitácora).
