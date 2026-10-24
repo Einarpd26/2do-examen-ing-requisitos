@@ -19,4 +19,20 @@ return [
         'correo' => env('ADMIN_CORREO', 'admin@clinicavidasalud.test'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Inicio de sesión
+    |--------------------------------------------------------------------------
+    |
+    | Tras max_intentos contraseñas incorrectas seguidas, la cuenta se bloquea durante
+    | bloqueo_minutos (RNF15). El cierre por inactividad (30 minutos, RNF14) lo fija
+    | SESSION_LIFETIME en .env.
+    |
+    */
+
+    'login' => [
+        'max_intentos' => 5,
+        'bloqueo_minutos' => 15,
+    ],
+
 ];
