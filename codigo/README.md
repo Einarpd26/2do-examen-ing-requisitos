@@ -58,4 +58,9 @@ php artisan migrate && php artisan db:seed
 
 ## Estado
 
-**Ciclo #1:** base de datos con control de acceso (RBAC), modelos y **CU-01 iniciar y cerrar sesión** (sesión con cookie, bloqueo por intentos, contraseña temporal, menú por permisos y bitácora).
+**Ciclo #1:** base de datos con control de acceso (RBAC) y modelos, más:
+
+- **CU-01 iniciar y cerrar sesión:** sesión con cookie, bloqueo por intentos, contraseña temporal, menú por permisos y bitácora.
+- **CU-04 gestionar pacientes:** alta, búsqueda, edición, desactivación, cuenta con contraseña temporal (se muestra una sola vez), renovación y verificación de la ficha.
+
+Las fechas se muestran en hora de Bolivia (`America/La_Paz`), tanto en la aplicación como en la conexión a PostgreSQL.

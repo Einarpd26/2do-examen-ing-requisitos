@@ -466,11 +466,13 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 5. Si el paciente no tiene cuenta, la Recepcionista la crea: el sistema genera una contraseña temporal aleatoria con vigencia de 72 horas y la muestra una sola vez, con botones Copiar e Imprimir. La Recepcionista se la entrega al paciente, impresa o por mensaje de texto o WhatsApp. El paciente entra con su CI.
 6. Si el paciente se registró solo (CU-02), la Recepcionista compara su documento y marca la ficha como verificada; en ese acto puede renovar la contraseña.
 7. Si el paciente olvidó su contraseña o la temporal venció, la Recepcionista puede renovarla en cualquier momento: el sistema genera otra con nuevas 72 horas e invalida la anterior.
-8. Para dar de baja, la Recepcionista desactiva el registro; no se elimina.
+8. Para dar de baja, la Recepcionista desactiva el registro; no se elimina. Si el paciente tiene cuenta de paciente, esta se desactiva con él y se reactiva si lo reactiva.
 
 **Flujos alternos**
 - 3a. El CI ya tiene ficha de paciente: se rechaza el registro (RN01).
 - 5a. El paciente ya tiene cuenta: no se crea otra.
+- 5b. El paciente está desactivado: no se crea ni se renueva su acceso.
+- 5c. La persona ya tiene una cuenta con otro rol (por ejemplo, Médico): no se crea una cuenta de paciente; como paciente la atiende la recepción, y su contraseña la renueva el Administrador (CU-03).
 - 6a. El documento no coincide con la ficha: la ficha sigue pendiente de verificación.
 - 8a. Paciente con citas históricas: solo se permite desactivar (RN11).
 - *. Una ficha creada por la Recepcionista queda verificada de inmediato.
