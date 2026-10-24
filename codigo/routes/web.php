@@ -8,6 +8,7 @@ use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\PacienteController;
+use App\Http\Controllers\PerfilController;
 use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +32,12 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
 
     Route::get('/cambiar-password', [CambioPasswordController::class, 'formulario'])->name('password.cambiar');
     Route::put('/cambiar-password', [CambioPasswordController::class, 'actualizar'])->name('password.actualizar');
+
+    // CU-08: el paciente consulta su perfil y modifica su teléfono (perfil:gestionar).
+    Route::prefix('perfil')->name('perfil.')->middleware('can:perfil:gestionar')->group(function () {
+        Route::get('/', [PerfilController::class, 'mostrar'])->name('mostrar');
+        Route::put('/', [PerfilController::class, 'actualizar'])->name('actualizar');
+    });
 
     // CU-03: gestionar usuarios y roles del personal (solo el Administrador, con usuarios:gestionar).
     Route::prefix('usuarios')->name('usuarios.')->middleware('can:usuarios:gestionar')->group(function () {
