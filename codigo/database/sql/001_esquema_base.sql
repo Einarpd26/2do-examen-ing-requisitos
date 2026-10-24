@@ -152,7 +152,7 @@ CREATE TABLE bitacora (
 CREATE INDEX bitacora_usuario_idx ON bitacora (usuario_id);
 CREATE INDEX bitacora_fecha_idx ON bitacora (fecha);
 
-CREATE FUNCTION bitacora_solo_agregar() RETURNS TRIGGER
+CREATE OR REPLACE FUNCTION bitacora_solo_agregar() RETURNS TRIGGER
     LANGUAGE plpgsql
     AS $$
 BEGIN
