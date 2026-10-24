@@ -5,7 +5,7 @@
 | **Materia** | Ingeniería de Requisitos — SC |
 | **Examen** | Segundo Examen Parcial |
 | **Grupo** | SC |
-| **Integrante** | Einar Padilla Delgadillo |
+| **Integrantes** | Einar Padilla Delgadillo<br>Daniel Acosta Roca |
 | **Docente** | Angeliza Garzon Cuellar |
 | **Presentación** | 1 — Ciclo #1 (24/10/2026) |
 | **Repositorio** | https://github.com/Einarpd26/2do-examen-ing-requisitos |
