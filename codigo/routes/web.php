@@ -5,12 +5,18 @@ use App\Http\Controllers\AccesoPacienteController;
 use App\Http\Controllers\CambioPasswordController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\PacienteController;
+use App\Http\Controllers\RegistroController;
 use Illuminate\Support\Facades\Route;
 
 // Acceso público: solo para quien no tiene sesión.
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AccesoController::class, 'formulario'])->name('login');
     Route::post('/login', [AccesoController::class, 'autenticar'])->name('login.autenticar');
+
+    // CU-02: registro propio del paciente. Limitado a 10 solicitudes por minuto por IP.
+    Route::get('/registro', [RegistroController::class, 'formulario'])->name('registro.formulario');
+    Route::post('/registro', [RegistroController::class, 'guardar'])
+        ->middleware('throttle:10,1')->name('registro.guardar');
 });
 
 // Páginas internas: exigen sesión válida (RF01) y una cuenta vigente.
