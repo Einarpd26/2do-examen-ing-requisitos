@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ListadoConPestanas;
 use App\Http\Requests\MedicoRequest;
 use App\Models\Especialidad;
 use App\Models\Medico;
@@ -15,18 +16,17 @@ use Illuminate\View\View;
  */
 class MedicoController extends Controller
 {
-    /** Pestañas del listado: por defecto solo los activos; los dados de baja siguen a un clic. */
-    private const VISTAS = ['activas' => 'Activos', 'inactivas' => 'Inactivos', 'todas' => 'Todos'];
+    use ListadoConPestanas;
+
+    protected function etiquetasDePestanas(): array
+    {
+        return ['activas' => 'Activos', 'inactivas' => 'Inactivos', 'todas' => 'Todos'];
+    }
 
     public function index(Request $request): View
     {
         $texto = trim((string) $request->query('q'));
-
-        // Sin texto de búsqueda se ven los activos. Con texto se busca en todos, para poder
-        // encontrar también a un médico dado de baja (por ejemplo, para reactivarlo).
-        $vista = $request->has('estado')
-            ? $this->vista($request->query('estado'))
-            : ($texto !== '' ? 'todas' : 'activas');
+        $vista = $this->vistaDelListado($request, $texto);
 
         $busqueda = Medico::query()
             ->join('personas', 'personas.id', '=', 'medicos.persona_id')
@@ -45,24 +45,11 @@ class MedicoController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $pestanas = [];
-        foreach (self::VISTAS as $clave => $etiqueta) {
-            $pestanas[$clave] = [
-                'etiqueta' => $etiqueta,
-                'cuenta' => $cuentas[$clave],
-                // Con búsqueda el estado va siempre en la URL, porque sin él se buscaría en todos.
-                'url' => route('medicos.index', array_filter([
-                    'q' => $texto,
-                    'estado' => ($clave !== 'activas' || $texto !== '') ? $clave : null,
-                ])),
-            ];
-        }
-
         return view('medicos.index', [
             'medicos' => $medicos,
             'texto' => $texto,
             'vista' => $vista,
-            'pestanas' => $pestanas,
+            'pestanas' => $this->pestanas('medicos.index', $cuentas, $texto),
             'cuentas' => $cuentas,
         ]);
     }
@@ -114,10 +101,7 @@ class MedicoController extends Controller
         $texto = trim((string) $request->input('q'));
 
         return redirect()
-            ->route('medicos.index', array_filter([
-                'q' => $texto,
-                'estado' => ($vista !== 'activas' || $texto !== '') ? $vista : null,
-            ]))
+            ->route('medicos.index', $this->parametrosDelListado($vista, $texto))
             ->with('exito', $activo
                 ? 'Médico reactivado. Ya aparece en la pestaña Activos.'
                 : 'Médico desactivado: no recibirá citas nuevas y su historial se conserva. Puede verlo en la pestaña Inactivos.');
@@ -155,11 +139,5 @@ class MedicoController extends Controller
             ->orWhereIn('id', $asignadas)
             ->orderBy('nombre')
             ->get();
-    }
-
-    /** Una pestaña desconocida cae en la de activos. */
-    private function vista(mixed $valor): string
-    {
-        return array_key_exists((string) $valor, self::VISTAS) ? (string) $valor : 'activas';
     }
 }
