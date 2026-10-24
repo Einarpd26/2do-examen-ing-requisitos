@@ -2227,18 +2227,157 @@ Reglas aplicadas:
 
 ### 8.1 Plan de pruebas
 
+**Objetivo.** Comprobar que el sistema cumple los casos de uso y las reglas de negocio del Ciclo #1 (CU-01 a CU-08 y CU-19), que rechaza los datos y los accesos inválidos, y que la base de datos hace cumplir sus restricciones aunque la aplicación falle.
+
+**Alcance.** Ciclo #1: acceso y roles, usuarios, pacientes, médicos, especialidades, horarios y perfil del paciente. Las pruebas 3 a 8 del enunciado dependen de las citas (CU-09 en adelante) y se ejecutan en el Ciclo #2.
+
+**Estrategia.** Cada caso de uso se prueba en tres frentes: automatizado, contra la base de datos real y de forma manual.
+
+| Nivel | Qué verifica | Herramienta | Dónde está |
+|---|---|---|---|
+| Unitarias | Reglas aisladas sin base de datos: códigos con formato (`PAC-000001`), contraseñas temporales y paleta de colores. | PHPUnit | `tests/Unit/` |
+| Funcionales (HTTP y base de datos) | Cada ruta del sistema con una solicitud real: permisos, validaciones, reglas de negocio, mensajes en español y registro en la bitácora. | PHPUnit con `RefreshDatabase` sobre la base `clinica_test` (PostgreSQL) | `tests/Feature/` |
+| Restricciones de la base | Que PostgreSQL rechace los datos inválidos aunque se salte la aplicación: claves únicas de médicos y especialidades y bloques de horario superpuestos. | PHPUnit, pruebas «la base rechaza…» | `tests/Feature/` |
+| Manuales | El recorrido de cada caso de uso en el navegador, por rol, incluida la vista en un teléfono. | Lista de verificación por caso de uso | Sección 8.3 |
+
+Las pruebas funcionales usan la base de datos real y no una simulada, porque varias reglas viven en PostgreSQL (restricciones `UNIQUE`, `CHECK` y `EXCLUDE`), y una base simulada no las habría ejercitado.
+
+**Tipos de caso por cada caso de uso.** Para cada uno se escriben, cuando aplican, pruebas de:
+
+1. **Permisos:** solo el rol autorizado entra; los demás reciben el error 403 y quien no inició sesión es enviado al login.
+2. **Flujo principal:** la operación se completa y el resultado queda guardado.
+3. **Validación:** los datos inválidos se rechazan en el servidor con un mensaje en español y no se guarda nada.
+4. **Reglas de negocio:** duplicados, bajas lógicas, superposiciones y demás reglas del modelo de negocio (RN).
+5. **Concurrencia:** una solicitud simultánea que choca con la base se informa como regla de negocio, sin error técnico.
+6. **Auditoría:** la acción queda en la bitácora (RNF13).
+
+**Entorno.** PHP 8.5.4, Laravel 13, PHPUnit 12.5.40 y PostgreSQL 16 en un contenedor Docker, con la base `clinica_test` separada de la de desarrollo. Cada prueba parte de una base vacía y con los catálogos cargados.
+
+**Criterio de aprobación.** Un caso se aprueba cuando se obtiene el resultado esperado. El ciclo se da por probado cuando la suite completa pasa sin fallos.
+
+**Cronograma.**
+
+| Ciclo | Pruebas | Estado |
+|---|---|---|
+| #1 | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2) |
+| #2 | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18 | Pendientes |
+
 ### 8.2 Casos de prueba
+
+#### 8.2.1 Pruebas mínimas del enunciado
+
+Los resultados obtenidos salen de la ejecución de la suite del 24/10/2026 (sección 8.3). En cada fila, la prueba automatizada está indicada como `Clase::método`.
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | Registrar un paciente nuevo | El paciente queda guardado | | |
-| 2 | Registrar un paciente con CI duplicado | El sistema rechaza el duplicado | | |
-| 9 | Ingresar a una página interna sin iniciar sesión | El acceso es denegado | | |
-| 10 | Ejecutar una operación con datos inválidos | El servidor valida y rechaza la operación | | |
+| 1 | Registrar un paciente nuevo | El paciente queda guardado | La Recepcionista registra al paciente: se crean la persona (con su nombre completo calculado) y la ficha en estado verificado y activo, y queda un registro `paciente_creado` en la bitácora. Con el registro propio se crea además la cuenta y la ficha queda pendiente de verificación. Pruebas `PacienteTest::registra_un_paciente_verificado_con_su_persona_y_su_ficha` y `RegistroTest::crea_la_persona_la_ficha_pendiente_y_la_cuenta_de_paciente`. | Aprobada |
+| 2 | Registrar un paciente con CI duplicado | El sistema rechaza el duplicado | El sistema devuelve un error en el campo CI y no crea otra ficha: la cantidad de pacientes sigue en uno. En el registro propio manda además al paciente a la recepción. Pruebas `PacienteTest::rechaza_un_ci_que_ya_tiene_ficha_de_paciente` y `RegistroTest::rechaza_un_ci_que_ya_esta_registrado_y_manda_a_recepcion`. | Aprobada |
+| 3 | Programar una cita en horario disponible | La cita queda registrada | Depende de CU-09 | Ciclo #2 |
+| 4 | Programar otra cita superpuesta para el mismo médico | El sistema impide el conflicto | Depende de CU-09 | Ciclo #2 |
+| 5 | Intentar reservar fuera del horario médico | El sistema rechaza la cita | Depende de CU-09 | Ciclo #2 |
+| 6 | Cancelar una cita | Cambia a estado cancelado y conserva el historial | Depende de CU-11 | Ciclo #2 |
+| 7 | Consultar el historial de un paciente | Aparecen sus citas registradas | Depende de CU-14 | Ciclo #2 |
+| 8 | Buscar las citas de un médico por fecha | Se muestran los resultados correctos | Depende de CU-13 | Ciclo #2 |
+| 9 | Ingresar a una página interna sin iniciar sesión | El acceso es denegado | El sistema redirige al formulario de inicio de sesión sin mostrar la página. Se comprueba en el inicio y en cada módulo de gestión (usuarios, pacientes, médicos, especialidades, horarios y perfil). Prueba `LoginTest::una_pagina_interna_sin_sesion_redirige_al_login` y `sin_sesion_se_redirige_al_login` de cada módulo. | Aprobada |
+| 10 | Intentar ejecutar una operación con datos inválidos | El servidor valida y rechaza la operación | El servidor rechaza cada dato inválido con un error en el campo correspondiente y no guarda nada. En el alta de pacientes se prueban doce casos: sin nombre, sin apellido, sin CI, CI con letras, CI muy corto, teléfono inválido, teléfono de emergencia inválido, tipo de sangre inválido, sexo inválido, fecha de nacimiento futura, correo mal escrito y correo de otra persona. Prueba `PacienteTest::valida_los_datos_del_formulario`, con pruebas equivalentes en cada módulo. | Aprobada |
 
-<!-- Pruebas 3–8 se agregan en el Ciclo #2 (dependen de citas). -->
+#### 8.2.2 Casos por caso de uso
+
+| N.º | CU | Prueba | Resultado esperado | Prueba automatizada | Estado |
+|---|---|---|---|---|---|
+| CP-01 | CU-01 | El personal entra con su correo y el paciente con su CI | Entra al inicio; el correo no distingue mayúsculas | `LoginTest::el_personal_entra_con_su_correo`, `el_paciente_entra_con_su_ci` | Aprobada |
+| CP-02 | CU-01 | El CI se escribe con espacios y en minúsculas | Entra igual que al registrarse | `LoginTest::el_ci_se_acepta_con_espacios_como_al_registrarse` | Aprobada |
+| CP-03 | CU-01 | Contraseña incorrecta y cuenta inexistente | Mismo mensaje en ambos casos, sin revelar si la cuenta existe | `LoginTest::contrasena_incorrecta_y_cuenta_inexistente_dan_el_mismo_mensaje` | Aprobada |
+| CP-04 | CU-01 | Cinco fallos seguidos | La cuenta se bloquea 15 minutos, aun con la contraseña correcta | `LoginTest::el_quinto_fallo_bloquea_la_cuenta_15_minutos`, `una_cuenta_bloqueada_no_entra_ni_con_la_clave_correcta` | Aprobada |
+| CP-05 | CU-01 | Intentos simultáneos con el contador desactualizado | El bloqueo se aplica con el valor real de la base | `LoginTest::el_conteo_de_intentos_usa_el_valor_real_de_la_base` | Aprobada |
+| CP-06 | CU-01 | Más de 10 solicitudes de login en un minuto | La solicitud 11 recibe el error 429 con el aviso en español | `LoginTest::el_login_limita_las_solicitudes_por_minuto` | Aprobada |
+| CP-07 | CU-01 | Contraseña temporal vigente y vencida | La vigente entra y obliga a cambiarla; la vencida no entra | `LoginTest::una_contrasena_temporal_vigente_entra_pero_obliga_a_cambiarla`, `una_contrasena_temporal_vencida_no_entra` | Aprobada |
+| CP-08 | CU-01 | Cuenta desactivada con la sesión abierta | La sesión se cierra en la siguiente solicitud | `LoginTest::una_cuenta_desactivada_con_la_sesion_abierta_se_cierra_en_la_siguiente_solicitud` | Aprobada |
+| CP-09 | CU-01 | Cada rol abre el menú | Cada uno ve solo las opciones que su rol permite | `LoginTest::el_menu_muestra_solo_lo_que_el_rol_permite` | Aprobada |
+| CP-10 | CU-01 / CU-08 | Cambiar la contraseña | Se rechaza la actual incorrecta, la débil, la confirmación distinta y la repetida; con una válida se limpian las dos columnas de la temporal | `CambioPasswordTest` (9 pruebas) | Aprobada |
+| CP-11 | CU-02 | Registro propio del paciente | Se crean la persona, la ficha pendiente y la cuenta; puede entrar con su CI | `RegistroTest::crea_la_persona_la_ficha_pendiente_y_la_cuenta_de_paciente`, `el_paciente_recien_registrado_puede_entrar_con_su_ci_aunque_su_ficha_siga_pendiente` | Aprobada |
+| CP-12 | CU-02 | CI de un médico o del personal, o correo repetido | Se rechaza el registro | `RegistroTest::rechaza_un_ci_que_pertenece_a_un_medico_o_al_personal`, `rechaza_un_correo_ya_registrado_sin_distinguir_mayusculas` | Aprobada |
+| CP-13 | CU-02 | Fallo a mitad del registro | No quedan filas a medias y la contraseña no vuelve al formulario | `RegistroTest::no_deja_filas_a_medias_si_algo_falla`, `si_el_registro_falla_la_contraseña_no_vuelve_al_formulario` | Aprobada |
+| CP-14 | CU-02 | Más de 10 registros por minuto | Se limita la solicitud | `RegistroTest::el_registro_publico_limita_las_solicitudes_por_minuto` | Aprobada |
+| CP-15 | CU-03 | Registrar usuarios del personal | Contraseña temporal de 72 horas, mostrada una sola vez; el empleado debe cambiarla al entrar | `UsuarioTest::crea_una_cuenta_de_recepcionista_con_contrasena_temporal_de_72_horas`, `la_contrasena_temporal_se_muestra_una_sola_vez` | Aprobada |
+| CP-16 | CU-03 | Cuenta con rol Médico | Se vincula a un médico registrado y activo, sin cuenta previa | `UsuarioTest::vincula_la_cuenta_a_un_medico_registrado_sin_pedir_datos_personales`, `rechaza_vincular_a_un_medico_que_ya_tiene_cuenta` | Aprobada |
+| CP-17 | CU-03 | CI o correo de otra persona | Se rechaza; si el CI es de una persona sin cuenta, se reutiliza sin cambiar sus datos | `UsuarioTest::rechaza_un_ci_de_una_persona_que_ya_tiene_cuenta`, `reutiliza_la_persona_que_existe_sin_cuenta_y_no_toca_sus_datos` | Aprobada |
+| CP-18 | CU-03 | Protecciones de la cuenta propia y del último Administrador | No se desactiva ni cambia el rol de la propia cuenta; siempre queda un Administrador activo | `UsuarioTest::nadie_puede_desactivar_su_propia_cuenta`, `nadie_puede_cambiarse_su_propio_rol`, `el_sistema_conserva_siempre_un_administrador_activo` | Aprobada |
+| CP-19 | CU-03 | Las cuentas de pacientes no se alcanzan desde Usuarios | Error 404 al editar, desactivar o renovar | `UsuarioTest::las_cuentas_de_pacientes_no_se_alcanzan_desde_aqui` | Aprobada |
+| CP-20 | CU-04 | Alta, búsqueda y edición de pacientes | Se guarda con su código `PAC-`; se busca por CI, nombre, apellido o código | `PacienteTest::registra_un_paciente_verificado_con_su_persona_y_su_ficha`, `busca_por_ci_nombre_apellido_y_codigo`, `modifica_los_datos_personales_y_la_ficha` | Aprobada |
+| CP-21 | CU-04 | Desactivar al paciente | No se elimina; su cuenta se desactiva con él y se reactiva si lo reactivan | `PacienteTest::desactivar_y_reactivar_siguen_a_la_cuenta_del_paciente` | Aprobada |
+| CP-22 | CU-04 | Crear el acceso del paciente | Contraseña temporal de 72 horas, mostrada una sola vez | `AccesoPacienteTest::crea_la_cuenta_con_una_contraseña_temporal_de_72_horas`, `la_contraseña_temporal_se_muestra_una_sola_vez` | Aprobada |
+| CP-23 | CU-04 | Verificar una ficha pendiente | Pasa a verificada; no se verifica dos veces; puede renovar la contraseña en el mismo acto | `AccesoPacienteTest::verifica_una_ficha_pendiente`, `no_se_verifica_dos_veces`, `verificar_puede_renovar_la_contraseña_en_el_mismo_acto` | Aprobada |
+| CP-24 | CU-19 | Renovar la contraseña temporal | La anterior deja de servir y se levanta el bloqueo; exige indicar cómo se verificó la identidad y lo guarda en la bitácora | `AccesoPacienteTest::renovar_invalida_la_contraseña_anterior_y_levanta_el_bloqueo`, `renovar_exige_indicar_como_se_verifico_la_identidad`, `la_bitacora_guarda_como_se_verifico_la_identidad`; `UsuarioTest::renueva_la_contrasena_invalida_la_anterior_y_levanta_el_bloqueo` | Aprobada |
+| CP-25 | CU-19 | Renovar la contraseña del Administrador por consola | Genera una temporal nueva y deja constancia en la bitácora; no sirve para otros roles ni cuentas desactivadas | `RenovarPasswordAdministradorTest` (8 pruebas) | Aprobada |
+| CP-26 | CU-05 | Registrar un médico | Se crea con su persona y especialidades y su código `MED-`; rechaza CI o registro profesional repetidos | `MedicoTest::registra_el_medico_con_su_persona_y_sus_especialidades`, `rechaza_un_ci_que_ya_tiene_ficha_de_medico`, `rechaza_un_registro_profesional_repetido_aunque_cambien_mayusculas_y_espacios` | Aprobada |
+| CP-27 | CU-05 | Desactivar y reactivar un médico | No se elimina; al desactivarlo su cuenta se desactiva y al reactivarlo no se reactiva sola | `MedicoTest::desactivar_baja_la_cuenta_de_medico_pero_reactivar_no_la_reactiva`, `reactivar_al_medico_no_reactiva_una_cuenta_desactivada_a_proposito` | Aprobada |
+| CP-28 | CU-05 | Quitar una especialidad con citas | Se rechaza y no cambia nada | `MedicoTest::no_se_puede_quitar_una_especialidad_con_citas_y_no_cambia_nada` | Aprobada |
+| CP-29 | CU-05 | Búsqueda y pestañas | Busca por nombre, especialidad, CI, registro y código; la búsqueda incluye a los inactivos | `MedicoTest::busca_por_nombre_apellido_especialidad_ci_registro_y_codigo`, `sin_busqueda_se_ven_los_activos_y_con_busqueda_tambien_los_inactivos` | Aprobada |
+| CP-30 | CU-06 | Registrar una especialidad | Se guarda y queda en la bitácora; la duración válida va de 5 a 240 minutos | `EspecialidadTest::registra_una_especialidad_y_queda_en_la_bitacora`, `acepta_los_limites_de_la_duracion`, `valida_los_datos_del_formulario` | Aprobada |
+| CP-31 | CU-06 | Nombre repetido con otras mayúsculas o espacios | Se rechaza | `EspecialidadTest::rechaza_un_nombre_repetido_sin_distinguir_mayusculas_ni_espacios`, `la_base_rechaza_un_nombre_repetido_aunque_se_salte_la_aplicacion` | Aprobada |
+| CP-32 | CU-06 | Desactivar una especialidad | Conserva sus médicos y citas; cambiar la duración no altera las citas ya agendadas | `EspecialidadTest::desactivar_una_especialidad_conserva_sus_medicos_y_citas`, `cambiar_la_duracion_no_altera_las_citas_ya_agendadas` | Aprobada |
+| CP-33 | CU-07 | Registrar un bloque horario | Se guarda con la única sucursal y queda en la bitácora | `HorarioTest::registra_un_bloque_con_la_unica_sucursal_y_queda_en_la_bitacora` | Aprobada |
+| CP-34 | CU-07 | Bloques superpuestos y pegados | El superpuesto se rechaza; el pegado se acepta; la base lo hace cumplir aunque se salte la aplicación | `HorarioTest::rechaza_un_bloque_que_se_superpone_con_otro_del_mismo_medico_y_dia`, `permite_bloques_pegados_el_mismo_dia_y_el_mismo_horario_otro_dia_u_otro_medico`, `la_base_rechaza_bloques_superpuestos_aunque_se_salte_la_aplicacion` | Aprobada |
+| CP-35 | CU-07 | Cambiar un horario con una cita agendada | Se rechaza si deja la cita fuera de la atención; se permite si la cita sigue dentro, está cancelada o pasó | `HorarioTest::no_acorta_un_bloque_si_deja_una_cita_agendada_fuera_de_la_atencion`, `si_la_cita_sigue_dentro_del_bloque_si_se_puede_acortar_o_mover_el_consultorio` | Aprobada |
+| CP-36 | CU-07 | Horarios de un médico desactivado | No se registran, modifican ni eliminan | `HorarioTest::no_registra_horarios_a_un_medico_desactivado`, `no_modifica_el_horario_de_un_medico_desactivado` | Aprobada |
+| CP-37 | CU-08 | Ver el perfil con la ficha verificada y pendiente | Verificada: muestra la información médica y el contacto de emergencia. Pendiente: avisa y los oculta | `PerfilTest::muestra_los_datos_con_la_informacion_medica_si_la_ficha_esta_verificada`, `con_la_ficha_pendiente_oculta_la_informacion_medica` | Aprobada |
+| CP-38 | CU-08 | Modificar el teléfono | Se guarda y queda en la bitácora; el teléfono inválido o vacío se rechaza | `PerfilTest::actualiza_el_telefono_y_queda_en_la_bitacora`, `valida_el_telefono_en_el_servidor` | Aprobada |
+| CP-39 | CU-08 | Intentar cambiar otros datos | Solo el teléfono es editable; los demás datos no cambian aunque se envíen | `PerfilTest::solo_el_telefono_es_editable_y_enlaza_al_cambio_de_contrasena`, `no_acepta_modificar_otros_datos_por_esta_via` | Aprobada |
+| CP-40 | Todos | Un rol sin permiso abre una pantalla de otro rol | Error 403 | `solo_el_administrador_gestiona_…` y `solo_la_recepcionista_gestiona_pacientes` en cada módulo; `PerfilTest::solo_el_paciente_tiene_perfil` | Aprobada |
 
 ### 8.3 Evidencias
+
+#### 8.3.1 Resultado de la suite automatizada
+
+Comando: `php artisan test`, ejecutado el 24/10/2026 en el repositorio del proyecto, con PHP 8.5.4 y PHPUnit 12.5.40.
+
+| Resultado | Valor |
+|---|---|
+| Pruebas ejecutadas | 288 |
+| Pruebas aprobadas | 288 |
+| Pruebas fallidas | 0 |
+| Aserciones | 2365 |
+| Duración | 17 segundos |
+
+La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1, 2, 9 y 10 del enunciado:
+
+```text
+Paciente (Tests\Feature\Pacientes\Paciente)
+ Registra un paciente verificado con su persona y su ficha
+ Rechaza un ci que ya tiene ficha de paciente
+ Valida los datos del formulario
+
+Login (Tests\Feature\Acceso\Login)
+ Una pagina interna sin sesion redirige al login
+
+Registro (Tests\Feature\Acceso\Registro)
+ Crea la persona la ficha pendiente y la cuenta de paciente
+```
+
+#### 8.3.2 Las pruebas detectan los defectos
+
+Para comprobar que una prueba sirve, se quita a propósito el arreglo que debe proteger y se verifica que falle. Con el corrector de la sección 8.2.2 (CP-05):
+
+| Cambio | Resultado de `LoginTest::el_conteo_de_intentos_usa_el_valor_real_de_la_base` |
+|---|---|
+| Sin la relectura del contador (el defecto original) | 0 aprobadas, 1 fallida |
+| Con la relectura del contador (el código actual) | Aprobada |
+
+#### 8.3.3 Hallazgos de la revisión de código y su corrección
+
+Una revisión del código del Ciclo #1 encontró cuatro problemas reales, que se corrigieron con su prueba, y los demás quedaron como limitaciones (sección Conclusión).
+
+| Problema | Corrección | Prueba |
+|---|---|---|
+| El inicio de sesión no limitaba las solicitudes por IP. | Límite de 10 por minuto y página 429 en español. | CP-06 |
+| El bloqueo por intentos fallidos no se activaba con intentos simultáneos. | Se vuelve a leer el contador de la base antes de compararlo. | CP-05 |
+| Reactivar al médico reactivaba su cuenta, aunque el Administrador la hubiera desactivado a propósito. | La cuenta ya no se reactiva sola; la reactiva el Administrador en CU-03. | CP-27 |
+| El CI con espacios entraba al registro pero no al login. | El login quita los espacios, igual que el registro. | CP-02 |
+
+#### 8.3.4 Pruebas manuales
+
+<!-- Completar: resultado de la lista de verificación por caso de uso (CU-06, 05, 07, 03, 04, 02, 08, 01, 19 y transversal) y capturas de pantalla. -->
 
 ---
 
