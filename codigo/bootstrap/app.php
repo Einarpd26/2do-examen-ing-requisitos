@@ -12,7 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'cuenta.vigente' => \App\Http\Middleware\VerificarCuenta::class,
+        ]);
+
+        // Quien ya inició sesión no vuelve al formulario de acceso.
+        $middleware->redirectUsersTo(fn () => route('inicio'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

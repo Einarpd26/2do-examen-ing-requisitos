@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Usuario;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Cada permiso del catálogo (por ejemplo pacientes:gestionar) funciona como una
+        // habilidad: Gate::allows(), @can() y el middleware can: lo consultan en el rol de la cuenta.
+        Gate::before(fn (?Usuario $cuenta, string $habilidad) => $cuenta?->tienePermiso($habilidad) ? true : null);
     }
 }
