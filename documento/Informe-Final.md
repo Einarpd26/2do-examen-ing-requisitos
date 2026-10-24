@@ -2392,7 +2392,7 @@ Una revisión del código del Ciclo #1 encontró cuatro problemas reales, que se
 
 #### 8.3.5 Capturas de pantalla
 
-Capturas del sistema en funcionamiento, tomadas el 24/10/2026 con la sesión del Administrador sobre el servidor de desarrollo (`http://127.0.0.1:8000`).
+Capturas del sistema en funcionamiento, tomadas el 24/10/2026 con las sesiones del Administrador, la Recepcionista y el Paciente sobre el servidor de desarrollo (`http://127.0.0.1:8000`).
 
 **Figura 1.** Inicio del Administrador, con el menú y los accesos de su rol (CU-01).
 
@@ -2426,9 +2426,51 @@ Capturas del sistema en funcionamiento, tomadas el 24/10/2026 con la sesión del
 
 ![Lista de usuarios en un teléfono](img/capturas/08-usuarios-telefono-390px.jpg)
 
-**Adaptación a pantallas angostas.** Se midió el ancho de cada pantalla del Administrador con 390 px de ancho y ninguna desborda horizontalmente: inicio, usuarios (lista, alta y edición), médicos (lista, alta y edición), especialidades (lista y alta), horarios (índice y semana de un médico) y cambio de contraseña. En la medición se encontró y corrigió un defecto: el texto oculto de las cabeceras de las tablas ensanchaba la página en las listas de usuarios, médicos y especialidades. Las pantallas de la Recepcionista y del Paciente no se midieron.
+**Figura 9.** Pantalla de inicio de sesión, con un solo campo para el CI de los pacientes o el correo del personal (CU-01).
 
-<!-- Pendiente: capturas de los roles Recepcionista (pacientes) y Paciente (registro, perfil). -->
+![Inicio de sesión](img/capturas/09-login.jpg)
+
+**Figura 10.** Formulario de registro propio del paciente (CU-02).
+
+![Registro propio del paciente](img/capturas/10-registro-paciente.jpg)
+
+**Figura 11.** Inicio de la Recepcionista, que solo ve las opciones de su rol.
+
+![Inicio de la Recepcionista](img/capturas/11-inicio-recepcionista.jpg)
+
+**Figura 12.** Lista de pacientes, con el estado de la ficha (verificada o pendiente) y del acceso (CU-04).
+
+![Lista de pacientes](img/capturas/12-pacientes-lista.jpg)
+
+**Figura 13.** Formulario para registrar un paciente: datos personales, información médica y contacto de emergencia (CU-04).
+
+![Registrar paciente](img/capturas/13-pacientes-registrar.jpg)
+
+**Figura 14.** Ficha de un paciente con la ficha verificada, vista por la Recepcionista (CU-04).
+
+![Ficha verificada](img/capturas/14-paciente-ficha-verificada.jpg)
+
+**Figura 15.** Ficha de un paciente que se registró solo: pendiente de verificación, con el aviso para comparar el documento de identidad (CU-04).
+
+![Ficha pendiente de verificación](img/capturas/15-paciente-ficha-pendiente.jpg)
+
+**Figura 16.** Inicio del Paciente, que solo ve su perfil.
+
+![Inicio del Paciente](img/capturas/16-inicio-paciente.jpg)
+
+**Figura 17.** Perfil de un paciente con la ficha verificada: información médica y contacto de emergencia en solo lectura, y teléfono editable (CU-08).
+
+![Perfil con la ficha verificada](img/capturas/17-perfil-ficha-verificada.jpg)
+
+**Figura 18.** Perfil de un paciente con la ficha pendiente: el sistema avisa y oculta la información médica y el contacto de emergencia (CU-08).
+
+![Perfil con la ficha pendiente](img/capturas/18-perfil-ficha-pendiente.jpg)
+
+**Figura 19.** Perfil del paciente con un ancho de teléfono de 390 px (CU-08).
+
+![Perfil en un teléfono](img/capturas/19-perfil-telefono-390px.jpg)
+
+**Adaptación a pantallas angostas.** Se midió el ancho de las pantallas con 390 px de ancho y ninguna desborda horizontalmente. Con la sesión del Administrador: inicio, usuarios (lista, alta y edición), médicos (lista, alta y edición), especialidades (lista y alta), horarios (índice y semana de un médico) y cambio de contraseña. Con la sesión del Paciente: inicio, perfil y cambio de contraseña. El login y el registro, que son públicos, tampoco desbordan. En la medición se encontró y corrigió un defecto: el texto oculto de las cabeceras de las tablas ensanchaba la página en las listas de usuarios, médicos y especialidades. Las pantallas de la Recepcionista no se midieron en este ancho.
 
 ---
 
