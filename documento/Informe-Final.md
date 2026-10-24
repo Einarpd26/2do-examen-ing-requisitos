@@ -449,9 +449,15 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 5. El Administrador puede activar o desactivar la cuenta.
 6. Si el titular olvidó su contraseña o la temporal venció, el Administrador puede renovarla en cualquier momento: el sistema genera otra con nuevas 72 horas, la muestra una sola vez e invalida la anterior.
 
+7. El Administrador puede modificar los datos personales de un usuario y cambiar su rol entre Administrador y Recepcionista. Los datos de una cuenta de Médico se editan en CU-05.
+
 **Flujos alternos**
-- 3a. CI o correo repetido: se rechaza el cambio.
-- 3b. El médico seleccionado ya tiene una cuenta vinculada: se rechaza el cambio.
+- 3a. CI o correo repetido: se rechaza el cambio. Si el CI pertenece a una persona sin cuenta (por ejemplo, un paciente), se reutiliza esa persona sin modificar sus datos personales.
+- 3b. El médico seleccionado ya tiene una cuenta vinculada o está desactivado: se rechaza el cambio.
+- 5a. El Administrador intenta desactivar su propia cuenta, cambiarse el rol o renovarse la contraseña: se rechaza (para su contraseña usa «Cambiar contraseña»).
+- 5b. El cambio dejaría al sistema sin un Administrador activo: se rechaza.
+- 5c. Se reactiva la cuenta de un médico cuya ficha sigue desactivada: se rechaza hasta reactivarlo en CU-05.
+- 6a. Antes de renovar, el Administrador indica cómo verificó la identidad del titular (documento en persona o celular registrado); queda en la bitácora. No se renueva la contraseña de una cuenta desactivada.
 
 #### CU-04 Gestionar pacientes
 
