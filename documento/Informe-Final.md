@@ -251,10 +251,10 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 **Decisiones de alcance** (tomadas para este proyecto, donde el enunciado no es explícito):
 
 - **Identificador de acceso:** el Paciente inicia sesión con su **CI**; el personal (Administrador, Recepcionista, Médico) con su correo. El correo del Paciente es opcional.
-- **Modelo de identidad:** una entidad `Persona` guarda los datos comunes (CI, nombres, apellidos, fecha de nacimiento, sexo, teléfono, correo, dirección). De ella cuelgan `Paciente` (ficha clínica y verificación), `Medico` (registro profesional) y `Usuario` (credenciales y rol). Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico); como paciente la atiende la Recepcionista. El personal administrativo es una persona con cuenta y sin ficha. El CI es único en `Persona`.
+- **Modelo de identidad:** una entidad `Persona` guarda los datos comunes (CI, primer nombre, segundo nombre, apellido paterno, apellido materno, fecha de nacimiento, sexo, teléfono, correo, dirección), más un nombre completo que la base calcula a partir de las partes. De ella cuelgan `Paciente` (ficha clínica y verificación), `Medico` (registro profesional) y `Usuario` (credenciales y rol). Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico); como paciente la atiende la Recepcionista. El personal administrativo es una persona con cuenta y sin ficha. El CI es único en `Persona`.
 - **Duración de la cita:** es un parámetro de la **especialidad** (en minutos), no del horario ni del médico. La cita hereda la duración de la especialidad elegida al reservar. Como la agenda de un médico puede mezclar duraciones, el anti-duplicados compara **intervalos**, no solo la hora de inicio (RF07, RNF17).
 - **Códigos:** el código del paciente (`PAC-000001`), del médico (`MED-000001`) y de la cita (`CM-000001`) lo genera el sistema a partir del `id`, con 6 dígitos y sin truncarse pasado el 999999. Nadie lo escribe a mano.
-- **Registro propio del Paciente:** nombres y apellidos, CI, celular y contraseña obligatorios; correo opcional. Se crea la cuenta y la ficha del paciente en estado **pendiente de verificación**. Si el CI ya tiene ficha, el registro propio se rechaza y se indica pedir el acceso en recepción.
+- **Registro propio del Paciente:** primer nombre, apellido paterno, CI, celular y contraseña obligatorios; segundo nombre, apellido materno y correo opcionales. Se crea la cuenta y la ficha del paciente en estado **pendiente de verificación**. Si el CI ya tiene ficha, el registro propio se rechaza y se indica pedir el acceso en recepción.
 - **Alta de cuenta por la Recepcionista:** para reducir la fricción, la Recepcionista también puede crear la cuenta del Paciente. El sistema genera una **contraseña temporal** aleatoria con vigencia de **72 horas**, la muestra **una sola vez** en pantalla (botones Copiar e Imprimir) y la Recepcionista se la entrega impresa o por mensaje de texto o WhatsApp. El sistema no envía correos ni mensajes. En su primer ingreso el Paciente debe cambiarla; si venció, no puede entrar hasta que se renueve.
 - **Renovación y contraseña olvidada:** la Recepcionista o el Administrador pueden generar una nueva contraseña temporal en cualquier momento (porque venció o porque el titular olvidó la suya): se genera otra con nuevas 72 horas y la anterior deja de servir. El titular la solicita a recepción; la pantalla de inicio de sesión muestra el celular de la clínica para ese fin. Para evitar suplantaciones, la contraseña nueva se envía solo al celular registrado en la ficha del paciente (mensaje o WhatsApp) o se entrega en persona con documento, nunca a un número nuevo que indique quien llama.
 - **Verificación de la ficha:** una ficha de registro propio queda pendiente hasta que la Recepcionista compare el documento en persona y la marque como verificada; en ese acto puede renovar la contraseña, para sacar de la cuenta a quien se haya registrado con un CI ajeno. Mientras está pendiente, el Paciente puede iniciar sesión, ver su perfil básico y reservar citas, pero **no ve su información médica ni sus notas clínicas**. Una ficha creada por la Recepcionista queda verificada de inmediato.
@@ -415,7 +415,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 | **Postcondición** | Queda creada la cuenta con rol Paciente y su ficha en estado pendiente de verificación. La Recepcionista la verifica con el documento (CU-04). |
 
 **Flujo principal**
-1. El visitante completa el formulario (nombres y apellidos, CI, celular, contraseña; correo opcional).
+1. El visitante completa el formulario (primer nombre, apellido paterno, CI, celular, contraseña; segundo nombre, apellido materno y correo opcionales).
 2. El sistema valida los datos en cliente y servidor (incluido el formato del celular).
 3. El sistema verifica que el CI no esté registrado como persona y que el correo, si se ingresó, no esté registrado.
 4. El sistema guarda la contraseña con `password_hash()` y crea la ficha del paciente en estado pendiente de verificación junto con su cuenta.
@@ -437,7 +437,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 
 **Flujo principal**
 1. El Administrador abre la lista de usuarios del personal (las cuentas de pacientes se gestionan en CU-02 y CU-04).
-2. Elige crear o modificar un usuario e ingresa los datos de la persona (CI, nombres, apellidos, teléfono, correo) y el rol. Si el rol es Médico, selecciona el médico (CU-05) al que se vincula la cuenta.
+2. Elige crear o modificar un usuario e ingresa los datos de la persona (CI, primer nombre, segundo nombre opcional, apellido paterno, apellido materno opcional, teléfono, correo) y el rol. Si el rol es Médico, selecciona el médico (CU-05) al que se vincula la cuenta.
 3. El sistema valida los datos y que el CI y el correo sean únicos.
 4. El sistema guarda el cambio. Al crear un usuario, genera una contraseña temporal aleatoria con vigencia de 72 horas y la muestra una sola vez, con botones Copiar e Imprimir; el Administrador se la entrega al empleado, quien debe cambiarla en su primer ingreso.
 5. El Administrador puede activar o desactivar la cuenta.
@@ -458,7 +458,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 
 **Flujo principal**
 1. La Recepcionista busca por CI, nombre o apellido, o abre el formulario de alta.
-2. Registra o modifica los datos personales (código, CI, nombres, apellidos, fecha de nacimiento, sexo, teléfono, correo, dirección), la información médica (tipo de sangre, alergias, enfermedades crónicas, medicamentos, antecedentes relevantes) y el contacto de emergencia (nombre, parentesco, teléfono).
+2. Registra o modifica los datos personales (código, CI, primer nombre, segundo nombre, apellido paterno, apellido materno, fecha de nacimiento, sexo, teléfono, correo, dirección), la información médica (tipo de sangre, alergias, enfermedades crónicas, medicamentos, antecedentes relevantes) y el contacto de emergencia (nombre, parentesco, teléfono).
 3. El sistema valida los datos. Si el CI ya existe como persona sin ficha de paciente (por ejemplo, un médico), reutiliza esa persona y le crea la ficha.
 4. El sistema guarda los cambios.
 5. Si el paciente no tiene cuenta, la Recepcionista la crea: el sistema genera una contraseña temporal aleatoria con vigencia de 72 horas y la muestra una sola vez, con botones Copiar e Imprimir. La Recepcionista se la entrega al paciente, impresa o por mensaje de texto o WhatsApp. El paciente entra con su CI.
@@ -484,7 +484,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 
 **Flujo principal**
 1. El Administrador abre el listado de médicos (con búsqueda por nombre o especialidad).
-2. Registra o modifica código, registro profesional, nombres, apellidos, teléfono, correo y especialidades.
+2. Registra o modifica los datos de la persona (CI, primer nombre, segundo nombre, apellido paterno, apellido materno, teléfono, correo), el registro profesional y las especialidades. Si el CI ya existe como persona, reutiliza esa persona.
 3. El sistema valida los datos y la unicidad del código y del registro profesional.
 4. El sistema guarda los cambios.
 5. El Administrador activa o desactiva al médico.
@@ -561,8 +561,11 @@ classDiagram
     class Persona {
         <<entity>>
         ci
-        nombres
-        apellidos
+        primerNombre
+        segundoNombre
+        apellidoPaterno
+        apellidoMaterno
+        nombreCompleto
         fechaNacimiento
         sexo
         telefono
@@ -697,7 +700,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    V([Visitante]) -- "1: registrar(nombres, apellidos, CI, celular, contraseña)" --> B[FormRegistro]
+    V([Visitante]) -- "1: registrar(nombre, apellido paterno, CI, celular, contraseña)" --> B[FormRegistro]
     B -- "2: crearCuenta(datos)" --> C[ControlRegistro]
     C -- "3: existeCI(ci)" --> P[Persona]
     C -- "4: crearPersona(datos)" --> P
@@ -868,7 +871,7 @@ sequenceDiagram
     participant D as Base de datos
     participant B as BitacoraService
 
-    V->>F: completa nombres, apellidos, CI, celular, contraseña
+    V->>F: completa primer nombre, apellido paterno, CI, celular, contraseña
     F->>C: POST /registro
     C->>R: validar datos
     R-->>C: datos válidos
@@ -928,8 +931,11 @@ erDiagram
     PERSONAS {
         bigint id PK
         string ci UK
-        string nombres
-        string apellidos
+        string primer_nombre
+        string segundo_nombre
+        string apellido_paterno
+        string apellido_materno
+        string nombre_completo
         date fecha_nacimiento
         string correo UK
     }
@@ -982,6 +988,7 @@ erDiagram
 
 **Decisiones del modelo**
 - Todos los textos son de tipo `TEXT`; los formatos que importan (CI, teléfono, correo, tipo de sangre, códigos) se acotan con `CHECK`.
+- El nombre de la persona es atómico: `primer_nombre` y `apellido_paterno` obligatorios, `segundo_nombre` y `apellido_materno` opcionales (si se escriben, no pueden estar en blanco). `nombre_completo` es una columna generada que une las partes, así que nunca se desincroniza y sirve para buscar e imprimir.
 - Todos los identificadores son `BIGINT`, para no mezclar tipos en las claves foráneas. `SMALLINT` se reserva para valores acotados por naturaleza: `duracion_min`, `dia_semana` e `intentos_fallidos`.
 - `usuarios.rol` es un único rol por cuenta (`ADMINISTRADOR`, `RECEPCIONISTA`, `MEDICO`, `PACIENTE`), validado con una restricción `CHECK`. Una persona puede ser médico y paciente a la vez, pero su cuenta tiene rol Médico; como paciente la atiende la recepción.
 - El estado activo/inactivo vive en cada especialización (`pacientes.estado`, `medicos.estado`), no en `personas`: desactivar a un paciente no debe desactivar a la misma persona como médico (RN11).
@@ -1023,8 +1030,19 @@ CREATE TABLE sucursales (
 CREATE TABLE personas (
     id               BIGSERIAL   PRIMARY KEY,
     ci               TEXT        NOT NULL UNIQUE CHECK (ci ~ '^[0-9]{5,10}(-[0-9A-Z]{1,2})?$'),
-    nombres          TEXT        NOT NULL CHECK (btrim(nombres) <> ''),
-    apellidos        TEXT        NOT NULL CHECK (btrim(apellidos) <> ''),
+    primer_nombre    TEXT        NOT NULL CHECK (btrim(primer_nombre) <> ''),
+    segundo_nombre   TEXT        CHECK (segundo_nombre IS NULL OR btrim(segundo_nombre) <> ''),
+    apellido_paterno TEXT        NOT NULL CHECK (btrim(apellido_paterno) <> ''),
+    apellido_materno TEXT        CHECK (apellido_materno IS NULL OR btrim(apellido_materno) <> ''),
+    -- Nombre completo derivado: siempre coincide con sus partes y se puede buscar e imprimir.
+    nombre_completo  TEXT        GENERATED ALWAYS AS (
+        TRIM(BOTH FROM (
+            primer_nombre
+            || COALESCE(' ' || segundo_nombre, '')
+            || ' ' || apellido_paterno
+            || COALESCE(' ' || apellido_materno, '')
+        ))
+    ) STORED,
     fecha_nacimiento DATE        CHECK (fecha_nacimiento <= CURRENT_DATE),
     sexo             TEXT        CHECK (sexo IN ('M', 'F')),
     telefono         TEXT        CHECK (telefono ~ '^\+?[0-9]{7,15}$'),
