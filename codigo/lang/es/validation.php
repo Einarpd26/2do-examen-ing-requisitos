@@ -74,6 +74,9 @@ return [
         'descripcion' => 'descripción',
         'duracion_min' => 'duración de la cita',
 
+        'rol' => 'rol',
+        'medico_id' => 'médico',
+
         'dia_semana' => 'día',
         'hora_inicio' => 'hora inicial',
         'hora_fin' => 'hora final',

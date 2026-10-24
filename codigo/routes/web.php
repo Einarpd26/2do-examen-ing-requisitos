@@ -9,6 +9,7 @@ use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\RegistroController;
+use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
 // Acceso público: solo para quien no tiene sesión.
@@ -30,6 +31,22 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
 
     Route::get('/cambiar-password', [CambioPasswordController::class, 'formulario'])->name('password.cambiar');
     Route::put('/cambiar-password', [CambioPasswordController::class, 'actualizar'])->name('password.actualizar');
+
+    // CU-03: gestionar usuarios y roles del personal (solo el Administrador, con usuarios:gestionar).
+    Route::prefix('usuarios')->name('usuarios.')->middleware('can:usuarios:gestionar')->group(function () {
+        Route::get('/', [UsuarioController::class, 'index'])->name('index');
+        Route::get('/nuevo', [UsuarioController::class, 'create'])->name('create');
+        Route::post('/', [UsuarioController::class, 'store'])->name('store');
+
+        Route::prefix('{usuario}')->where(['usuario' => '[0-9]+'])->group(function () {
+            Route::get('/editar', [UsuarioController::class, 'edit'])->name('edit');
+            Route::put('/', [UsuarioController::class, 'update'])->name('update');
+            Route::patch('/estado', [UsuarioController::class, 'estado'])->name('estado');
+            Route::post('/renovar', [UsuarioController::class, 'renovar'])
+                ->name('renovar')->middleware('can:accesos:renovar');
+            Route::get('/credenciales', [UsuarioController::class, 'credenciales'])->name('credenciales');
+        });
+    });
 
     // CU-07: gestionar horarios de atención (solo el Administrador, con horarios:gestionar).
     Route::prefix('horarios')->name('horarios.')->middleware('can:horarios:gestionar')->group(function () {
