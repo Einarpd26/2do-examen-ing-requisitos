@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Acceso;
 
+use App\Enums\ResultadoAcceso;
 use App\Models\Bitacora;
+use App\Models\Usuario;
+use App\Services\AutenticacionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreaCuentas;
 use Tests\TestCase;
@@ -55,6 +58,41 @@ class LoginTest extends TestCase
             ->assertRedirect(route('inicio'));
 
         $this->assertAuthenticatedAs($cuenta);
+    }
+
+    public function test_el_ci_se_acepta_con_espacios_como_al_registrarse(): void
+    {
+        $cuenta = $this->crearCuenta('PACIENTE', ['ci' => '7654321-1A']);
+
+        $this->post(route('login.autenticar'), $this->credenciales('  7654321 -1 a '))
+            ->assertRedirect(route('inicio'));
+
+        $this->assertAuthenticatedAs($cuenta);
+    }
+
+    public function test_el_conteo_de_intentos_usa_el_valor_real_de_la_base(): void
+    {
+        $cuenta = $this->crearCuenta('MEDICO');
+        $enMemoria = Usuario::findOrFail($cuenta->id); // este request cargó la cuenta con 0 intentos
+        Usuario::whereKey($cuenta->id)->update(['intentos_fallidos' => 4]); // otro request llegó a 4
+
+        $registrarFallo = new \ReflectionMethod(AutenticacionService::class, 'registrarFallo');
+        $resultado = $registrarFallo->invoke(app(AutenticacionService::class), $enMemoria);
+
+        $this->assertSame(ResultadoAcceso::Bloqueada, $resultado->resultado);
+        $this->assertNotNull($cuenta->fresh()->bloqueado_hasta);
+    }
+
+    public function test_el_login_limita_las_solicitudes_por_minuto(): void
+    {
+        for ($i = 0; $i < 10; $i++) {
+            $this->post(route('login.autenticar'), $this->credenciales('nadie'.$i.'@clinica.test'))
+                ->assertSessionHasErrors('identificador');
+        }
+
+        $this->post(route('login.autenticar'), $this->credenciales('nadie@clinica.test'))
+            ->assertStatus(429)
+            ->assertSee('Demasiadas solicitudes');
     }
 
     public function test_el_paciente_no_entra_con_su_correo(): void

@@ -71,7 +71,8 @@ class AutenticacionService
                 if ($esCorreo) {
                     $persona->whereRaw('lower(correo) = ?', [Str::lower($identificador)]);
                 } else {
-                    $persona->where('ci', Str::upper($identificador));
+                    // Igual que al registrarse: el CI se guarda sin espacios y en mayúsculas.
+                    $persona->where('ci', Str::upper(preg_replace('/\s+/', '', $identificador)));
                 }
             })
             ->first();
@@ -88,7 +89,10 @@ class AutenticacionService
 
     private function registrarFallo(Usuario $cuenta): IntentoAcceso
     {
+        // increment() suma en la base de forma atómica; se vuelve a leer el valor real porque
+        // con intentos simultáneos el que tiene en memoria este request ya quedó desactualizado.
         $cuenta->increment('intentos_fallidos');
+        $cuenta->refresh();
 
         if ($cuenta->intentos_fallidos >= config('clinica.login.max_intentos')) {
             $cuenta->forceFill([
