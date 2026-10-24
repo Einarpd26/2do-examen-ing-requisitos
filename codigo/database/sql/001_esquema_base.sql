@@ -44,13 +44,36 @@ CREATE TABLE personas (
 -- El correo es opcional, pero único (sin distinguir mayúsculas) cuando existe.
 CREATE UNIQUE INDEX personas_correo_uq ON personas (lower(correo)) WHERE correo IS NOT NULL;
 
+-- Control de acceso (RBAC): los permisos son datos validados por claves foráneas.
+-- Cada permiso usa el formato recurso:accion (por ejemplo, pacientes:gestionar).
+CREATE TABLE roles (
+    id          BIGSERIAL   PRIMARY KEY,
+    codigo      TEXT        NOT NULL UNIQUE CHECK (codigo ~ '^[A-Z_]+$'),
+    nombre      TEXT        NOT NULL CHECK (btrim(nombre) <> ''),
+    descripcion TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE permisos (
+    id          BIGSERIAL   PRIMARY KEY,
+    codigo      TEXT        NOT NULL UNIQUE CHECK (codigo ~ '^[a-z_]+:[a-z_]+$'),
+    descripcion TEXT        NOT NULL CHECK (btrim(descripcion) <> ''),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE rol_permisos (
+    rol_id     BIGINT NOT NULL REFERENCES roles (id) ON DELETE CASCADE,
+    permiso_id BIGINT NOT NULL REFERENCES permisos (id) ON DELETE CASCADE,
+    PRIMARY KEY (rol_id, permiso_id)
+);
+CREATE INDEX rol_permisos_permiso_idx ON rol_permisos (permiso_id);
+
 CREATE TABLE usuarios (
     id                      BIGSERIAL   PRIMARY KEY,
     persona_id              BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
     password_hash           TEXT        NOT NULL,
     -- Un solo rol por cuenta. Una persona puede ser médico y paciente, pero entra con rol MEDICO.
-    rol                     TEXT        NOT NULL
-                            CHECK (rol IN ('ADMINISTRADOR', 'RECEPCIONISTA', 'MEDICO', 'PACIENTE')),
+    rol_id                  BIGINT      NOT NULL REFERENCES roles (id) ON DELETE RESTRICT,
     estado                  BOOLEAN     NOT NULL DEFAULT TRUE,
     intentos_fallidos       SMALLINT    NOT NULL DEFAULT 0 CHECK (intentos_fallidos >= 0),
     bloqueado_hasta         TIMESTAMPTZ,
@@ -60,6 +83,7 @@ CREATE TABLE usuarios (
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     CHECK (debe_cambiar_password OR password_temporal_vence IS NULL)
 );
+CREATE INDEX usuarios_rol_idx ON usuarios (rol_id);
 
 CREATE TABLE pacientes (
     id                    BIGSERIAL   PRIMARY KEY,
