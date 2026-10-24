@@ -147,6 +147,8 @@ CREATE TABLE bitacora (
     accion     TEXT        NOT NULL CHECK (btrim(accion) <> ''),
     entidad    TEXT,
     entidad_id BIGINT,
+    -- Contexto de la acción, por ejemplo cómo se verificó la identidad al renovar una contraseña.
+    detalle    TEXT,
     fecha      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX bitacora_usuario_idx ON bitacora (usuario_id);

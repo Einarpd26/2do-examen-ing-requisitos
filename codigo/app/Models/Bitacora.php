@@ -19,6 +19,7 @@ class Bitacora extends Model
         'accion',
         'entidad',
         'entidad_id',
+        'detalle',
     ];
 
     protected function casts(): array

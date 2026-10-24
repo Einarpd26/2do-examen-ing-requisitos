@@ -16,12 +16,14 @@ class BitacoraService
         ?Usuario $usuario = null,
         ?string $entidad = null,
         ?int $entidadId = null,
+        ?string $detalle = null,
     ): void {
         Bitacora::create([
             'usuario_id' => $usuario?->id,
             'accion' => $accion,
             'entidad' => $entidad,
             'entidad_id' => $entidadId,
+            'detalle' => $detalle,
         ]);
     }
 }
