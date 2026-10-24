@@ -487,18 +487,21 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 |---|---|
 | **Actores** | Administrador |
 | **Requisito** | RF03 |
-| **Precondición** | El Administrador inició sesión y existen especialidades. |
+| **Precondición** | El Administrador inició sesión y existe al menos una especialidad activa. |
 | **Postcondición** | El médico queda registrado, modificado o activado/desactivado. |
 
 **Flujo principal**
-1. El Administrador abre el listado de médicos (con búsqueda por nombre o especialidad).
-2. Registra o modifica los datos de la persona (CI, primer nombre, segundo nombre, apellido paterno, apellido materno, teléfono, correo), el registro profesional y las especialidades. Si el CI ya existe como persona, reutiliza esa persona.
-3. El sistema valida los datos y la unicidad del código y del registro profesional.
-4. El sistema guarda los cambios.
-5. El Administrador activa o desactiva al médico.
+1. El Administrador abre el listado de médicos. Por defecto ve los **activos**; con las pestañas Activos, Inactivos y Todos, cada una con su cantidad, puede ver también los dados de baja. Puede buscar por nombre, especialidad, CI, registro profesional o código; la búsqueda incluye a los inactivos.
+2. Registra o modifica los datos de la persona (CI, primer nombre, segundo nombre, apellido paterno, apellido materno, teléfono, correo), el número de registro profesional y las especialidades. El teléfono y el correo son obligatorios (RF03; con el correo el médico entra al sistema) y hay que elegir al menos una especialidad activa. Si el CI ya existe como persona sin ficha de médico (por ejemplo, un paciente), reutiliza esa persona sin modificar sus datos personales.
+3. El sistema valida los datos y comprueba que el registro profesional (guardado en mayúsculas y sin espacios de más) y el correo no pertenezcan a otra persona.
+4. El sistema guarda los cambios y los registra en la bitácora.
+5. El Administrador desactiva o reactiva al médico; nunca se elimina. Su cuenta de médico, si la tiene, sigue el mismo estado.
 
 **Flujos alternos**
-- 3a. Código o registro profesional repetido: se rechaza.
+- 3a. Registro profesional o correo repetido: se rechaza. Lo garantiza también la base de datos.
+- 3b. El CI ya tiene ficha de médico: se rechaza el registro (RN02).
+- 3c. Ninguna especialidad elegida, o una especialidad desactivada que el médico no tenía: se rechaza. Si ya la tenía, puede conservarla.
+- 3d. Se quita una especialidad con la que el médico ya tiene citas: se rechaza y no se aplica ningún cambio; el mensaje dice cuál es.
 - 5a. Un médico inactivo no recibe nuevas citas, pero conserva las históricas (RN04, RN11).
 
 #### CU-06 Gestionar especialidades
@@ -1381,7 +1384,7 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 | Formulario de paciente | Recepcionista | CU-04 | Datos personales, información médica, contacto de emergencia; acciones: crear o renovar acceso, verificar ficha, desactivar |
 | Credenciales temporales | Recepcionista, Administrador | CU-03, CU-04 | Contraseña mostrada una sola vez, con vencimiento y botones Copiar e Imprimir |
 | Lista y formulario de usuarios | Administrador | CU-03 | Alta del personal, rol, vínculo con médico, activar o desactivar, renovar contraseña |
-| Lista y formulario de médicos | Administrador | CU-05 | Datos, registro profesional, especialidades, estado |
+| Lista y formulario de médicos | Administrador | CU-05 | Búsqueda; pestañas Activos, Inactivos y Todos con su contador; datos, registro profesional, especialidades, estado |
 | Lista y formulario de especialidades | Administrador | CU-06 | Pestañas Activas, Inactivas y Todas con su contador; nombre, descripción, duración de la cita, estado |
 | Horarios de atención | Administrador | CU-07 | Horarios por médico: día, hora inicial, hora final y consultorio |
 
