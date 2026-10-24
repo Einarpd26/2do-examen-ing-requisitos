@@ -16,7 +16,9 @@ use Illuminate\Support\Facades\Route;
 // Acceso público: solo para quien no tiene sesión.
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AccesoController::class, 'formulario'])->name('login');
-    Route::post('/login', [AccesoController::class, 'autenticar'])->name('login.autenticar');
+    // Limitado a 10 solicitudes por minuto por IP, además del bloqueo por cuenta (RNF15).
+    Route::post('/login', [AccesoController::class, 'autenticar'])
+        ->middleware('throttle:10,1')->name('login.autenticar');
 
     // CU-02: registro propio del paciente. Limitado a 10 solicitudes por minuto por IP.
     Route::get('/registro', [RegistroController::class, 'formulario'])->name('registro.formulario');
