@@ -372,7 +372,7 @@ La lista de espera y los recordatorios por SMS o correo se mencionan como mejora
 |---|---|---|
 | RNF01 | Tecnología | Backend en PHP con el framework Laravel, base de datos PostgreSQL y acceso a datos sobre PDO (`pdo_pgsql`). |
 | RNF02 | Tecnología | Interfaz con HTML5 y CSS3 generados en el servidor mediante plantillas Blade de Laravel; JavaScript para validaciones e interacción. |
-| RNF03 | Despliegue | Ejecución en un entorno PHP local equivalente a Apache/XAMPP: en desarrollo, PHP 8.4 con su servidor embebido (`php artisan serve`) y PostgreSQL en un contenedor Docker; el directorio `public/` de Laravel es la raíz web. El servidor embebido es solo para desarrollo: un despliegue real usaría Apache o Nginx con PHP apuntando a `public/`. |
+| RNF03 | Despliegue | Ejecución en un entorno PHP local equivalente a Apache/XAMPP: en desarrollo, PHP 8.4 o superior (probado con 8.5.4) con su servidor embebido (`php artisan serve`) y PostgreSQL en un contenedor Docker; el directorio `public/` de Laravel es la raíz web. El servidor embebido es solo para desarrollo: un despliegue real usaría Apache o Nginx con PHP apuntando a `public/`. |
 | RNF04 | Seguridad | Contraseñas almacenadas con un hash seguro (`password_hash()` de PHP, que usa internamente el hasher de Laravel) y verificadas con `password_verify()` o su equivalente. |
 | RNF05 | Seguridad | Consultas SQL parametrizadas para evitar inyección SQL. |
 | RNF06 | Seguridad | Uso de sesiones; las páginas internas rechazan el acceso sin sesión válida. |
@@ -997,7 +997,7 @@ flowchart LR
         N["Navegador web\nHTML5 · Bootstrap 5 · JavaScript"]
     end
     subgraph Servidor["Servidor local (entorno PHP equivalente a XAMPP)"]
-        A["PHP 8.4 · servidor embebido\nLaravel (public/ como raíz web)"]
+        A["PHP 8.4+ · servidor embebido\nLaravel (public/ como raíz web)"]
     end
     subgraph BD["Base de datos (contenedor Docker)"]
         P[("PostgreSQL 16\n(pdo_pgsql)")]
@@ -1009,7 +1009,7 @@ flowchart LR
 | Nodo | Software | Responsabilidad |
 |---|---|---|
 | Cliente | Navegador moderno | Muestra la interfaz y ejecuta las validaciones de JavaScript. |
-| Servidor de aplicación | PHP 8.4 con su servidor embebido (`php artisan serve`) y Laravel | Procesa las solicitudes, aplica las reglas de negocio y mantiene las sesiones. |
+| Servidor de aplicación | PHP 8.4 o superior con su servidor embebido (`php artisan serve`) y Laravel | Procesa las solicitudes, aplica las reglas de negocio y mantiene las sesiones. |
 | Servidor de datos | PostgreSQL 16 en un contenedor Docker (`docker-compose.yml`) | Almacena los datos de forma persistente (RN14). |
 
 El servidor embebido es solo para desarrollo. Un despliegue real sustituiría ese nodo por Apache o Nginx con PHP apuntando a `public/`, sin cambiar el código ni la base de datos (RNF03).
@@ -1280,7 +1280,7 @@ erDiagram
 
 #### 6.3.2 Modelo físico (DDL PostgreSQL)
 
-El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #1) y `002_citas_y_notas.sql` (Ciclo #2), que las migraciones de Laravel ejecutan; `003_catalogos_iniciales.sql` carga los datos de referencia (sucursal, roles y permisos, ver 4.7). Se verificó en PostgreSQL 16: los `CHECK` de formato, la restricción contra horarios y citas superpuestas, las claves foráneas compuestas, el control de acceso y la bitácora de solo escriturarechazan lo inválido, y `migrate:rollback` deja la base limpia. Las tablas propias del framework (`migrations`) no se listan.
+El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #1) y `002_citas_y_notas.sql` (Ciclo #2), que las migraciones de Laravel ejecutan; `003_catalogos_iniciales.sql` carga los datos de referencia (sucursal, roles y permisos, ver 4.7). Se verificó en PostgreSQL 16: los `CHECK` de formato, la restricción contra horarios y citas superpuestas, las claves foráneas compuestas, el control de acceso y la bitácora de solo escritura rechazan lo inválido, y `migrate:rollback` deja la base limpia. Las tablas propias del framework (`migrations`) no se listan.
 
 ```sql
 -- Ciclo #1: identidad, acceso, datos maestros y bitácora.
@@ -1545,7 +1545,7 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 
 | Capa | Herramienta | Versión | Uso en el proyecto |
 |---|---|---|---|
-| Lenguaje del servidor | PHP | 8.4 (el `composer.lock` exige 8.4.1 o superior) | Lógica de negocio y acceso a datos (RNF01). |
+| Lenguaje del servidor | PHP | 8.4.1 o superior (lo exige el `composer.lock`); probado con 8.5.4 | Lógica de negocio y acceso a datos (RNF01). |
 | *Framework* | Laravel | 13.38 | Rutas, controladores, validación, autenticación por sesión, Eloquent y plantillas Blade. |
 | Base de datos | PostgreSQL | 16 | Almacenamiento persistente (RN14). Corre en un contenedor Docker. |
 | Acceso a datos | PDO con `pdo_pgsql` | Incluido en PHP | Conexión con consultas parametrizadas, a través de Eloquent (RNF05). |
@@ -1553,7 +1553,7 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 | Cliente | JavaScript | Sin librerías | Validaciones de formularios en el navegador (`public/js/validaciones.js`), además de la validación en el servidor (RNF08). |
 | Dependencias PHP | Composer | 2.x | Instala y fija las versiones de las librerías (`composer.lock`). |
 | Entorno de la base | Docker y Docker Compose | — | Levanta PostgreSQL con `docker-compose.yml` (RNF03). |
-| Servidor local | Servidor embebido de PHP (`php artisan serve`) | PHP 8.4 | Ejecuta la aplicación en desarrollo. Un despliegue real usaría Apache o Nginx (RNF03). |
+| Servidor local | Servidor embebido de PHP (`php artisan serve`) | PHP 8.4 o superior | Ejecuta la aplicación en desarrollo. Un despliegue real usaría Apache o Nginx (RNF03). |
 | Pruebas | PHPUnit | 12.5 | Pruebas unitarias y de funcionalidad con `php artisan test`. |
 | Control de versiones | Git y GitHub | — | Repositorio público del código y del informe (sección 7.4). |
 
@@ -2472,7 +2472,7 @@ Son 48 rutas en total, según `php artisan route:list --except-vendor`. Solo el 
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **288 pruebas, 288 aprobadas, 2365 aserciones**, en unos 22 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **288 pruebas, 288 aprobadas, 2365 aserciones**, en unos 17 segundos, contra la base `clinica_test`.
 
 | Módulo | Pruebas | Cubre |
 |---|---|---|
