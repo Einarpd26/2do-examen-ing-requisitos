@@ -297,7 +297,7 @@ La lista de espera y los recordatorios por SMS o correo se mencionan como mejora
 | RNF12 | Usabilidad | Diseño profesional y mensajes de error comprensibles. |
 | RNF13 | Seguridad | Bitácora de auditoría: se registra usuario, acción, entidad afectada y fecha al iniciar sesión y al crear o modificar usuarios, pacientes, información médica y notas clínicas, y al crear o renovar cuentas y verificar fichas. Solo escrituras, sin registrar lecturas. |
 | RNF14 | Seguridad | Cierre automático de la sesión tras 30 minutos de inactividad. |
-| RNF15 | Seguridad | Bloqueo de la cuenta durante 15 minutos tras 5 intentos fallidos seguidos de inicio de sesión, y token CSRF en los formularios que modifican datos. |
+| RNF15 | Seguridad | Bloqueo de la cuenta durante 15 minutos tras 5 intentos fallidos seguidos de inicio de sesión, límite de 10 solicitudes de inicio de sesión por minuto desde una misma dirección IP, y token CSRF en los formularios que modifican datos. |
 | RNF16 | Privacidad | Los avisos y recordatorios muestran solo fecha, hora y médico, nunca motivo, diagnóstico ni datos médicos. |
 | RNF17 | Integridad | Además de la validación en PHP, la base de datos impide por restricción citas superpuestas del mismo médico (Ciclo #2). |
 | RNF18 | Seguridad | Las contraseñas temporales se generan de forma aleatoria con un generador criptográfico, vencen a las 72 horas, se muestran una sola vez, se guardan solo como hash y obligan a cambiarlas en el primer ingreso. |
