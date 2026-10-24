@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\ReglaDeNegocioException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn () => route('inicio'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Una regla del negocio incumplida vuelve a la pantalla anterior con su mensaje.
+        $exceptions->render(
+            fn (ReglaDeNegocioException $e) => back()->withInput()->with('error', $e->getMessage())
+        );
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

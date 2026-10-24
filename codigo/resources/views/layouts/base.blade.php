@@ -49,6 +49,9 @@
     @if (session('exito'))
         <div class="alert alert-success" role="alert">{{ session('exito') }}</div>
     @endif
+    @if (session('error'))
+        <div class="alert alert-danger" role="alert">{{ session('error') }}</div>
+    @endif
 
     @yield('contenido')
 </main>
@@ -59,5 +62,6 @@
 
 <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ asset('js/validaciones.js') }}"></script>
+@stack('scripts')
 </body>
 </html>
