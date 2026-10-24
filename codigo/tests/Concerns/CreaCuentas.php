@@ -2,6 +2,7 @@
 
 namespace Tests\Concerns;
 
+use App\Models\Medico;
 use App\Models\Paciente;
 use App\Models\Persona;
 use App\Models\Rol;
@@ -76,6 +77,34 @@ trait CreaCuentas
             'persona_id' => $persona->id,
             'verificado' => true,
         ], $ficha))->refresh()->load('persona');
+    }
+
+    /**
+     * Crea una persona con su ficha de médico (sin cuenta), activa por defecto y con las
+     * especialidades indicadas (ids).
+     *
+     * @param  array<string, mixed>  $persona
+     * @param  array<string, mixed>  $ficha
+     * @param  array<int, int>  $especialidades
+     */
+    protected function crearFichaMedico(array $persona = [], array $ficha = [], array $especialidades = []): Medico
+    {
+        $persona = Persona::create(array_merge([
+            'ci' => (string) ++self::$secuenciaCi,
+            'primer_nombre' => 'Rosa',
+            'apellido_paterno' => 'Luna',
+            'telefono' => '70011122',
+            'correo' => 'medico'.self::$secuenciaCi.'@clinica.test',
+        ], $persona));
+
+        $medico = Medico::create(array_merge([
+            'persona_id' => $persona->id,
+            'nro_registro_profesional' => 'MP-'.self::$secuenciaCi,
+        ], $ficha))->refresh();
+
+        $medico->especialidades()->sync($especialidades);
+
+        return $medico->load('persona', 'especialidades');
     }
 
     /**
