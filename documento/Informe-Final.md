@@ -300,8 +300,9 @@ La lista de espera y los recordatorios por SMS o correo se mencionan como mejora
 | RNF15 | Seguridad | Bloqueo de la cuenta durante 15 minutos tras 5 intentos fallidos seguidos de inicio de sesión, y token CSRF en los formularios que modifican datos. |
 | RNF16 | Privacidad | Los avisos y recordatorios muestran solo fecha, hora y médico, nunca motivo, diagnóstico ni datos médicos. |
 | RNF17 | Integridad | Además de la validación en PHP, la base de datos impide por restricción citas superpuestas del mismo médico (Ciclo #2). |
-| RNF19 | Seguridad | Control de acceso por permisos (RBAC): cada operación exige un permiso `recurso:accion` concedido por el rol de la cuenta. La interfaz oculta lo no permitido y el servidor lo verifica en cada solicitud (RN12). |
 | RNF18 | Seguridad | Las contraseñas temporales se generan de forma aleatoria con un generador criptográfico, vencen a las 72 horas, se muestran una sola vez, se guardan solo como hash y obligan a cambiarlas en el primer ingreso. |
+| RNF19 | Seguridad | Control de acceso por permisos (RBAC): cada operación exige un permiso `recurso:accion` concedido por el rol de la cuenta. La interfaz oculta lo no permitido y el servidor lo verifica en cada solicitud (RN12). |
+| RNF20 | Seguridad | El registro propio del paciente es público, así que se limita a 10 solicitudes por minuto por dirección IP, y una contraseña escrita nunca se vuelve a mostrar en el formulario. |
 
 ### 4.3 Actores del sistema
 
@@ -426,6 +427,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 **Flujos alternos**
 - 3a. El CI ya está registrado: se rechaza el registro y se indica pedir el acceso en recepción.
 - 3b. Correo ya registrado: se rechaza el registro con un mensaje.
+- 3c. Dos registros simultáneos con el mismo CI o correo: el segundo se rechaza con el mismo mensaje y no deja datos a medias (el alta es una sola transacción).
 - 2a. Datos inválidos: se indican los campos a corregir.
 
 #### CU-03 Gestionar usuarios y roles
