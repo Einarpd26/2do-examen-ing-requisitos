@@ -153,7 +153,7 @@ class AccesoPacienteTest extends TestCase
         ]);
 
         $this->actingAs($recepcionista)
-            ->post(route('pacientes.acceso.renovar', $paciente))
+            ->post(route('pacientes.acceso.renovar', $paciente), ['verificacion' => 'documento'])
             ->assertRedirect(route('pacientes.credenciales', $paciente));
 
         $nueva = session('credenciales.contrasena');
@@ -177,7 +177,8 @@ class AccesoPacienteTest extends TestCase
         $paciente = $this->crearPaciente();
         $cuenta = $this->darCuenta($paciente); // cuenta normal, sin contraseña temporal
 
-        $this->actingAs($this->recepcionista())->post(route('pacientes.acceso.renovar', $paciente));
+        $this->actingAs($this->recepcionista())
+            ->post(route('pacientes.acceso.renovar', $paciente), ['verificacion' => 'celular']);
 
         $this->assertTrue($cuenta->fresh()->debe_cambiar_password);
     }
@@ -189,21 +190,98 @@ class AccesoPacienteTest extends TestCase
 
         $sinCuenta = $this->crearPaciente();
         $this->from(route('pacientes.show', $sinCuenta))
-            ->post(route('pacientes.acceso.renovar', $sinCuenta))
+            ->post(route('pacientes.acceso.renovar', $sinCuenta), ['verificacion' => 'documento'])
             ->assertSessionHas('error');
 
         $medico = $this->crearCuenta('MEDICO');
         $esMedico = Paciente::create(['persona_id' => $medico->persona_id, 'verificado' => true])->refresh();
         $this->from(route('pacientes.show', $esMedico))
-            ->post(route('pacientes.acceso.renovar', $esMedico))
+            ->post(route('pacientes.acceso.renovar', $esMedico), ['verificacion' => 'documento'])
             ->assertSessionHas('error');
         $this->assertStringContainsString('Administrador', session('error'));
 
         $desactivado = $this->crearPaciente([], ['estado' => false]);
         $this->darCuenta($desactivado);
         $this->from(route('pacientes.show', $desactivado))
-            ->post(route('pacientes.acceso.renovar', $desactivado))
+            ->post(route('pacientes.acceso.renovar', $desactivado), ['verificacion' => 'documento'])
             ->assertSessionHas('error');
+    }
+
+    // --- CU-19: comprobar la identidad antes de renovar -----------------------------------
+
+    public function test_renovar_exige_indicar_como_se_verifico_la_identidad(): void
+    {
+        $paciente = $this->crearPaciente();
+        $cuenta = $this->darCuenta($paciente);
+        $hashAntes = $cuenta->password_hash;
+
+        $this->actingAs($this->recepcionista())
+            ->from(route('pacientes.show', $paciente))
+            ->post(route('pacientes.acceso.renovar', $paciente))
+            ->assertRedirect(route('pacientes.show', $paciente))
+            ->assertSessionHasErrors('verificacion');
+
+        $this->assertSame($hashAntes, $cuenta->fresh()->password_hash, 'sin verificar la identidad no se renueva nada');
+        $this->assertSame(0, Bitacora::where('accion', 'acceso_renovado')->count());
+        $this->assertNull(session('credenciales'));
+    }
+
+    public function test_rechaza_una_forma_de_verificar_que_no_existe(): void
+    {
+        $paciente = $this->crearPaciente();
+        $this->darCuenta($paciente);
+
+        $this->actingAs($this->recepcionista())
+            ->post(route('pacientes.acceso.renovar', $paciente), ['verificacion' => 'porque_si'])
+            ->assertSessionHasErrors('verificacion');
+
+        $this->assertSame(0, Bitacora::where('accion', 'acceso_renovado')->count());
+    }
+
+    public function test_la_bitacora_guarda_como_se_verifico_la_identidad(): void
+    {
+        $recepcionista = $this->recepcionista();
+        $paciente = $this->crearPaciente();
+        $this->darCuenta($paciente);
+        $this->actingAs($recepcionista);
+
+        $this->post(route('pacientes.acceso.renovar', $paciente), ['verificacion' => 'documento']);
+        $this->post(route('pacientes.acceso.renovar', $paciente), ['verificacion' => 'celular']);
+
+        $detalles = Bitacora::where('usuario_id', $recepcionista->id)
+            ->where('accion', 'acceso_renovado')->orderBy('id')->pluck('detalle')->all();
+
+        $this->assertSame([
+            'Identidad verificada con: documento de identidad en persona',
+            'Identidad verificada con: mensaje al celular registrado en la ficha',
+        ], $detalles);
+    }
+
+    public function test_verificar_con_renovacion_registra_el_documento_como_comprobacion(): void
+    {
+        $paciente = $this->crearPaciente([], ['verificado' => false]);
+        $this->darCuenta($paciente);
+
+        $this->actingAs($this->recepcionista())
+            ->post(route('pacientes.verificar', $paciente), ['renovar_acceso' => 1]);
+
+        $this->assertStringContainsString(
+            'documento de identidad en persona',
+            Bitacora::where('accion', 'acceso_renovado')->firstOrFail()->detalle
+        );
+    }
+
+    public function test_la_ficha_ofrece_las_formas_de_verificar_la_identidad_al_renovar(): void
+    {
+        $paciente = $this->crearPaciente();
+        $this->darCuenta($paciente);
+
+        $this->actingAs($this->recepcionista())
+            ->get(route('pacientes.show', $paciente))
+            ->assertSee('¿Cómo verificó la identidad del titular?')
+            ->assertSee('Documento de identidad en persona')
+            ->assertSee('Mensaje al celular registrado en la ficha')
+            ->assertSee('nunca a otro número');
     }
 
     // --- Verificar -----------------------------------------------------------------------
