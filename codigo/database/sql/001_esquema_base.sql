@@ -75,7 +75,8 @@ CREATE TABLE usuarios (
     password_temporal_vence TIMESTAMPTZ,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CHECK (debe_cambiar_password OR password_temporal_vence IS NULL)
+    -- Las dos columnas van juntas: una contraseña temporal siempre tiene vencimiento.
+    CHECK (debe_cambiar_password = (password_temporal_vence IS NOT NULL))
 );
 CREATE INDEX usuarios_rol_idx ON usuarios (rol_id);
 
