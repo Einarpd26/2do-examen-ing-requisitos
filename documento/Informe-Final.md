@@ -219,6 +219,7 @@ Se aplican independientemente de lo que el usuario escriba en los formularios.
 | RN13 | La programación y reprogramación verificarán la disponibilidad en el servidor. |
 | RN14 | Los datos se almacenarán de forma persistente en PostgreSQL. |
 | RN15 | El Paciente solo podrá cancelar o reprogramar una cita con al menos 24 horas de anticipación; la Recepcionista no tiene esta restricción (Ciclo #2). |
+| RN16 | Un médico no puede atenderse a sí mismo: la persona del médico y la del paciente de una cita deben ser distintas (Ciclo #2). |
 
 ---
 
@@ -250,7 +251,7 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 **Decisiones de alcance** (tomadas para este proyecto, donde el enunciado no es explícito):
 
 - **Identificador de acceso:** el Paciente inicia sesión con su **CI**; el personal (Administrador, Recepcionista, Médico) con su correo. El correo del Paciente es opcional.
-- **Modelo de identidad:** una entidad `Persona` guarda los datos comunes (CI, nombres, apellidos, fecha de nacimiento, sexo, teléfono, correo, dirección). De ella cuelgan `Paciente` (ficha clínica y verificación), `Medico` (registro profesional) y `Usuario` (credenciales y rol). Una persona puede ser paciente y médico a la vez, y el personal administrativo es una persona con cuenta y sin ficha. El CI es único en `Persona`.
+- **Modelo de identidad:** una entidad `Persona` guarda los datos comunes (CI, nombres, apellidos, fecha de nacimiento, sexo, teléfono, correo, dirección). De ella cuelgan `Paciente` (ficha clínica y verificación), `Medico` (registro profesional) y `Usuario` (credenciales y rol). Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico); como paciente la atiende la Recepcionista. El personal administrativo es una persona con cuenta y sin ficha. El CI es único en `Persona`.
 - **Duración de la cita:** es un parámetro de la **especialidad** (en minutos), no del horario ni del médico. La cita hereda la duración de la especialidad elegida al reservar. Como la agenda de un médico puede mezclar duraciones, el anti-duplicados compara **intervalos**, no solo la hora de inicio (RF07, RNF17).
 - **Códigos:** el código del paciente (`PAC-0001`) y del médico (`MED-0001`) lo genera el sistema de forma correlativa.
 - **Registro propio del Paciente:** nombres y apellidos, CI, celular y contraseña obligatorios; correo opcional. Se crea la cuenta y la ficha del paciente en estado **pendiente de verificación**. Si el CI ya tiene ficha, el registro propio se rechaza y se indica pedir el acceso en recepción.
@@ -416,12 +417,12 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 **Flujo principal**
 1. El visitante completa el formulario (nombres y apellidos, CI, celular, contraseña; correo opcional).
 2. El sistema valida los datos en cliente y servidor (incluido el formato del celular).
-3. El sistema verifica que el CI no tenga ya una ficha y que el correo, si se ingresó, no esté registrado.
+3. El sistema verifica que el CI no esté registrado como persona y que el correo, si se ingresó, no esté registrado.
 4. El sistema guarda la contraseña con `password_hash()` y crea la ficha del paciente en estado pendiente de verificación junto con su cuenta.
 5. El sistema confirma el registro.
 
 **Flujos alternos**
-- 3a. El CI ya tiene ficha: se rechaza el registro y se indica pedir el acceso en recepción.
+- 3a. El CI ya está registrado: se rechaza el registro y se indica pedir el acceso en recepción.
 - 3b. Correo ya registrado: se rechaza el registro con un mensaje.
 - 2a. Datos inválidos: se indican los campos a corregir.
 
@@ -458,7 +459,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 **Flujo principal**
 1. La Recepcionista busca por CI, nombre o apellido, o abre el formulario de alta.
 2. Registra o modifica los datos personales (código, CI, nombres, apellidos, fecha de nacimiento, sexo, teléfono, correo, dirección), la información médica (tipo de sangre, alergias, enfermedades crónicas, medicamentos, antecedentes relevantes) y el contacto de emergencia (nombre, parentesco, teléfono).
-3. El sistema valida los datos y la unicidad del CI.
+3. El sistema valida los datos. Si el CI ya existe como persona sin ficha de paciente (por ejemplo, un médico), reutiliza esa persona y le crea la ficha.
 4. El sistema guarda los cambios.
 5. Si el paciente no tiene cuenta, la Recepcionista la crea: el sistema genera una contraseña temporal aleatoria con vigencia de 72 horas y la muestra una sola vez, con botones Copiar e Imprimir. La Recepcionista se la entrega al paciente, impresa o por mensaje de texto o WhatsApp. El paciente entra con su CI.
 6. Si el paciente se registró solo (CU-02), la Recepcionista compara su documento y marca la ficha como verificada; en ese acto puede renovar la contraseña.
@@ -466,7 +467,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 8. Para dar de baja, la Recepcionista desactiva el registro; no se elimina.
 
 **Flujos alternos**
-- 3a. CI duplicado: se rechaza el registro (RN01).
+- 3a. El CI ya tiene ficha de paciente: se rechaza el registro (RN01).
 - 5a. El paciente ya tiene cuenta: no se crea otra.
 - 6a. El documento no coincide con la ficha: la ficha sigue pendiente de verificación.
 - 8a. Paciente con citas históricas: solo se permite desactivar (RN11).
@@ -952,14 +953,14 @@ erDiagram
         string nro_registro_profesional UK
     }
     ESPECIALIDADES {
-        smallint id PK
+        bigint id PK
         string nombre UK
         smallint duracion_min
     }
     HORARIOS_ATENCION {
         bigint id PK
         bigint medico_id FK
-        smallint sucursal_id FK
+        bigint sucursal_id FK
         smallint dia_semana
         time hora_inicio
         time hora_fin
@@ -980,158 +981,231 @@ erDiagram
 ```
 
 **Decisiones del modelo**
-- `usuarios.rol` es un único rol por cuenta (`ADMINISTRADOR`, `RECEPCIONISTA`, `MEDICO`, `PACIENTE`), validado con una restricción `CHECK`.
+- Todos los textos son de tipo `TEXT`; los formatos que importan (CI, teléfono, correo, tipo de sangre, códigos) se acotan con `CHECK`.
+- Todos los identificadores son `BIGINT`, para no mezclar tipos en las claves foráneas. `SMALLINT` se reserva para valores acotados por naturaleza: `duracion_min`, `dia_semana` e `intentos_fallidos`.
+- `usuarios.rol` es un único rol por cuenta (`ADMINISTRADOR`, `RECEPCIONISTA`, `MEDICO`, `PACIENTE`), validado con una restricción `CHECK`. Una persona puede ser médico y paciente a la vez, pero su cuenta tiene rol Médico; como paciente la atiende la recepción.
 - El estado activo/inactivo vive en cada especialización (`pacientes.estado`, `medicos.estado`), no en `personas`: desactivar a un paciente no debe desactivar a la misma persona como médico (RN11).
 - `ON DELETE RESTRICT` en las claves hacia pacientes, médicos y citas: nada con historial se elimina, solo se desactiva (RN10, RN11).
 - El CI es único en `personas`; el correo es único sin distinguir mayúsculas y solo cuando existe.
 - Los datos del personal administrativo (Administrador, Recepcionista) viven en `personas` y `usuarios`, sin ficha.
 - El correo es obligatorio para el personal y para el Paciente es opcional; esa regla la valida la aplicación, porque depende del rol.
-- La superposición de horarios de atención de un mismo médico se valida en la aplicación (CU-07). La de citas se refuerza además con una restricción de exclusión en la base de datos (RNF17).
+- Una restricción de exclusión impide horarios de atención superpuestos del mismo médico en el mismo día (CU-07) y citas superpuestas del mismo médico (RNF17); las citas canceladas no cuentan.
+- Una clave foránea compuesta exige que el médico de una cita ejerza la especialidad elegida, y otra ata la nota clínica al médico de su cita. Consecuencia: no se puede quitar una especialidad a un médico que tiene citas con ella.
+- Los códigos `PAC-0001`, `MED-0001` y `CM-0001` salen de secuencias de la base de datos, así que dos altas simultáneas no repiten código. Pueden quedar saltos en la numeración, porque una secuencia no se revierte si el alta falla.
+- La bitácora es de solo escritura: un disparador impide modificar, borrar o vaciar sus filas.
+- Las claves foráneas llevan índice, porque PostgreSQL no los crea solo.
+- Las reglas que cruzan tablas (cita dentro del horario del médico, duración de la cita, médico activo, fecha futura, transiciones de estado, que un médico no se atienda a sí mismo) las valida la aplicación y se cubren con pruebas.
 
 #### 6.3.2 Modelo físico (DDL PostgreSQL)
 
-Script verificado en PostgreSQL 16. Se comprobó que la restricción de `citas` rechaza horarios superpuestos del mismo médico, acepta citas contiguas y libera el horario al cancelar. En Laravel, estas tablas se crearán mediante migraciones; el script es la referencia del diseño. Las tablas propias del framework (`migrations`, `sessions`) no se listan.
+El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #1) y `002_citas_y_notas.sql` (Ciclo #2), que las migraciones de Laravel ejecutan. Se verificó en PostgreSQL 16: los `CHECK` de formato, la restricción contra horarios y citas superpuestas, las claves foráneas compuestas, los códigos autogenerados y la bitácora de solo escritura rechazan lo inválido, y `migrate:rollback` deja la base limpia. Las tablas propias del framework (`migrations`) no se listan.
 
 ```sql
+-- Ciclo #1: identidad, acceso, datos maestros y bitácora.
+-- Referencia de diseño: documento/Informe-Final.md, sección 6.3.2.
+-- Los textos usan TEXT; los formatos se acotan con CHECK donde importa.
+
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
+-- Códigos correlativos legibles (PAC-0001, MED-0001, CM-0001) que no se truncan pasado el 9999.
+CREATE FUNCTION codigo_con_prefijo(prefijo TEXT, n BIGINT) RETURNS TEXT
+    LANGUAGE sql IMMUTABLE
+    AS $$ SELECT prefijo || CASE WHEN n < 10000 THEN lpad(n::TEXT, 4, '0') ELSE n::TEXT END $$;
+
+CREATE SEQUENCE seq_codigo_paciente;
+CREATE SEQUENCE seq_codigo_medico;
+
 CREATE TABLE sucursales (
-    id         SMALLSERIAL  PRIMARY KEY,
-    nombre     VARCHAR(100) NOT NULL UNIQUE,
-    direccion  VARCHAR(200),
-    estado     BOOLEAN      NOT NULL DEFAULT TRUE
+    id         BIGSERIAL   PRIMARY KEY,
+    nombre     TEXT        NOT NULL UNIQUE CHECK (btrim(nombre) <> ''),
+    direccion  TEXT,
+    estado     BOOLEAN     NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE personas (
-    id               BIGSERIAL    PRIMARY KEY,
-    ci               VARCHAR(20)  NOT NULL UNIQUE,
-    nombres          VARCHAR(100) NOT NULL,
-    apellidos        VARCHAR(100) NOT NULL,
-    fecha_nacimiento DATE,
-    sexo             CHAR(1)      CHECK (sexo IN ('M', 'F')),
-    telefono         VARCHAR(20),
-    correo           VARCHAR(150),
-    direccion        VARCHAR(200),
-    created_at       TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT now()
+    id               BIGSERIAL   PRIMARY KEY,
+    ci               TEXT        NOT NULL UNIQUE CHECK (ci ~ '^[0-9]{5,10}(-[0-9A-Z]{1,2})?$'),
+    nombres          TEXT        NOT NULL CHECK (btrim(nombres) <> ''),
+    apellidos        TEXT        NOT NULL CHECK (btrim(apellidos) <> ''),
+    fecha_nacimiento DATE        CHECK (fecha_nacimiento <= CURRENT_DATE),
+    sexo             TEXT        CHECK (sexo IN ('M', 'F')),
+    telefono         TEXT        CHECK (telefono ~ '^\+?[0-9]{7,15}$'),
+    correo           TEXT        CHECK (correo ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'),
+    direccion        TEXT,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- El correo es opcional, pero único (sin distinguir mayúsculas) cuando existe.
 CREATE UNIQUE INDEX personas_correo_uq ON personas (lower(correo)) WHERE correo IS NOT NULL;
 
 CREATE TABLE usuarios (
-    id                      BIGSERIAL    PRIMARY KEY,
-    persona_id              BIGINT       NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
-    password_hash           VARCHAR(255) NOT NULL,
-    rol                     VARCHAR(15)  NOT NULL
+    id                      BIGSERIAL   PRIMARY KEY,
+    persona_id              BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
+    password_hash           TEXT        NOT NULL,
+    -- Un solo rol por cuenta. Una persona puede ser médico y paciente, pero entra con rol MEDICO.
+    rol                     TEXT        NOT NULL
                             CHECK (rol IN ('ADMINISTRADOR', 'RECEPCIONISTA', 'MEDICO', 'PACIENTE')),
-    estado                  BOOLEAN      NOT NULL DEFAULT TRUE,
-    intentos_fallidos       SMALLINT     NOT NULL DEFAULT 0,
+    estado                  BOOLEAN     NOT NULL DEFAULT TRUE,
+    intentos_fallidos       SMALLINT    NOT NULL DEFAULT 0 CHECK (intentos_fallidos >= 0),
     bloqueado_hasta         TIMESTAMPTZ,
-    debe_cambiar_password   BOOLEAN      NOT NULL DEFAULT FALSE,
+    debe_cambiar_password   BOOLEAN     NOT NULL DEFAULT FALSE,
     password_temporal_vence TIMESTAMPTZ,
-    created_at              TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    updated_at              TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     CHECK (debe_cambiar_password OR password_temporal_vence IS NULL)
 );
 
 CREATE TABLE pacientes (
-    id                    BIGSERIAL    PRIMARY KEY,
-    persona_id            BIGINT       NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
-    codigo                VARCHAR(12)  NOT NULL UNIQUE,
-    verificado            BOOLEAN      NOT NULL DEFAULT FALSE,
-    estado                BOOLEAN      NOT NULL DEFAULT TRUE,
-    tipo_sangre           VARCHAR(3),
+    id                    BIGSERIAL   PRIMARY KEY,
+    persona_id            BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
+    codigo                TEXT        NOT NULL UNIQUE
+                          DEFAULT codigo_con_prefijo('PAC-', nextval('seq_codigo_paciente'))
+                          CHECK (codigo ~ '^PAC-[0-9]{4,}$'),
+    verificado            BOOLEAN     NOT NULL DEFAULT FALSE,
+    estado                BOOLEAN     NOT NULL DEFAULT TRUE,
+    tipo_sangre           TEXT        CHECK (tipo_sangre IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
     alergias              TEXT,
     enfermedades_cronicas TEXT,
     medicamentos          TEXT,
     antecedentes          TEXT,
-    emergencia_nombre     VARCHAR(150),
-    emergencia_parentesco VARCHAR(50),
-    emergencia_telefono   VARCHAR(20),
-    created_at            TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    updated_at            TIMESTAMPTZ  NOT NULL DEFAULT now()
+    emergencia_nombre     TEXT,
+    emergencia_parentesco TEXT,
+    emergencia_telefono   TEXT        CHECK (emergencia_telefono ~ '^\+?[0-9]{7,15}$'),
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER SEQUENCE seq_codigo_paciente OWNED BY pacientes.codigo;
 
 CREATE TABLE medicos (
     id                       BIGSERIAL   PRIMARY KEY,
     persona_id               BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
-    codigo                   VARCHAR(12) NOT NULL UNIQUE,
-    nro_registro_profesional VARCHAR(30) NOT NULL UNIQUE,
+    codigo                   TEXT        NOT NULL UNIQUE
+                             DEFAULT codigo_con_prefijo('MED-', nextval('seq_codigo_medico'))
+                             CHECK (codigo ~ '^MED-[0-9]{4,}$'),
+    nro_registro_profesional TEXT        NOT NULL UNIQUE CHECK (btrim(nro_registro_profesional) <> ''),
     estado                   BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at               TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER SEQUENCE seq_codigo_medico OWNED BY medicos.codigo;
 
 CREATE TABLE especialidades (
-    id           SMALLSERIAL  PRIMARY KEY,
-    nombre       VARCHAR(100) NOT NULL,
-    descripcion  VARCHAR(300),
-    duracion_min SMALLINT     NOT NULL DEFAULT 30 CHECK (duracion_min BETWEEN 5 AND 240),
-    estado       BOOLEAN      NOT NULL DEFAULT TRUE
+    id           BIGSERIAL   PRIMARY KEY,
+    nombre       TEXT        NOT NULL CHECK (btrim(nombre) <> ''),
+    descripcion  TEXT,
+    duracion_min SMALLINT    NOT NULL DEFAULT 30 CHECK (duracion_min BETWEEN 5 AND 240),
+    estado       BOOLEAN     NOT NULL DEFAULT TRUE
 );
+-- Nombre único normalizado: sin distinguir mayúsculas ni espacios en los extremos.
 CREATE UNIQUE INDEX especialidades_nombre_uq ON especialidades (lower(btrim(nombre)));
 
 CREATE TABLE medico_especialidad (
     medico_id       BIGINT   NOT NULL REFERENCES medicos (id) ON DELETE CASCADE,
-    especialidad_id SMALLINT NOT NULL REFERENCES especialidades (id) ON DELETE RESTRICT,
+    especialidad_id BIGINT   NOT NULL REFERENCES especialidades (id) ON DELETE RESTRICT,
     PRIMARY KEY (medico_id, especialidad_id)
 );
+CREATE INDEX medico_especialidad_especialidad_idx ON medico_especialidad (especialidad_id);
 
 CREATE TABLE horarios_atencion (
-    id          BIGSERIAL   PRIMARY KEY,
-    medico_id   BIGINT      NOT NULL REFERENCES medicos (id) ON DELETE CASCADE,
-    sucursal_id SMALLINT    NOT NULL REFERENCES sucursales (id) ON DELETE RESTRICT,
-    dia_semana  SMALLINT    NOT NULL CHECK (dia_semana BETWEEN 1 AND 7),
-    hora_inicio TIME        NOT NULL,
-    hora_fin    TIME        NOT NULL,
-    consultorio VARCHAR(50),
-    CHECK (hora_fin > hora_inicio)
+    id          BIGSERIAL PRIMARY KEY,
+    medico_id   BIGINT    NOT NULL REFERENCES medicos (id) ON DELETE CASCADE,
+    sucursal_id BIGINT    NOT NULL REFERENCES sucursales (id) ON DELETE RESTRICT,
+    dia_semana  SMALLINT  NOT NULL CHECK (dia_semana BETWEEN 1 AND 7),
+    hora_inicio TIME      NOT NULL,
+    hora_fin    TIME      NOT NULL,
+    consultorio TEXT,
+    CHECK (hora_fin > hora_inicio),
+    -- Rango del bloque dentro de un día de referencia, para comparar superposiciones.
+    rango TSRANGE GENERATED ALWAYS AS
+        (tsrange(DATE '2000-01-01' + hora_inicio, DATE '2000-01-01' + hora_fin)) STORED,
+    -- Un médico no puede tener dos bloques superpuestos el mismo día, ni en sucursales distintas.
+    EXCLUDE USING gist (medico_id WITH =, dia_semana WITH =, rango WITH &&)
 );
+CREATE INDEX horarios_atencion_sucursal_idx ON horarios_atencion (sucursal_id);
 
--- Ciclo #2
+-- La bitácora es solo de añadir: no se modifica, no se borra y no se vacía.
+CREATE TABLE bitacora (
+    id         BIGSERIAL   PRIMARY KEY,
+    usuario_id BIGINT      REFERENCES usuarios (id) ON DELETE RESTRICT,
+    accion     TEXT        NOT NULL CHECK (btrim(accion) <> ''),
+    entidad    TEXT,
+    entidad_id BIGINT,
+    fecha      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX bitacora_usuario_idx ON bitacora (usuario_id);
+CREATE INDEX bitacora_fecha_idx ON bitacora (fecha);
+
+CREATE FUNCTION bitacora_solo_agregar() RETURNS TRIGGER
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RAISE EXCEPTION 'La bitácora es de solo escritura: no se permite % sobre bitacora', TG_OP;
+END;
+$$;
+
+CREATE TRIGGER bitacora_sin_modificar
+    BEFORE UPDATE OR DELETE ON bitacora
+    FOR EACH ROW EXECUTE FUNCTION bitacora_solo_agregar();
+
+CREATE TRIGGER bitacora_sin_vaciar
+    BEFORE TRUNCATE ON bitacora
+    FOR EACH STATEMENT EXECUTE FUNCTION bitacora_solo_agregar();
+-- Ciclo #2: citas médicas y notas clínicas.
+-- Referencia de diseño: documento/Informe-Final.md, sección 6.3.2.
+
+CREATE SEQUENCE seq_codigo_cita;
+
 CREATE TABLE citas (
     id                 BIGSERIAL   PRIMARY KEY,
-    codigo             VARCHAR(12) NOT NULL UNIQUE,
+    codigo             TEXT        NOT NULL UNIQUE
+                       DEFAULT codigo_con_prefijo('CM-', nextval('seq_codigo_cita'))
+                       CHECK (codigo ~ '^CM-[0-9]{4,}$'),
     paciente_id        BIGINT      NOT NULL REFERENCES pacientes (id) ON DELETE RESTRICT,
-    medico_id          BIGINT      NOT NULL REFERENCES medicos (id) ON DELETE RESTRICT,
-    especialidad_id    SMALLINT    NOT NULL REFERENCES especialidades (id) ON DELETE RESTRICT,
-    sucursal_id        SMALLINT    NOT NULL REFERENCES sucursales (id) ON DELETE RESTRICT,
+    medico_id          BIGINT      NOT NULL,
+    especialidad_id    BIGINT      NOT NULL,
+    sucursal_id        BIGINT      NOT NULL REFERENCES sucursales (id) ON DELETE RESTRICT,
     fecha              DATE        NOT NULL,
     hora_inicio        TIME        NOT NULL,
     hora_fin           TIME        NOT NULL,
-    modalidad          VARCHAR(10) NOT NULL DEFAULT 'PRESENCIAL'
+    modalidad          TEXT        NOT NULL DEFAULT 'PRESENCIAL'
                        CHECK (modalidad IN ('PRESENCIAL', 'VIRTUAL')),
-    estado             VARCHAR(12) NOT NULL DEFAULT 'PROGRAMADA'
+    estado             TEXT        NOT NULL DEFAULT 'PROGRAMADA'
                        CHECK (estado IN ('PROGRAMADA', 'CONFIRMADA', 'ATENDIDA', 'CANCELADA', 'INASISTENCIA')),
-    motivo             VARCHAR(300),
-    motivo_cancelacion VARCHAR(300),
+    motivo             TEXT,
+    motivo_cancelacion TEXT,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     CHECK (hora_fin > hora_inicio),
     periodo TSRANGE GENERATED ALWAYS AS (tsrange(fecha + hora_inicio, fecha + hora_fin)) STORED,
-    EXCLUDE USING gist (medico_id WITH =, periodo WITH &&) WHERE (estado <> 'CANCELADA')
+    -- El médico solo puede atender una especialidad que ejerce.
+    FOREIGN KEY (medico_id, especialidad_id)
+        REFERENCES medico_especialidad (medico_id, especialidad_id) ON DELETE RESTRICT,
+    -- Un médico no puede tener dos citas superpuestas; las canceladas no ocupan horario (RN07, RN09).
+    EXCLUDE USING gist (medico_id WITH =, periodo WITH &&) WHERE (estado <> 'CANCELADA'),
+    -- Permite que la nota clínica se ate al médico de la cita.
+    UNIQUE (id, medico_id)
 );
+ALTER SEQUENCE seq_codigo_cita OWNED BY citas.codigo;
+CREATE INDEX citas_paciente_idx ON citas (paciente_id);
+CREATE INDEX citas_especialidad_idx ON citas (especialidad_id);
+CREATE INDEX citas_sucursal_idx ON citas (sucursal_id);
+CREATE INDEX citas_fecha_idx ON citas (fecha);
 
 CREATE TABLE notas_clinicas (
     id               BIGSERIAL   PRIMARY KEY,
-    cita_id          BIGINT      NOT NULL UNIQUE REFERENCES citas (id) ON DELETE RESTRICT,
-    medico_id        BIGINT      NOT NULL REFERENCES medicos (id) ON DELETE RESTRICT,
+    cita_id          BIGINT      NOT NULL UNIQUE,
+    medico_id        BIGINT      NOT NULL,
     motivo_consulta  TEXT,
     diagnostico      TEXT,
     tratamiento      TEXT,
     observaciones    TEXT,
-    modificado_por   BIGINT      REFERENCES usuarios (id) ON DELETE SET NULL,
+    modificado_por   BIGINT      REFERENCES usuarios (id) ON DELETE RESTRICT,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- La nota la escribe el médico de la cita.
+    FOREIGN KEY (cita_id, medico_id) REFERENCES citas (id, medico_id) ON DELETE RESTRICT
 );
-
-CREATE TABLE bitacora (
-    id         BIGSERIAL   PRIMARY KEY,
-    usuario_id BIGINT      REFERENCES usuarios (id) ON DELETE SET NULL,
-    accion     VARCHAR(50) NOT NULL,
-    entidad    VARCHAR(50),
-    entidad_id BIGINT,
-    fecha      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+CREATE INDEX notas_clinicas_medico_idx ON notas_clinicas (medico_id);
 ```
 
 ### 6.4 Diseño de interfaces
