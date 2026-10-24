@@ -1,10 +1,10 @@
 # Clínica Vida Salud: sistema web de gestión de citas médicas
 
-Segundo examen parcial de Ingeniería de Requisitos. Aplicación en **Laravel 13** (PHP 8.3 o superior), **PostgreSQL 16**, plantillas Blade y Bootstrap 5. El informe con el análisis y el diseño está en `../documento/Informe-Final.md`.
+Segundo examen parcial de Ingeniería de Requisitos. Aplicación en **Laravel 13** (PHP 8.4.1 o superior), **PostgreSQL 16**, plantillas Blade y Bootstrap 5. El informe con el análisis y el diseño está en `../documento/Informe-Final.md`.
 
 ## Requisitos
 
-- PHP 8.3 o superior con la extensión `pdo_pgsql`
+- PHP 8.4.1 o superior con la extensión `pdo_pgsql`
 - Composer
 - Docker (para PostgreSQL)
 
