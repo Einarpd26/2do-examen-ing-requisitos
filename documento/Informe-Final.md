@@ -300,6 +300,7 @@ La lista de espera y los recordatorios por SMS o correo se mencionan como mejora
 | RNF15 | Seguridad | Bloqueo temporal de la cuenta tras 5 intentos fallidos de inicio de sesión, y token CSRF en los formularios que modifican datos. |
 | RNF16 | Privacidad | Los avisos y recordatorios muestran solo fecha, hora y médico, nunca motivo, diagnóstico ni datos médicos. |
 | RNF17 | Integridad | Además de la validación en PHP, la base de datos impide por restricción citas superpuestas del mismo médico (Ciclo #2). |
+| RNF19 | Seguridad | Control de acceso por permisos (RBAC): cada operación exige un permiso `recurso:accion` concedido por el rol de la cuenta. La interfaz oculta lo no permitido y el servidor lo verifica en cada solicitud (RN12). |
 | RNF18 | Seguridad | Las contraseñas temporales se generan de forma aleatoria con un generador criptográfico, vencen a las 72 horas, se muestran una sola vez, se guardan solo como hash y obligan a cambiarlas en el primer ingreso. |
 
 ### 4.3 Actores del sistema
@@ -391,8 +392,8 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 **Flujo principal**
 1. El usuario ingresa su identificador (el Paciente su CI; el personal su correo) y su contraseña.
 2. El sistema valida los datos en el servidor y verifica la contraseña con `password_verify()`.
-3. El sistema inicia la sesión e identifica el rol.
-4. El sistema muestra el menú correspondiente al rol.
+3. El sistema inicia la sesión e identifica el rol de la cuenta y sus permisos.
+4. El sistema muestra el menú según los permisos del rol.
 5. El usuario cierra la sesión y el sistema la destruye.
 
 **Flujos alternos**
@@ -548,6 +549,39 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 - 3a. Datos inválidos: se indican los campos a corregir.
 - El Paciente no puede modificar su nombre, CI, correo, información médica ni contacto de emergencia; esos cambios los realiza la Recepcionista.
 
+### 4.7 Control de acceso (RBAC)
+
+Cada operación exige un permiso con formato `recurso:accion`. Los permisos se agrupan en roles y cada cuenta tiene un único rol. El catálogo es fijo en este proyecto: el Administrador asigna el rol de una cuenta (CU-03), pero no edita qué permisos concede cada rol.
+
+| Permiso | Administrador | Recepcionista | Médico | Paciente |
+|---|:-:|:-:|:-:|:-:|
+| `usuarios:gestionar` | ✓ | | | |
+| `accesos:renovar` | ✓ | ✓ | | |
+| `pacientes:gestionar` | | ✓ | | |
+| `pacientes:consultar` | | ✓ | ✓ | |
+| `pacientes:verificar` | | ✓ | | |
+| `pacientes:crear_acceso` | | ✓ | | |
+| `medicos:gestionar` | ✓ | | | |
+| `especialidades:gestionar` | ✓ | | | |
+| `horarios:gestionar` | ✓ | | | |
+| `perfil:gestionar` | | | | ✓ |
+| `citas:gestionar` | | ✓ | | |
+| `citas:gestionar_propias` | | | | ✓ |
+| `citas:atender` | | | ✓ | |
+| `agenda:consultar` | | ✓ | ✓ | |
+| `historial:consultar` | | ✓ | | ✓ |
+| `notas:registrar` | | | ✓ | |
+| `notas:consultar` | | ✓ | ✓ | ✓ |
+| `recordatorios:consultar` | | | | ✓ |
+| `reportes:consultar` | ✓ | | | |
+| **Total** | 6 | 9 | 5 | 5 |
+
+**Alcance dentro del permiso.** El permiso dice qué acción se puede hacer, no sobre qué datos. La aplicación acota el alcance: el Paciente solo ve lo propio (`citas:gestionar_propias`, `historial:consultar`, `notas:consultar`), y solo con la ficha verificada; el Médico solo ve a los pacientes que tienen o tuvieron cita con él y edita solo sus notas.
+
+**Aplicación en Laravel.** Cada permiso se declara como *Gate*; las rutas lo exigen con el middleware `can:` y las vistas ocultan lo no permitido (RNF19).
+
+**Por qué normalizado.** Los permisos son filas validadas por claves foráneas, no un arreglo de texto: un permiso mal escrito se rechaza al cargarlo. Es una mejora sobre el modelo de Portal Watts, donde los permisos son un `text[]` sin validar.
+
 ---
 
 ## 5. FT. Análisis
@@ -575,7 +609,6 @@ classDiagram
     class Usuario {
         <<entity>>
         contrasenaHash
-        rol
         estado
         intentosFallidos
         bloqueadoHasta
@@ -643,6 +676,17 @@ classDiagram
         fechaRegistro
         fechaUltimaModificacion
     }
+    class Rol {
+        <<entity>>
+        codigo
+        nombre
+        descripcion
+    }
+    class Permiso {
+        <<entity>>
+        codigo
+        descripcion
+    }
     class Bitacora {
         <<entity>>
         fecha
@@ -655,6 +699,8 @@ classDiagram
     Persona "1" -- "0..1" Paciente : es
     Persona "1" -- "0..1" Medico : es
     Usuario "1" -- "*" Bitacora : genera
+    Rol "1" -- "*" Usuario : asignado a
+    Rol "*" -- "*" Permiso : concede
     Paciente "1" -- "*" Cita : tiene
     Medico "1" -- "*" Cita : atiende
     Especialidad "1" -- "*" Cita : de
@@ -670,9 +716,9 @@ classDiagram
 
 | Caso de uso | «boundary» | «control» | «entity» |
 |---|---|---|---|
-| CU-01 Iniciar y cerrar sesión | FormLogin, MenuPrincipal | ControlAcceso | Persona, Usuario, Bitacora |
+| CU-01 Iniciar y cerrar sesión | FormLogin, MenuPrincipal | ControlAcceso | Persona, Usuario, Rol, Permiso, Bitacora |
 | CU-02 Registrarse como paciente | FormRegistro | ControlRegistro | Persona, Paciente, Usuario |
-| CU-03 Gestionar usuarios y roles | ListaUsuarios, FormUsuario | ControlUsuario | Persona, Usuario, Medico, Bitacora |
+| CU-03 Gestionar usuarios y roles | ListaUsuarios, FormUsuario | ControlUsuario | Persona, Usuario, Rol, Medico, Bitacora |
 | CU-04 Gestionar pacientes | ListaPacientes, FormPaciente | ControlPaciente | Persona, Paciente, Usuario, Bitacora |
 | CU-05 Gestionar médicos | ListaMedicos, FormMedico | ControlMedico | Persona, Medico, Especialidad |
 | CU-06 Gestionar especialidades | ListaEspecialidades, FormEspecialidad | ControlEspecialidad | Especialidad |
@@ -917,6 +963,9 @@ erDiagram
     PERSONAS ||--o| PACIENTES : "es"
     PERSONAS ||--o| MEDICOS : "es"
     USUARIOS ||--o{ BITACORA : "genera"
+    ROLES ||--o{ USUARIOS : "asignado a"
+    ROLES ||--o{ ROL_PERMISOS : "concede"
+    PERMISOS ||--o{ ROL_PERMISOS : "incluido en"
     PACIENTES ||--o{ CITAS : "tiene"
     MEDICOS ||--o{ CITAS : "atiende"
     ESPECIALIDADES ||--o{ CITAS : "de"
@@ -942,9 +991,23 @@ erDiagram
     USUARIOS {
         bigint id PK
         bigint persona_id FK
-        string rol
+        bigint rol_id FK
         boolean debe_cambiar_password
         timestamptz password_temporal_vence
+    }
+    ROLES {
+        bigint id PK
+        string codigo UK
+        string nombre
+    }
+    PERMISOS {
+        bigint id PK
+        string codigo UK "recurso:accion"
+        string descripcion
+    }
+    ROL_PERMISOS {
+        bigint rol_id PK, FK
+        bigint permiso_id PK, FK
     }
     PACIENTES {
         bigint id PK
@@ -990,7 +1053,7 @@ erDiagram
 - Todos los textos son de tipo `TEXT`; los formatos que importan (CI, teléfono, correo, tipo de sangre, códigos) se acotan con `CHECK`.
 - El nombre de la persona es atómico: `primer_nombre` y `apellido_paterno` obligatorios, `segundo_nombre` y `apellido_materno` opcionales (si se escriben, no pueden estar en blanco). `nombre_completo` es una columna generada que une las partes, así que nunca se desincroniza y sirve para buscar e imprimir.
 - Todos los identificadores son `BIGINT`, para no mezclar tipos en las claves foráneas. `SMALLINT` se reserva para valores acotados por naturaleza: `duracion_min`, `dia_semana` e `intentos_fallidos`.
-- `usuarios.rol` es un único rol por cuenta (`ADMINISTRADOR`, `RECEPCIONISTA`, `MEDICO`, `PACIENTE`), validado con una restricción `CHECK`. Una persona puede ser médico y paciente a la vez, pero su cuenta tiene rol Médico; como paciente la atiende la recepción.
+- El control de acceso es RBAC normalizado: `roles`, `permisos` y `rol_permisos` son tablas, y `usuarios.rol_id` es una clave foránea al rol. Los permisos tienen formato `recurso:accion` (restricción `CHECK`) y se asignan a los roles por claves foráneas, así que la base rechaza un permiso inexistente. Cada cuenta tiene un solo rol: una persona puede ser médico y paciente a la vez, pero su cuenta tiene rol Médico; como paciente la atiende la recepción. Los catálogos iniciales se cargan con `003_catalogos_iniciales.sql`.
 - El estado activo/inactivo vive en cada especialización (`pacientes.estado`, `medicos.estado`), no en `personas`: desactivar a un paciente no debe desactivar a la misma persona como médico (RN11).
 - `ON DELETE RESTRICT` en las claves hacia pacientes, médicos y citas: nada con historial se elimina, solo se desactiva (RN10, RN11).
 - El CI es único en `personas`; el correo es único sin distinguir mayúsculas y solo cuando existe.
@@ -1005,7 +1068,7 @@ erDiagram
 
 #### 6.3.2 Modelo físico (DDL PostgreSQL)
 
-El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #1) y `002_citas_y_notas.sql` (Ciclo #2), que las migraciones de Laravel ejecutan. Se verificó en PostgreSQL 16: los `CHECK` de formato, la restricción contra horarios y citas superpuestas, las claves foráneas compuestas, los códigos autogenerados y la bitácora de solo escritura rechazan lo inválido, y `migrate:rollback` deja la base limpia. Las tablas propias del framework (`migrations`) no se listan.
+El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #1) y `002_citas_y_notas.sql` (Ciclo #2), que las migraciones de Laravel ejecutan; `003_catalogos_iniciales.sql` carga los datos de referencia (sucursal, roles y permisos, ver 4.7). Se verificó en PostgreSQL 16: los `CHECK` de formato, la restricción contra horarios y citas superpuestas, las claves foráneas compuestas, los códigos autogenerados y la bitácora de solo escritura rechazan lo inválido, y `migrate:rollback` deja la base limpia. Las tablas propias del framework (`migrations`) no se listan.
 
 ```sql
 -- Ciclo #1: identidad, acceso, datos maestros y bitácora.
@@ -1054,13 +1117,36 @@ CREATE TABLE personas (
 -- El correo es opcional, pero único (sin distinguir mayúsculas) cuando existe.
 CREATE UNIQUE INDEX personas_correo_uq ON personas (lower(correo)) WHERE correo IS NOT NULL;
 
+-- Control de acceso (RBAC): los permisos son datos validados por claves foráneas.
+-- Cada permiso usa el formato recurso:accion (por ejemplo, pacientes:gestionar).
+CREATE TABLE roles (
+    id          BIGSERIAL   PRIMARY KEY,
+    codigo      TEXT        NOT NULL UNIQUE CHECK (codigo ~ '^[A-Z_]+$'),
+    nombre      TEXT        NOT NULL CHECK (btrim(nombre) <> ''),
+    descripcion TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE permisos (
+    id          BIGSERIAL   PRIMARY KEY,
+    codigo      TEXT        NOT NULL UNIQUE CHECK (codigo ~ '^[a-z_]+:[a-z_]+$'),
+    descripcion TEXT        NOT NULL CHECK (btrim(descripcion) <> ''),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE rol_permisos (
+    rol_id     BIGINT NOT NULL REFERENCES roles (id) ON DELETE CASCADE,
+    permiso_id BIGINT NOT NULL REFERENCES permisos (id) ON DELETE CASCADE,
+    PRIMARY KEY (rol_id, permiso_id)
+);
+CREATE INDEX rol_permisos_permiso_idx ON rol_permisos (permiso_id);
+
 CREATE TABLE usuarios (
     id                      BIGSERIAL   PRIMARY KEY,
     persona_id              BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
     password_hash           TEXT        NOT NULL,
     -- Un solo rol por cuenta. Una persona puede ser médico y paciente, pero entra con rol MEDICO.
-    rol                     TEXT        NOT NULL
-                            CHECK (rol IN ('ADMINISTRADOR', 'RECEPCIONISTA', 'MEDICO', 'PACIENTE')),
+    rol_id                  BIGINT      NOT NULL REFERENCES roles (id) ON DELETE RESTRICT,
     estado                  BOOLEAN     NOT NULL DEFAULT TRUE,
     intentos_fallidos       SMALLINT    NOT NULL DEFAULT 0 CHECK (intentos_fallidos >= 0),
     bloqueado_hasta         TIMESTAMPTZ,
@@ -1070,6 +1156,7 @@ CREATE TABLE usuarios (
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     CHECK (debe_cambiar_password OR password_temporal_vence IS NULL)
 );
+CREATE INDEX usuarios_rol_idx ON usuarios (rol_id);
 
 CREATE TABLE pacientes (
     id                    BIGSERIAL   PRIMARY KEY,
