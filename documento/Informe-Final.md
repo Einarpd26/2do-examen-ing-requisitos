@@ -1222,7 +1222,7 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 | Pantalla | Rol | Caso de uso | Contenido principal |
 |---|---|---|---|
 | Inicio de sesión | Público | CU-01 | CI o correo, contraseña, celular de la clínica para pedir una contraseña nueva |
-| Registro de paciente | Público | CU-02 | Nombres, apellidos, CI, celular, contraseña; correo opcional |
+| Registro de paciente | Público | CU-02 | Primer nombre, apellido paterno, CI, celular, contraseña; segundo nombre, apellido materno y correo opcionales |
 | Cambio de contraseña | Todos | CU-01, CU-08 | Obligatoria en el primer ingreso con una contraseña temporal |
 | Mi perfil | Paciente | CU-08 | Datos personales; información médica y contacto de emergencia en solo lectura si la ficha está verificada; edición de teléfono y contraseña |
 | Lista de pacientes | Recepcionista | CU-04 | Búsqueda por CI, nombre o apellido; estado de verificación |
