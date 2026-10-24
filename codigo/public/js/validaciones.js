@@ -29,9 +29,32 @@
         if (nueva) { nueva.addEventListener('input', function () { validarNueva(); validarConfirmacion(); }); }
         if (confirmacion) { confirmacion.addEventListener('input', validarConfirmacion); }
 
+        // Grupos de casillas donde hay que marcar al menos una (por ejemplo, las especialidades de un médico).
+        function validarGrupos() {
+            formulario.querySelectorAll('fieldset[data-al-menos-uno]').forEach(function (grupo) {
+                var casillas = grupo.querySelectorAll('input[type="checkbox"]');
+                var mensaje = grupo.getAttribute('data-al-menos-uno');
+                var aviso = grupo.querySelector('[data-mensaje-grupo]');
+                var hayMarcada = Array.prototype.some.call(casillas, function (casilla) { return casilla.checked; });
+
+                // Todas las casillas del grupo quedan inválidas a la vez, para que se vean iguales.
+                casillas.forEach(function (casilla) { casilla.setCustomValidity(hayMarcada ? '' : mensaje); });
+                if (aviso) {
+                    aviso.textContent = hayMarcada ? '' : mensaje;
+                    aviso.classList.toggle('d-none', hayMarcada);
+                    aviso.classList.toggle('d-block', !hayMarcada);
+                }
+            });
+        }
+
+        formulario.querySelectorAll('fieldset[data-al-menos-uno] input[type="checkbox"]').forEach(function (casilla) {
+            casilla.addEventListener('change', validarGrupos);
+        });
+
         formulario.addEventListener('submit', function (evento) {
             validarNueva();
             validarConfirmacion();
+            validarGrupos();
 
             if (!formulario.checkValidity()) {
                 evento.preventDefault();
