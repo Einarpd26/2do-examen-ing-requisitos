@@ -1367,7 +1367,7 @@ CREATE INDEX notas_clinicas_medico_idx ON notas_clinicas (medico_id);
 
 ### 6.4 Diseño de interfaces
 
-Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones dependen del rol, formularios con validación en cliente y mensajes de error junto a cada campo.
+Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones dependen del rol, formularios con validación en cliente y mensajes de error junto a cada campo. El verde de la clínica (`#0b6e6e`) es el color primario de toda la interfaz: botones, barra superior, pestañas, insignias, enlaces y el halo de los campos al enfocarlos.
 
 **Pantallas del Ciclo #1**
 
