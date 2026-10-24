@@ -152,6 +152,17 @@ class EspecialidadTest extends TestCase
         }
     }
 
+    public function test_solo_las_filas_inactivas_se_marcan_para_atenuarlas(): void
+    {
+        $this->crearActivasEInactivas();
+
+        $html = $this->actingAs($this->administrador())
+            ->get(route('especialidades.index', ['estado' => 'todas']))
+            ->getContent();
+
+        $this->assertSame(1, substr_count($html, 'fila-inactiva'), 'hay una sola especialidad inactiva');
+    }
+
     public function test_la_pestaña_inactivas_muestra_solo_las_inactivas(): void
     {
         $this->crearActivasEInactivas();
