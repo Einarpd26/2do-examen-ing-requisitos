@@ -47,6 +47,6 @@ class AdministradorInicialSeeder extends Seeder
         $this->command->info('Administrador inicial creado. Esta contraseña no se vuelve a mostrar:');
         $this->command->line("  Correo:     {$datos['correo']}");
         $this->command->line("  Contraseña: {$emitida['contrasena']}");
-        $this->command->line("  Vence:      {$emitida['vence']->toDateTimeString()} (UTC)");
+        $this->command->line("  Vence:      {$emitida['vence']->format('d/m/Y H:i')} (hora de Bolivia)");
     }
 }

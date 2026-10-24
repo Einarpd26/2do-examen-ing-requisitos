@@ -97,6 +97,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Debe coincidir con la zona horaria de la aplicación (config/app.php): Laravel envía
+            // las fechas sin zona y PostgreSQL las interpreta con la zona de la conexión.
+            'timezone' => 'America/La_Paz',
         ],
 
         'sqlsrv' => [
