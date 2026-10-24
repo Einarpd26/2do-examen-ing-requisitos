@@ -4,12 +4,6 @@
 
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
--- Códigos legibles (PAC-000001, MED-000001, CM-000001) derivados del id: 6 dígitos y, pasado
--- el 999999, el número completo sin truncar. Cada tabla los calcula con una columna generada.
-CREATE FUNCTION codigo_con_prefijo(prefijo TEXT, n BIGINT) RETURNS TEXT
-    LANGUAGE sql IMMUTABLE
-    AS $$ SELECT prefijo || CASE WHEN n < 1000000 THEN lpad(n::TEXT, 6, '0') ELSE n::TEXT END $$;
-
 CREATE TABLE sucursales (
     id         BIGSERIAL   PRIMARY KEY,
     nombre     TEXT        NOT NULL UNIQUE CHECK (btrim(nombre) <> ''),
@@ -88,7 +82,6 @@ CREATE INDEX usuarios_rol_idx ON usuarios (rol_id);
 CREATE TABLE pacientes (
     id                    BIGSERIAL   PRIMARY KEY,
     persona_id            BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
-    codigo                TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('PAC-', id)) STORED UNIQUE,
     verificado            BOOLEAN     NOT NULL DEFAULT FALSE,
     estado                BOOLEAN     NOT NULL DEFAULT TRUE,
     tipo_sangre           TEXT        CHECK (tipo_sangre IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
@@ -106,7 +99,6 @@ CREATE TABLE pacientes (
 CREATE TABLE medicos (
     id                       BIGSERIAL   PRIMARY KEY,
     persona_id               BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
-    codigo                   TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('MED-', id)) STORED UNIQUE,
     nro_registro_profesional TEXT        NOT NULL UNIQUE CHECK (btrim(nro_registro_profesional) <> ''),
     estado                   BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),

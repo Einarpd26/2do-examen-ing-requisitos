@@ -15,6 +15,5 @@ return new class extends Migration
     {
         DB::unprepared('DROP TABLE IF EXISTS bitacora, horarios_atencion, medico_especialidad, especialidades, medicos, pacientes, usuarios, rol_permisos, permisos, roles, personas, sucursales CASCADE');
         DB::unprepared('DROP FUNCTION IF EXISTS bitacora_solo_agregar()');
-        DB::unprepared('DROP FUNCTION IF EXISTS codigo_con_prefijo(TEXT, BIGINT)');
     }
 };

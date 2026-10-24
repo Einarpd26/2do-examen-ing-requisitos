@@ -3,7 +3,6 @@
 
 CREATE TABLE citas (
     id                 BIGSERIAL   PRIMARY KEY,
-    codigo             TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('CM-', id)) STORED UNIQUE,
     paciente_id        BIGINT      NOT NULL REFERENCES pacientes (id) ON DELETE RESTRICT,
     medico_id          BIGINT      NOT NULL,
     especialidad_id    BIGINT      NOT NULL,
