@@ -74,7 +74,7 @@ php artisan migrate && php artisan db:seed
 - **CU-02 registro propio del paciente:** crea la cuenta y la ficha en estado pendiente de verificación; limitado a 10 solicitudes por minuto por IP.
 - **CU-04 gestionar pacientes:** alta, búsqueda, edición, desactivación, cuenta con contraseña temporal (se muestra una sola vez), renovación y verificación de la ficha.
 
-- **CU-06 gestionar especialidades:** alta, edición, desactivación y reactivación (nunca se eliminan), con nombre único sin distinguir mayúsculas ni espacios y duración de la cita entre 5 y 240 minutos.
+- **CU-06 gestionar especialidades:** alta, edición, desactivación y reactivación (nunca se eliminan), con nombre único sin distinguir mayúsculas ni espacios y duración de la cita entre 5 y 240 minutos. El listado muestra por defecto las activas, con pestañas Activas, Inactivas y Todas y su contador.
 - **CU-19 renovar contraseña temporal:** la recepcionista renueva la contraseña del paciente que la olvidó, indicando cómo verificó su identidad (queda en la bitácora). No usa correo electrónico.
 
 Las fechas se muestran en hora de Bolivia (`America/La_Paz`), tanto en la aplicación como en la conexión a PostgreSQL.

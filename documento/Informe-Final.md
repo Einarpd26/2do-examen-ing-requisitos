@@ -511,7 +511,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 | **Postcondición** | La especialidad queda registrada, modificada o activada/desactivada. |
 
 **Flujo principal**
-1. El Administrador abre el listado de especialidades.
+1. El Administrador abre el listado de especialidades. Por defecto ve las **activas**; con las pestañas Activas, Inactivas y Todas, cada una con su cantidad, puede ver también las dadas de baja.
 2. Registra o modifica el nombre, la descripción (opcional) y la duración de la cita en minutos (por ejemplo, 30; entre 5 y 240).
 3. El sistema valida los datos y comprueba que el nombre normalizado no exista. El nombre se guarda sin espacios al inicio ni al final y con un solo espacio entre palabras, y no se distinguen mayúsculas.
 4. El sistema guarda los cambios y los registra en la bitácora.
@@ -1382,8 +1382,10 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 | Credenciales temporales | Recepcionista, Administrador | CU-03, CU-04 | Contraseña mostrada una sola vez, con vencimiento y botones Copiar e Imprimir |
 | Lista y formulario de usuarios | Administrador | CU-03 | Alta del personal, rol, vínculo con médico, activar o desactivar, renovar contraseña |
 | Lista y formulario de médicos | Administrador | CU-05 | Datos, registro profesional, especialidades, estado |
-| Lista y formulario de especialidades | Administrador | CU-06 | Nombre, descripción, duración de la cita, estado |
+| Lista y formulario de especialidades | Administrador | CU-06 | Pestañas Activas, Inactivas y Todas con su contador; nombre, descripción, duración de la cita, estado |
 | Horarios de atención | Administrador | CU-07 | Horarios por médico: día, hora inicial, hora final y consultorio |
+
+**Criterio para los listados con baja lógica** (aplicado hoy en especialidades). Los registros que se desactivan en lugar de eliminarse se listan en pestañas **Activas / Inactivas / Todas**, con la cantidad de cada una y las activas por defecto. El contador evita que lo dado de baja desaparezca sin aviso. Cada fila ofrece solo la acción que corresponde a su estado (Desactivar o Reactivar), y el cambio vuelve a la pestaña desde la que se hizo.
 
 **Menú por rol**
 
