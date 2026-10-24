@@ -100,7 +100,94 @@ El sistema es una aplicación web accesible desde un navegador (PHP, PostgreSQL,
 
 ## 2. Marco teórico
 
-<!-- PUDS-UML, aplicaciones web, PHP, PostgreSQL, PDO, sesiones y hash de contraseñas, RBAC, etc. -->
+### 2.1 Proceso Unificado (PUDS) y UML
+
+El Proceso Unificado de Desarrollo de Software es un proceso iterativo e incremental, dirigido por casos de uso y centrado en la arquitectura (Jacobson, Booch y Rumbaugh, 2000). El trabajo se organiza en ciclos, y cada ciclo recorre los flujos de trabajo de **captura de requisitos, análisis, diseño, implementación y pruebas**, con distinto énfasis según la fase del proyecto.
+
+UML (*Unified Modeling Language*) es el lenguaje de modelado con el que se expresan esos flujos: diagramas de casos de uso, de clases, de secuencia, de comunicación, de estados y de actividades (Object Management Group, s. f.).
+
+**En este proyecto:** el informe sigue los flujos del PUDS en el orden del índice del examen. El desarrollo se divide en dos ciclos: el Ciclo #1 entrega el acceso y los datos maestros (CU-01 a CU-08 y CU-19), y el Ciclo #2 el núcleo de citas, que depende de esa base (sección 4.5).
+
+### 2.2 Aplicaciones web
+
+Una aplicación web sigue el modelo **cliente-servidor**: el navegador envía una solicitud HTTP, el servidor la procesa, consulta o modifica los datos y devuelve una respuesta, normalmente una página HTML. HTTP no guarda estado entre solicitudes, por lo que la identidad del usuario se mantiene con un mecanismo adicional, la **sesión** (The PHP Documentation Group, s. f.-c).
+
+Se acostumbra separar la aplicación en capas (presentación, lógica de negocio y acceso a datos) para que cada una cambie sin arrastrar a las demás.
+
+**En este proyecto:** la capa de presentación son las vistas Blade con Bootstrap 5, la lógica de negocio vive en servicios y la persistencia en modelos Eloquent sobre PostgreSQL (sección 6.1).
+
+### 2.3 PHP y el patrón MVC con Laravel
+
+PHP es un lenguaje de programación del lado del servidor. Laravel es un *framework* de PHP que organiza la aplicación según el patrón **Modelo-Vista-Controlador (MVC)**:
+
+- El **modelo** representa las entidades y su acceso a la base de datos (Eloquent).
+- La **vista** presenta la información; en Laravel se escribe con plantillas Blade (Laravel, s. f.-c).
+- El **controlador** recibe la solicitud que enruta el sistema de rutas (Laravel, s. f.-b), coordina el trabajo y elige la vista.
+
+Laravel también permite validar los datos de entrada antes de que lleguen a la lógica de negocio, mediante clases de solicitud (*form requests*) (Laravel, s. f.-d).
+
+**En este proyecto:** cada caso de uso tiene su controlador, su clase de solicitud para validar en el servidor y un servicio que concentra las reglas de negocio, de modo que el controlador no contiene reglas (sección 7.3).
+
+### 2.4 PostgreSQL, PDO y consultas parametrizadas
+
+PostgreSQL es un sistema gestor de bases de datos relacional. Un modelo relacional bien diseñado se apoya en **claves primarias y foráneas**, en la **normalización** para evitar datos duplicados y en **restricciones** (`UNIQUE`, `CHECK`, `NOT NULL`, claves foráneas) que hacen cumplir las reglas aunque falle la validación de la aplicación (The PostgreSQL Global Development Group, s. f.-b).
+
+PDO (*PHP Data Objects*) es la capa de acceso a bases de datos de PHP; con el controlador `pdo_pgsql` conecta con PostgreSQL (The PHP Documentation Group, s. f.-b). Las **consultas parametrizadas** envían el texto SQL y los valores por separado, de modo que lo que escribe el usuario nunca se interpreta como código SQL. Es la defensa principal contra la inyección SQL (OWASP Foundation, s. f.-a).
+
+**En este proyecto:** todo el acceso a datos pasa por Eloquent y el constructor de consultas de Laravel, que usan PDO con parámetros (RNF05). Las reglas críticas, como la unicidad del CI, también están como restricciones en la base (sección 6.3).
+
+### 2.5 Seguridad en aplicaciones web
+
+Los riesgos más frecuentes en aplicaciones web están catalogados por OWASP (OWASP Foundation, s. f.-e). Los que más influyen en este proyecto son:
+
+- **Almacenamiento de contraseñas:** nunca se guardan en texto plano, sino como un *hash* con una función diseñada para ello. PHP ofrece `password_hash()` y `password_verify()` (The PHP Documentation Group, s. f.-a; OWASP Foundation, s. f.-b).
+- **Sesiones:** el identificador de sesión debe protegerse, regenerarse y vencer por inactividad (OWASP Foundation, s. f.-d).
+- **CSRF (*Cross-Site Request Forgery*):** un sitio ajeno hace que el navegador de la víctima envíe una solicitud autenticada. Se previene con un *token* secreto en cada formulario que modifica datos (OWASP Foundation, s. f.-c; Laravel, s. f.-a).
+- **Fuerza bruta:** se limita con el bloqueo temporal de la cuenta tras varios intentos fallidos y con un tope de solicitudes por dirección IP.
+
+**En este proyecto:** las contraseñas se almacenan solo como hash con el hasher de Laravel, que se apoya en `password_hash()` (RNF04), y las contraseñas temporales se generan con un generador criptográfico (`random_int`) (RNF18). El inicio de sesión compara la contraseña contra un hash de relleno cuando la cuenta no existe, para que el tiempo de respuesta no revele qué CI o correos están registrados. El bloqueo por intentos, el límite por IP y el token CSRF corresponden a RNF15 y RNF20.
+
+### 2.6 Control de acceso basado en roles (RBAC)
+
+En el control de acceso basado en roles los **permisos se asignan a roles** y los **roles a usuarios**, en lugar de asignar permisos usuario por usuario (Ferraiolo et al., 2001). Esto simplifica la administración y facilita comprobar quién puede hacer qué.
+
+**En este proyecto:** cada operación exige un permiso con la forma `recurso:accion`, concedido por el rol de la cuenta. La interfaz oculta lo no permitido, pero la verificación definitiva ocurre en el servidor en cada solicitud (RNF19, RN12), apoyada en el sistema de autorización de Laravel (Laravel, s. f.-e). La matriz completa está en la sección 4.7.
+
+### 2.7 Pruebas de software
+
+Las **pruebas unitarias** verifican una pieza aislada de lógica; las **pruebas de funcionalidad** (*feature tests*) recorren una solicitud completa, desde la ruta hasta la base de datos. PHPUnit es el *framework* de pruebas de PHP (Bergmann, s. f.) y Laravel lo integra con ayudas para simular solicitudes y comprobar respuestas y datos guardados (Laravel, s. f.-f).
+
+**En este proyecto:** las pruebas se ejecutan con `php artisan test` contra una base PostgreSQL dedicada (`clinica_test`), que se recrea con las migraciones en cada ejecución. Los resultados están en la sección 8.
+
+### 2.8 Contenedores para el entorno de desarrollo
+
+Un contenedor empaqueta un programa con sus dependencias y lo ejecuta de forma aislada del resto del equipo (Docker Inc., s. f.). Docker Compose describe esos servicios en un archivo.
+
+**En este proyecto:** PostgreSQL 16 corre en un contenedor definido en `docker-compose.yml`, de modo que la base se levanta con el mismo comando en cualquier equipo, sin instalarla ni configurarla a mano (RNF03).
+
+### Referencias de esta sección
+
+- Bergmann, S. (s. f.). *PHPUnit Documentation*. https://docs.phpunit.de/en/12.5/
+- Docker Inc. (s. f.). *What is Docker?* https://docs.docker.com/get-started/docker-overview/
+- Ferraiolo, D. F., Sandhu, R., Gavrila, S., Kuhn, D. R. y Chandramouli, R. (2001). Proposed NIST standard for role-based access control. *ACM Transactions on Information and System Security, 4*(3), 224-274. https://doi.org/10.1145/501978.501980
+- Jacobson, I., Booch, G. y Rumbaugh, J. (2000). *El Proceso Unificado de Desarrollo de Software*. Addison-Wesley. (Edición en español de *The Unified Software Development Process*, 1999.)
+- Laravel. (s. f.-a). *CSRF Protection*. https://laravel.com/docs/13.x/csrf
+- Laravel. (s. f.-b). *Routing*. https://laravel.com/docs/13.x/routing
+- Laravel. (s. f.-c). *Blade Templates*. https://laravel.com/docs/13.x/blade
+- Laravel. (s. f.-d). *Validation*. https://laravel.com/docs/13.x/validation
+- Laravel. (s. f.-e). *Authorization*. https://laravel.com/docs/13.x/authorization
+- Laravel. (s. f.-f). *Testing: Getting Started*. https://laravel.com/docs/13.x/testing
+- Object Management Group. (s. f.). *Unified Modeling Language (UML)*. https://www.omg.org/spec/UML/
+- OWASP Foundation. (s. f.-a). *SQL Injection Prevention Cheat Sheet*. https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+- OWASP Foundation. (s. f.-b). *Password Storage Cheat Sheet*. https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+- OWASP Foundation. (s. f.-c). *Cross-Site Request Forgery Prevention Cheat Sheet*. https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
+- OWASP Foundation. (s. f.-d). *Session Management Cheat Sheet*. https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
+- OWASP Foundation. (s. f.-e). *OWASP Top Ten*. https://owasp.org/www-project-top-ten/
+- The PHP Documentation Group. (s. f.-a). *password_hash*. Manual de PHP. https://www.php.net/manual/es/function.password-hash.php
+- The PHP Documentation Group. (s. f.-b). *PHP Data Objects*. Manual de PHP. https://www.php.net/manual/es/book.pdo.php
+- The PHP Documentation Group. (s. f.-c). *Sesiones*. Manual de PHP. https://www.php.net/manual/es/features.sessions.php
+- The PostgreSQL Global Development Group. (s. f.-a). *PostgreSQL 16 Documentation*. https://www.postgresql.org/docs/16/
+- The PostgreSQL Global Development Group. (s. f.-b). *Constraints*. En *PostgreSQL 16 Documentation*. https://www.postgresql.org/docs/16/ddl-constraints.html
 
 ---
 
@@ -285,7 +372,7 @@ La lista de espera y los recordatorios por SMS o correo se mencionan como mejora
 |---|---|---|
 | RNF01 | Tecnología | Backend en PHP con el framework Laravel, base de datos PostgreSQL y acceso a datos sobre PDO (`pdo_pgsql`). |
 | RNF02 | Tecnología | Interfaz con HTML5 y CSS3 generados en el servidor mediante plantillas Blade de Laravel; JavaScript para validaciones e interacción. |
-| RNF03 | Despliegue | Ejecución en servidor local Apache (XAMPP o entorno PHP equivalente), con el directorio `public/` de Laravel como raíz web. |
+| RNF03 | Despliegue | Ejecución en un entorno PHP local equivalente a Apache/XAMPP: en desarrollo, PHP 8.4 con su servidor embebido (`php artisan serve`) y PostgreSQL en un contenedor Docker; el directorio `public/` de Laravel es la raíz web. El servidor embebido es solo para desarrollo: un despliegue real usaría Apache o Nginx con PHP apuntando a `public/`. |
 | RNF04 | Seguridad | Contraseñas almacenadas con un hash seguro (`password_hash()` de PHP, que usa internamente el hasher de Laravel) y verificadas con `password_verify()` o su equivalente. |
 | RNF05 | Seguridad | Consultas SQL parametrizadas para evitar inyección SQL. |
 | RNF06 | Seguridad | Uso de sesiones; las páginas internas rechazan el acceso sin sesión válida. |
@@ -871,9 +958,9 @@ flowchart TB
     end
     subgraph Aplicacion["Aplicación"]
         R["Rutas (routes/web.php)"]
-        M["Middleware: autenticación, rol,\ncambio obligatorio de contraseña,\ncierre por inactividad"]
+        M["Middleware: auth (sesión válida),\ncuenta.vigente (cuenta activa y cambio\nobligatorio de contraseña),\ncan: (permiso de cada operación)"]
         C["Controladores + Form Requests\n(«control»)"]
-        S["Servicios: ContraseñaTemporal,\nBitácora, Códigos"]
+        S["Servicios: uno por módulo, más\nAutenticación, ContraseñaTemporal\ny Bitácora"]
     end
     subgraph Dominio["Dominio y datos"]
         E["Modelos Eloquent\n(«entity»)"]
@@ -891,8 +978,10 @@ flowchart TB
 | «boundary» (FormLogin, ListaPacientes...) | Vistas Blade | `resources/views/` |
 | «control» (ControlAcceso, ControlPaciente...) | Controladores y Form Requests (validación) | `app/Http/Controllers/`, `app/Http/Requests/` |
 | «entity» (Persona, Usuario, Paciente...) | Modelos Eloquent | `app/Models/` |
-| Reglas transversales (contraseña temporal, bitácora, códigos) | Servicios | `app/Services/` |
-| Control de acceso (RNF06, RNF14, RNF15) | Middleware | `app/Http/Middleware/` |
+| Reglas de negocio y transversales (autenticación, contraseña temporal, bitácora) | Servicios | `app/Services/` |
+| Formato de los códigos (`PAC-`, `MED-`, `CM-`) | *Trait* de los modelos | `app/Models/Concerns/TieneCodigoFormateado.php` |
+| Control de acceso (RNF06, RNF19) | Middleware `auth`, `cuenta.vigente` y `can:`, con el `Gate` de permisos | `app/Http/Middleware/`, `bootstrap/app.php`, `app/Providers/AppServiceProvider.php` |
+| Cierre por inactividad y bloqueo por intentos (RNF14, RNF15) | Configuración de la sesión (`SESSION_LIFETIME`), límite de solicitudes en las rutas y servicio de autenticación | `config/session.php`, `routes/web.php`, `app/Services/AutenticacionService.php` |
 
 **Reglas de la arquitectura**
 - Las vistas no contienen lógica de negocio ni consultas.
@@ -907,11 +996,11 @@ flowchart LR
     subgraph Cliente["Equipo del usuario"]
         N["Navegador web\nHTML5 · Bootstrap 5 · JavaScript"]
     end
-    subgraph Servidor["Servidor local (XAMPP o equivalente)"]
-        A["Apache + PHP\nLaravel (public/ como raíz web)"]
+    subgraph Servidor["Servidor local (entorno PHP equivalente a XAMPP)"]
+        A["PHP 8.4 · servidor embebido\nLaravel (public/ como raíz web)"]
     end
-    subgraph BD["Base de datos"]
-        P[("PostgreSQL\n(pdo_pgsql)")]
+    subgraph BD["Base de datos (contenedor Docker)"]
+        P[("PostgreSQL 16\n(pdo_pgsql)")]
     end
     N -- "HTTP(S)" --> A
     A -- "PDO" --> P
@@ -920,8 +1009,10 @@ flowchart LR
 | Nodo | Software | Responsabilidad |
 |---|---|---|
 | Cliente | Navegador moderno | Muestra la interfaz y ejecuta las validaciones de JavaScript. |
-| Servidor de aplicación | Apache, PHP y Laravel | Procesa las solicitudes, aplica las reglas de negocio y mantiene las sesiones. |
-| Servidor de datos | PostgreSQL | Almacena los datos de forma persistente (RN14). |
+| Servidor de aplicación | PHP 8.4 con su servidor embebido (`php artisan serve`) y Laravel | Procesa las solicitudes, aplica las reglas de negocio y mantiene las sesiones. |
+| Servidor de datos | PostgreSQL 16 en un contenedor Docker (`docker-compose.yml`) | Almacena los datos de forma persistente (RN14). |
+
+El servidor embebido es solo para desarrollo. Un despliegue real sustituiría ese nodo por Apache o Nginx con PHP apuntando a `public/`, sin cambiar el código ni la base de datos (RNF03).
 
 Los archivos de Bootstrap se sirven desde `public/`, sin depender de una conexión a internet.
 
@@ -936,29 +1027,41 @@ sequenceDiagram
     actor U as Usuario
     participant V as FormLogin (Blade)
     participant C as AccesoController
-    participant P as Persona
-    participant S as Usuario
+    participant R as LoginRequest
+    participant S as AutenticacionService
+    participant M as Usuario
     participant B as BitacoraService
 
     U->>V: ingresa identificador y contraseña
     V->>C: POST /login
-    C->>P: buscar por CI o correo
-    P-->>C: persona
-    C->>S: obtener cuenta
-    alt cuenta inactiva o bloqueada
-        C-->>V: mensaje genérico o tiempo de espera
+    C->>R: validar que ambos campos vengan completos
+    C->>S: intentar(identificador, contraseña)
+    S->>M: buscar la cuenta (CI si es paciente, correo si es personal)
+    alt la cuenta no existe
+        S->>B: registrar login fallido
+        S-->>C: credenciales incorrectas (se compara contra un hash de relleno para no revelar si existe)
+    else cuenta bloqueada
+        S-->>C: bloqueada, con los minutos de espera
     else contraseña incorrecta
-        C->>S: sumar intento fallido (bloquear al 5.º)
-        C->>B: registrar login fallido
-        C-->>V: mensaje genérico
+        S->>M: sumar intento fallido (bloquear al 5.º)
+        S->>B: registrar login fallido o cuenta bloqueada
+        S-->>C: credenciales incorrectas o bloqueada
+    else cuenta inactiva
+        S->>B: registrar rechazo por cuenta inactiva
+        S-->>C: inactiva
+    else contraseña temporal vencida
+        S->>B: registrar rechazo por contraseña temporal vencida
+        S-->>C: temporal vencida
     else contraseña correcta
-        alt contraseña temporal vencida
-            C-->>V: rechazar y pedir renovación a recepción
-        else
-            C->>S: reiniciar intentos fallidos
-            C->>B: registrar login
-            C-->>U: redirigir (cambiar contraseña si es temporal; si no, menú del rol)
-        end
+        S->>M: reiniciar intentos fallidos
+        S->>B: registrar login
+        S-->>C: correcto
+    end
+    alt el intento no fue correcto
+        C-->>V: mensaje del resultado (genérico, tiempo de espera o pedir renovación a recepción)
+    else
+        C->>C: abrir la sesión y regenerar su identificador
+        C-->>U: redirigir al inicio (si la contraseña es temporal, el middleware cuenta.vigente la lleva a cambiarla)
     end
 ```
 
@@ -969,23 +1072,29 @@ sequenceDiagram
     actor V as Visitante
     participant F as FormRegistro (Blade)
     participant C as RegistroController
-    participant R as RegistroRequest
-    participant P as Persona
+    participant R as RegistroPacienteRequest
+    participant S as RegistroPacienteService
     participant D as Base de datos
     participant B as BitacoraService
 
     V->>F: completa primer nombre, apellido paterno, CI, celular, contraseña
     F->>C: POST /registro
-    C->>R: validar datos
-    R-->>C: datos válidos
-    C->>P: ¿existe el CI?
-    alt el CI ya tiene ficha
-        C-->>F: rechazar, pedir el acceso en recepción
+    C->>R: validar datos (incluye comprobar que el CI y el correo no existan)
+    alt datos inválidos o el CI ya está registrado
+        R-->>F: errores (si el CI existe, pedir el acceso en recepción)
     else
-        C->>D: transacción: crear persona, ficha (verificado = falso) y cuenta (hash)
-        D-->>C: confirmación
-        C->>B: registrar alta de paciente
-        C-->>V: redirigir al inicio de sesión
+        R-->>C: datos válidos
+        C->>S: registrar(datos)
+        S->>D: transacción: crear persona, ficha (verificado = falso) y cuenta (hash)
+        S->>B: registrar alta de paciente (dentro de la transacción)
+        alt otro registro con el mismo CI o correo ganó la carrera
+            D-->>S: violación de unicidad
+            S-->>F: rechazar con el mensaje de CI o correo ya registrado
+        else
+            D-->>S: confirmación
+            S-->>C: cuenta creada
+            C-->>V: redirigir al inicio de sesión
+        end
     end
 ```
 
@@ -995,19 +1104,27 @@ sequenceDiagram
 sequenceDiagram
     actor R as Recepcionista
     participant F as FormPaciente (Blade)
-    participant C as PacienteController
+    participant C as AccesoPacienteController
+    participant S as PacienteService
     participant T as ContraseñaTemporalService
     participant U as Usuario
     participant B as BitacoraService
 
     R->>F: pide crear el acceso del paciente
     F->>C: POST /pacientes/{id}/acceso
-    C->>T: generar contraseña temporal
-    T-->>C: contraseña (14 caracteres) y vencimiento (72 h)
-    C->>U: crear cuenta (hash, debe_cambiar_password, vencimiento)
-    C->>B: registrar creación del acceso
-    C-->>F: mostrar la contraseña una sola vez (Copiar / Imprimir)
-    F-->>R: la entrega al paciente, impresa o por mensaje
+    C->>S: crearAcceso(paciente, actor)
+    alt paciente desactivado o con cuenta existente
+        S-->>F: rechazar con un mensaje explicativo
+    else
+        S->>U: transacción: crear la cuenta con rol Paciente (contraseña de relleno)
+        S->>T: emitirPara(cuenta)
+        T->>U: fijar la contraseña temporal (hash, debe_cambiar_password, vencimiento)
+        T-->>S: contraseña (14 caracteres) y vencimiento (72 h)
+        S->>B: registrar creación del acceso
+        S-->>C: credenciales emitidas
+        C-->>F: redirigir a la pantalla de credenciales, que muestra la contraseña una sola vez (Copiar / Imprimir)
+        F-->>R: la entrega al paciente, impresa o por mensaje
+    end
 ```
 
 **CU-19 Renovar contraseña temporal**
@@ -1019,6 +1136,7 @@ sequenceDiagram
     participant F as FichaPaciente (Blade)
     participant C as AccesoPacienteController
     participant V as RenovarAccesoRequest
+    participant S as PacienteService
     participant T as ContraseñaTemporalService
     participant U as Usuario
     participant B as BitacoraService
@@ -1031,12 +1149,18 @@ sequenceDiagram
     alt no indicó cómo verificó la identidad
         V-->>F: rechazar, no se renueva nada
     else
-        C->>T: generar contraseña temporal
-        T-->>C: contraseña (14 caracteres) y vencimiento (72 h)
-        C->>U: reemplazar el hash, exigir cambio, levantar el bloqueo
-        C->>B: registrar renovación con cómo se verificó la identidad
-        C-->>F: mostrar la contraseña una sola vez (Copiar / Imprimir)
-        R->>P: la entrega impresa, en persona o por mensaje al celular registrado
+        C->>S: renovarAcceso(paciente, actor, verificación)
+        alt sin cuenta, cuenta de otro rol o paciente desactivado
+            S-->>F: rechazar con un mensaje explicativo
+        else
+            S->>T: transacción: emitirPara(cuenta)
+            T->>U: reemplazar el hash, exigir cambio, levantar el bloqueo
+            T-->>S: contraseña (14 caracteres) y vencimiento (72 h)
+            S->>B: registrar renovación con cómo se verificó la identidad
+            S-->>C: credenciales emitidas
+            C-->>F: redirigir a la pantalla de credenciales, que muestra la contraseña una sola vez (Copiar / Imprimir)
+            R->>P: la entrega impresa, en persona o por mensaje al celular registrado
+        end
     end
 ```
 
@@ -1419,11 +1543,679 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 
 ### 7.1 Herramientas de desarrollo
 
-<!-- PHP, PostgreSQL, PDO, Apache/XAMPP, HTML5, CSS3, JS, Git/GitHub. -->
+| Capa | Herramienta | Versión | Uso en el proyecto |
+|---|---|---|---|
+| Lenguaje del servidor | PHP | 8.4 (el `composer.lock` exige 8.4.1 o superior) | Lógica de negocio y acceso a datos (RNF01). |
+| *Framework* | Laravel | 13.38 | Rutas, controladores, validación, autenticación por sesión, Eloquent y plantillas Blade. |
+| Base de datos | PostgreSQL | 16 | Almacenamiento persistente (RN14). Corre en un contenedor Docker. |
+| Acceso a datos | PDO con `pdo_pgsql` | Incluido en PHP | Conexión con consultas parametrizadas, a través de Eloquent (RNF05). |
+| Interfaz | HTML5, CSS3 y Bootstrap | Bootstrap 5.3.8 | Plantillas Blade con Bootstrap servido desde `public/vendor/bootstrap`, sin depender de internet. Hoja de estilos propia en `public/css/clinica.css`. |
+| Cliente | JavaScript | Sin librerías | Validaciones de formularios en el navegador (`public/js/validaciones.js`), además de la validación en el servidor (RNF08). |
+| Dependencias PHP | Composer | 2.x | Instala y fija las versiones de las librerías (`composer.lock`). |
+| Entorno de la base | Docker y Docker Compose | — | Levanta PostgreSQL con `docker-compose.yml` (RNF03). |
+| Servidor local | Servidor embebido de PHP (`php artisan serve`) | PHP 8.4 | Ejecuta la aplicación en desarrollo. Un despliegue real usaría Apache o Nginx (RNF03). |
+| Pruebas | PHPUnit | 12.5 | Pruebas unitarias y de funcionalidad con `php artisan test`. |
+| Control de versiones | Git y GitHub | — | Repositorio público del código y del informe (sección 7.4). |
+
+El esqueleto de Laravel trae también Vite y Tailwind CSS (`package.json`), pero la interfaz no los usa: las vistas cargan Bootstrap y el JavaScript propio directamente desde `public/`, por lo que no hace falta Node.js para ejecutar la aplicación.
+
+**Puesta en marcha.** El procedimiento completo está en el `README.md` del repositorio: copiar `.env.example` a `.env`, instalar las dependencias con Composer, generar la clave de la aplicación, levantar PostgreSQL con Docker, ejecutar las migraciones y cargar los datos iniciales con `php artisan db:seed`.
 
 ### 7.2 Implementación de la arquitectura del sistema
 
+La arquitectura lógica de la sección 6.1 se materializó sin cambiar su forma: cada solicitud recorre las mismas capas, y cada capa vive en un directorio propio de `codigo/`. El recorrido de una solicitud del Ciclo #1 es:
+
+```text
+ruta (routes/web.php)
+  -> middleware: auth, cuenta.vigente, can:<permiso>
+  -> controlador (app/Http/Controllers)
+  -> Form Request: validación en el servidor (app/Http/Requests)
+  -> servicio: reglas de negocio (app/Services)
+  -> modelo Eloquent (app/Models)
+  -> PostgreSQL (database/sql)
+  -> vista Blade (resources/views)
+```
+
+**Rutas y grupos de middleware.** `routes/web.php` separa dos zonas. Las rutas públicas (`/login` y `/registro`) están bajo el middleware `guest` y las solicitudes de entrada y de registro se limitan a 10 por minuto con `throttle:10,1` (RNF15, RNF20). Todas las páginas internas están bajo `auth` y `cuenta.vigente` (RF01, RNF06), y cada módulo agrega su permiso con `can:` (RNF19).
+
+`routes/web.php`
+
+```php
+// Páginas internas: exigen sesión válida (RF01) y una cuenta vigente.
+Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
+    Route::redirect('/', '/inicio');
+    Route::get('/inicio', InicioController::class)->name('inicio');
+    Route::post('/logout', [AccesoController::class, 'salir'])->name('logout');
+// ...
+    // CU-03: gestionar usuarios y roles del personal (solo el Administrador, con usuarios:gestionar).
+    Route::prefix('usuarios')->name('usuarios.')->middleware('can:usuarios:gestionar')->group(function () {
+        Route::get('/', [UsuarioController::class, 'index'])->name('index');
+        Route::get('/nuevo', [UsuarioController::class, 'create'])->name('create');
+        Route::post('/', [UsuarioController::class, 'store'])->name('store');
+```
+
+**Middleware `cuenta.vigente`.** El alias se registra en `bootstrap/app.php` y apunta a la clase `VerificarCuenta`.
+
+`bootstrap/app.php`
+
+```php
+        $middleware->alias([
+            'cuenta.vigente' => \App\Http\Middleware\VerificarCuenta::class,
+        ]);
+```
+
+`VerificarCuenta` se ejecuta en cada solicitud de una sesión abierta. Si la cuenta fue desactivada, o si la contraseña temporal venció, cierra la sesión. Si la contraseña temporal sigue vigente, solo deja pasar las rutas de cambio de contraseña y de cierre de sesión (RNF18). Por eso la baja de una cuenta surte efecto en la solicitud siguiente.
+
+`app/Http/Middleware/VerificarCuenta.php`
+
+```php
+        if (! $cuenta->estado) {
+            return $this->cerrarSesion($request, 'Su cuenta fue desactivada. Comuníquese con recepción.');
+        }
+
+        if ($cuenta->debe_cambiar_password) {
+            if ($cuenta->password_temporal_vence->isPast()) {
+                return $this->cerrarSesion(
+                    $request,
+                    'La contraseña temporal venció. Pida una nueva en recepción: '.config('clinica.celular').'.'
+                );
+            }
+
+            if (! $request->routeIs(self::RUTAS_PERMITIDAS)) {
+                return redirect()->route('password.cambiar');
+            }
+        }
+```
+
+**Control de acceso por permisos (RBAC).** Los permisos tienen el formato `recurso:accion` (sección 4.7) y se guardan en las tablas `permisos` y `rol_permisos`. Para que `can:usuarios:gestionar` funcione, `AppServiceProvider` registra un `Gate::before` que consulta el rol de la cuenta; lo mismo sirve para `@can()` en las vistas y para `Gate::allows()` en el código (RN12, RNF19).
+
+`app/Providers/AppServiceProvider.php`
+
+```php
+        // Cada permiso del catálogo (por ejemplo pacientes:gestionar) funciona como una
+        // habilidad: Gate::allows(), @can() y el middleware can: lo consultan en el rol de la cuenta.
+        Gate::before(fn (?Usuario $cuenta, string $habilidad) => $cuenta?->tienePermiso($habilidad) ? true : null);
+```
+
+**Controlador.** Cada controlador recibe la solicitud ya validada y delega la regla de negocio en un servicio; no escribe SQL ni decide reglas. `AccesoController` es el ejemplo más pequeño: el Form Request valida, el servicio decide y el controlador solo abre la sesión.
+
+`app/Http/Controllers/AccesoController.php`
+
+```php
+    public function autenticar(LoginRequest $request, AutenticacionService $acceso): RedirectResponse
+    {
+        $intento = $acceso->intentar(
+            $request->validated('identificador'),
+            $request->validated('contrasena'),
+        );
+
+        if (! $intento->fueCorrecto()) {
+            return back()
+                ->withInput($request->only('identificador'))
+                ->withErrors(['identificador' => $intento->mensaje()]);
+        }
+
+        Auth::login($intento->cuenta);
+        // Nuevo identificador de sesión al entrar, para evitar la fijación de sesión.
+        $request->session()->regenerate();
+```
+
+**Form Request.** La validación del servidor está en clases de `app/Http/Requests/` (RNF08); el cliente la refuerza con `public/js/validaciones.js`. Varias solicitudes comparten el trait `NormalizaDatosDePersona`, que deja el CI, el correo y los teléfonos en la forma en que se guardan antes de validarlos.
+
+`app/Http/Requests/LoginRequest.php`
+
+```php
+    public function rules(): array
+    {
+        return [
+            'identificador' => ['required', 'string', 'max:150'],
+            'contrasena' => ['required', 'string', 'max:255'],
+        ];
+    }
+```
+
+**Servicio.** Las reglas de negocio viven en `app/Services/`, un servicio por módulo, más los transversales. Los servicios abren la transacción, aplican la regla, escriben en la bitácora y traducen los rechazos de la base de datos a un mensaje comprensible. `HorarioService` muestra este último punto: la restricción de exclusión de PostgreSQL (más abajo) es la última defensa, y el servicio convierte su error `23P01` en una regla de negocio.
+
+`app/Services/HorarioService.php`
+
+```php
+    private function conReglasDeLaBase(\Closure $operacion): mixed
+    {
+        try {
+            return $operacion();
+        } catch (QueryException $e) {
+            // 23P01: violación de la restricción de exclusión (bloques superpuestos del mismo médico).
+            if (($e->errorInfo[0] ?? null) === '23P01') {
+                throw new ReglaDeNegocioException('Este horario se superpone con otro del mismo médico el mismo día.');
+            }
+
+            throw $e;
+        }
+    }
+```
+
+`ReglaDeNegocioException` es la excepción común de todos los servicios. `bootstrap/app.php` la convierte en una redirección a la pantalla anterior con el mensaje, sin volver a poner en el formulario ninguna contraseña (RNF20); la plantilla base muestra ese mensaje.
+
+`bootstrap/app.php`
+
+```php
+        $exceptions->render(
+            fn (ReglaDeNegocioException $e) => back()
+                ->withInput(request()->except(['password', 'password_confirmation', 'password_actual', 'contrasena']))
+                ->with('error', $e->getMessage())
+        );
+```
+
+**Modelo.** Los modelos de `app/Models/` son las entidades del análisis. `Usuario` es la cuenta de acceso: guarda el hash en la columna `password_hash`, nunca la expone al serializarse (`$hidden`) y la convierte en hash automáticamente al asignarla (`'hashed'`), de modo que ningún servicio escribe una contraseña en claro (RNF04).
+
+`app/Models/Usuario.php`
+
+```php
+    protected $hidden = ['password_hash'];
+
+    protected function casts(): array
+    {
+        return [
+            // Al asignar una contraseña en texto plano se guarda su hash.
+            'password_hash' => 'hashed',
+            'estado' => 'boolean',
+            'bloqueado_hasta' => 'datetime',
+            'debe_cambiar_password' => 'boolean',
+            'password_temporal_vence' => 'datetime',
+        ];
+    }
+```
+
+**Base de datos.** El esquema del Ciclo #1 está escrito en SQL puro en `database/sql/` (`001_esquema_base.sql`, `002_citas_y_notas.sql`, `003_catalogos_iniciales.sql`); las migraciones de `database/migrations/` solo ejecutan esos archivos. Así las restricciones no dependen de la aplicación: unicidad (CI, correo, registro profesional, nombre de especialidad), formatos con `CHECK`, claves foráneas y la restricción de exclusión de los horarios. Esta es la que impide que un médico tenga dos bloques superpuestos el mismo día:
+
+`database/sql/001_esquema_base.sql`
+
+```sql
+    CHECK (hora_fin > hora_inicio),
+    -- Rango del bloque dentro de un día de referencia, para comparar superposiciones.
+    rango TSRANGE GENERATED ALWAYS AS
+        (tsrange(DATE '2000-01-01' + hora_inicio, DATE '2000-01-01' + hora_fin)) STORED,
+    -- Un médico no puede tener dos bloques superpuestos el mismo día, ni en sucursales distintas.
+    EXCLUDE USING gist (medico_id WITH =, dia_semana WITH =, rango WITH &&)
+```
+
+**Vistas y menú por permisos.** El menú no está escrito en las vistas: sale de `config/menu.php`, donde cada opción declara el permiso que la habilita y el nombre de la ruta a la que lleva.
+
+`config/menu.php`
+
+```php
+    'opciones' => [
+        ['etiqueta' => 'Usuarios', 'permiso' => 'usuarios:gestionar', 'ruta' => 'usuarios.index'],
+        ['etiqueta' => 'Médicos', 'permiso' => 'medicos:gestionar', 'ruta' => 'medicos.index'],
+        ['etiqueta' => 'Especialidades', 'permiso' => 'especialidades:gestionar', 'ruta' => 'especialidades.index'],
+        ['etiqueta' => 'Horarios de atención', 'permiso' => 'horarios:gestionar', 'ruta' => 'horarios.index'],
+        ['etiqueta' => 'Pacientes', 'permiso' => 'pacientes:gestionar', 'ruta' => 'pacientes.index'],
+        ['etiqueta' => 'Mi perfil', 'permiso' => 'perfil:gestionar', 'ruta' => 'perfil.mostrar'],
+    ],
+```
+
+La clase `App\Support\Menu` filtra esas opciones con el mismo `Gate` que usan las rutas, de modo que la interfaz oculta lo que el servidor rechazaría. Una opción cuya ruta todavía no existe se muestra deshabilitada.
+
+`app/Support/Menu.php`
+
+```php
+        foreach (config('menu.opciones') as $opcion) {
+            if (! Gate::forUser($cuenta)->allows($opcion['permiso'])) {
+                continue;
+            }
+
+            $opciones[] = [
+                'etiqueta' => $opcion['etiqueta'],
+                'url' => Route::has($opcion['ruta']) ? route($opcion['ruta']) : null,
+            ];
+        }
+```
+
+La plantilla base `resources/views/layouts/base.blade.php` dibuja la barra de navegación solo para sesiones abiertas (`@auth`), recorre el resultado de `Menu::para()` y deja el contenido de cada pantalla en `@yield('contenido')`. Todas las vistas del Ciclo #1 extienden esta plantilla. Los avisos de éxito y de error de la sesión también se muestran aquí, y el formulario de cierre de sesión incluye `@csrf`.
+
+`resources/views/layouts/base.blade.php`
+
+```blade
+                    @foreach (\App\Support\Menu::para(auth()->user()) as $opcion)
+                        <li class="nav-item">
+                            @if ($opcion['url'])
+                                <a class="nav-link" href="{{ $opcion['url'] }}">{{ $opcion['etiqueta'] }}</a>
+                            @else
+                                <span class="nav-link disabled" aria-disabled="true">{{ $opcion['etiqueta'] }}</span>
+                            @endif
+                        </li>
+                    @endforeach
+```
+
+#### Aspectos transversales
+
+**Bitácora de auditoría (RNF13).** `BitacoraService` es el único punto de escritura de la bitácora y solo sabe agregar. La base de datos refuerza esa regla: la tabla `bitacora` tiene disparadores que rechazan `UPDATE`, `DELETE` y `TRUNCATE` (`bitacora_sin_modificar` y `bitacora_sin_vaciar` en `001_esquema_base.sql`).
+
+`app/Services/BitacoraService.php`
+
+```php
+    public function registrar(
+        string $accion,
+        ?Usuario $usuario = null,
+        ?string $entidad = null,
+        ?int $entidadId = null,
+        ?string $detalle = null,
+    ): void {
+        Bitacora::create([
+            'usuario_id' => $usuario?->id,
+            'accion' => $accion,
+            'entidad' => $entidad,
+            'entidad_id' => $entidadId,
+            'detalle' => $detalle,
+        ]);
+    }
+```
+
+**Límite de intentos y bloqueo de cuenta (RNF15).** `AutenticacionService::registrarFallo()` suma el intento en la base de forma atómica (`increment()`), vuelve a leer el valor real y, al llegar al máximo, bloquea la cuenta. Los valores (5 intentos, 15 minutos) están en `config/clinica.php`, no en el código. A esto se suma el límite de 10 solicitudes por minuto por IP de la ruta `/login`.
+
+`app/Services/AutenticacionService.php`
+
+```php
+        $cuenta->increment('intentos_fallidos');
+        $cuenta->refresh();
+
+        if ($cuenta->intentos_fallidos >= config('clinica.login.max_intentos')) {
+            $cuenta->forceFill([
+                'intentos_fallidos' => 0,
+                'bloqueado_hasta' => now()->addMinutes(config('clinica.login.bloqueo_minutos')),
+            ])->save();
+            $this->bitacora->registrar('cuenta_bloqueada', $cuenta, 'usuarios', $cuenta->id);
+
+            return new IntentoAcceso(ResultadoAcceso::Bloqueada, $cuenta, $this->minutosRestantes($cuenta));
+        }
+```
+
+**Contraseñas temporales (RNF18).** `ContrasenaTemporalService` genera la contraseña con `random_int()` (generador criptográfico), con 14 caracteres por defecto, y le fija 72 horas de vigencia. `emitirPara()` es el único lugar que asigna una contraseña temporal, tanto en el alta como en la renovación: la anterior deja de servir, se levanta el bloqueo y se obliga a cambiarla. Devuelve la contraseña en claro solo para mostrarla una vez; en la base queda su hash por el `cast` `hashed` de `Usuario`.
+
+`app/Services/ContrasenaTemporalService.php`
+
+```php
+    public function emitirPara(Usuario $usuario): array
+    {
+        $contrasena = $this->generar();
+        $vence = $this->vencimiento();
+
+        $usuario->forceFill([
+            'password_hash' => $contrasena,
+            'debe_cambiar_password' => true,
+            'password_temporal_vence' => $vence,
+            'intentos_fallidos' => 0,
+            'bloqueado_hasta' => null,
+        ])->save();
+
+        return ['contrasena' => $contrasena, 'vence' => $vence];
+    }
+```
+
+**Cierre por inactividad (RNF14).** La duración de la sesión la fija la variable de entorno `SESSION_LIFETIME`, que `config/session.php` lee en minutos. El archivo `.env.example` la deja en 30 minutos, que es el valor que exige el requisito, y el valor por defecto de `config/session.php` también es 30: si la variable falta en el `.env`, la sesión sigue venciendo a los 30 minutos de inactividad.
+
+`config/session.php`
+
+```php
+    'lifetime' => (int) env('SESSION_LIFETIME', 30),
+```
+
 ### 7.3 Implementación de la arquitectura de subsistemas
+
+Cada caso de uso del Ciclo #1 sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso del Ciclo #2 (CU-09 a CU-18) no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
+
+Todos los servicios de este ciclo usan `BitacoraService` (RNF13) y `ReglaDeNegocioException` (sección 7.2); no se repite en cada tabla.
+
+#### CU-01 Iniciar y cerrar sesión
+
+| Elemento | Archivo |
+|---|---|
+| Controlador | `app/Http/Controllers/AccesoController.php` (`formulario`, `autenticar`, `salir`) |
+| Solicitud de validación | `app/Http/Requests/LoginRequest.php` |
+| Servicio | `app/Services/AutenticacionService.php` (devuelve un `IntentoAcceso` con un `ResultadoAcceso`) |
+| Middleware | `app/Http/Middleware/VerificarCuenta.php` (cuenta desactivada o contraseña temporal vencida o pendiente) |
+| Vistas | `resources/views/auth/login.blade.php`, `resources/views/layouts/base.blade.php` |
+| Pruebas | `tests/Feature/Acceso/LoginTest.php`, `tests/Feature/Acceso/CambioPasswordTest.php` |
+
+Reglas aplicadas:
+- El paciente entra con su CI y el personal con su correo. El servicio busca la cuenta según el identificador y rechaza la combinación contraria (un paciente con correo o el personal con CI).
+- Cuando la cuenta no existe, el servicio igual verifica la contraseña contra un hash de relleno, para que la respuesta tarde lo mismo y no revele si la cuenta existe; el mensaje de error es genérico (flujo alterno 2a).
+- La contraseña se verifica con `Hash::check()` (RNF04). Una cuenta bloqueada no llega a esa verificación y devuelve el tiempo de espera (flujo alterno 2f, RNF15).
+- Tras la verificación se rechaza la cuenta inactiva (2b) y la contraseña temporal vencida (2d, RNF18). Al entrar bien se ponen en cero los intentos y se registra `login` en la bitácora.
+- El controlador abre la sesión y regenera su identificador (protección contra la fijación de sesión). `salir` registra `logout`, destruye la sesión y regenera el token.
+- La pantalla de acceso muestra el celular de la clínica tomado de `config('clinica.celular')` (flujo alterno 2e).
+
+`app/Services/AutenticacionService.php`
+
+```php
+        if ($cuenta->bloqueado_hasta?->isFuture()) {
+            return new IntentoAcceso(ResultadoAcceso::Bloqueada, $cuenta, $this->minutosRestantes($cuenta));
+        }
+
+        if (! Hash::check($contrasena, $cuenta->password_hash)) {
+            return $this->registrarFallo($cuenta);
+        }
+
+        if (! $cuenta->estado) {
+            $this->bitacora->registrar('login_rechazado_inactiva', $cuenta, 'usuarios', $cuenta->id);
+
+            return new IntentoAcceso(ResultadoAcceso::Inactiva, $cuenta);
+        }
+
+        if ($cuenta->debe_cambiar_password && $cuenta->password_temporal_vence->isPast()) {
+            $this->bitacora->registrar('login_rechazado_temporal_vencida', $cuenta, 'usuarios', $cuenta->id);
+
+            return new IntentoAcceso(ResultadoAcceso::TemporalVencida, $cuenta);
+        }
+```
+
+#### CU-02 Registrarse como paciente
+
+| Elemento | Archivo |
+|---|---|
+| Controlador | `app/Http/Controllers/RegistroController.php` (`formulario`, `guardar`) |
+| Solicitud de validación | `app/Http/Requests/RegistroPacienteRequest.php` (con el trait `NormalizaDatosDePersona`) |
+| Servicio | `app/Services/RegistroPacienteService.php` |
+| Vistas | `resources/views/auth/registro.blade.php` |
+| Pruebas | `tests/Feature/Acceso/RegistroTest.php` |
+
+Reglas aplicadas:
+- Las rutas `/registro` son públicas (`guest`) y limitadas a 10 solicitudes por minuto por IP (RNF20).
+- El Form Request exige CI con formato válido, celular de 7 a 15 dígitos y una contraseña de al menos 8 caracteres con mayúsculas, minúsculas y números, confirmada (RNF08). Rechaza un CI que ya exista como persona (sea paciente, médico o personal) y un correo ya registrado (flujos 3a y 3b).
+- El servicio crea la persona, la ficha con `verificado = false` y la cuenta con rol `PACIENTE` en una sola transacción, y registra `paciente_registro_propio`. La contraseña no es temporal: la elige el paciente.
+- Si dos registros simultáneos pasan la validación, la base rechaza al segundo con `UniqueConstraintViolationException` y el servicio lo informa con el mismo mensaje, sin dejar datos a medias (flujo 3c).
+
+`app/Services/RegistroPacienteService.php`
+
+```php
+        try {
+            return DB::transaction(function () use ($datos) {
+                $persona = Persona::create(Arr::only($datos, [
+                    'ci', 'primer_nombre', 'segundo_nombre', 'apellido_paterno', 'apellido_materno', 'telefono', 'correo',
+                ]));
+
+                Paciente::create(['persona_id' => $persona->id, 'verificado' => false]);
+
+                $cuenta = Usuario::create([
+                    'persona_id' => $persona->id,
+                    'rol_id' => Rol::where('codigo', 'PACIENTE')->firstOrFail()->id,
+                    'password_hash' => $datos['password'],
+                ])->refresh();
+
+                $this->bitacora->registrar('paciente_registro_propio', $cuenta, 'usuarios', $cuenta->id);
+
+                return $cuenta;
+            });
+        } catch (UniqueConstraintViolationException) {
+```
+
+#### CU-03 Gestionar usuarios y roles
+
+| Elemento | Archivo |
+|---|---|
+| Controlador | `app/Http/Controllers/UsuarioController.php` (con el trait `ListadoConPestanas`) |
+| Solicitud de validación | `app/Http/Requests/UsuarioRequest.php`, `app/Http/Requests/RenovarAccesoRequest.php` |
+| Servicio | `app/Services/UsuarioService.php`, `app/Services/ContrasenaTemporalService.php` |
+| Vistas | `resources/views/usuarios/` (`index`, `create`, `edit`, `credenciales`, `_datos-personales`) |
+| Pruebas | `tests/Feature/Usuarios/UsuarioTest.php` |
+
+Reglas aplicadas:
+- Todo el grupo `/usuarios` exige `usuarios:gestionar`, que solo concede el rol Administrador (RN12, RNF19). Además, `AppServiceProvider` enlaza el parámetro `{usuario}` solo a cuentas que no son de paciente: las de pacientes responden 404 aquí y se gestionan en CU-02 y CU-04.
+- Al crear la cuenta se genera una contraseña temporal de 72 horas, que se muestra una sola vez (RNF18): el controlador la pasa a la pantalla `credenciales` en un mensaje de sesión que se pierde al recargar.
+- Para el rol Médico la cuenta se vincula a un médico ya registrado y activo (flujo 3b); si el CI ya existe como persona sin cuenta, se reutiliza sin modificar sus datos personales (flujo 3a).
+- Nadie se desactiva a sí mismo, se cambia el rol ni se renueva la contraseña desde esta pantalla (5a), y el sistema conserva siempre al menos un Administrador activo (5b).
+- Una cuenta de médico no se reactiva mientras su ficha siga desactivada (5c). Los datos de una cuenta de médico se editan en CU-05; aquí solo se intercambian los roles Administrador y Recepcionista.
+- La renovación de contraseña exige indicar cómo se verificó la identidad y lo deja en la bitácora (6a); es la misma operación de CU-19.
+
+`app/Services/UsuarioService.php`
+
+```php
+    /** El sistema siempre conserva al menos un Administrador activo. */
+    private function exigirOtroAdministradorActivo(Usuario $cuenta): void
+    {
+        if ($cuenta->rol->codigo !== 'ADMINISTRADOR' || ! $cuenta->estado) {
+            return;
+        }
+
+        $hayOtro = Usuario::query()
+            ->where('id', '!=', $cuenta->id)
+            ->where('estado', true)
+            ->whereHas('rol', fn ($rol) => $rol->where('codigo', 'ADMINISTRADOR'))
+            ->exists();
+
+        if (! $hayOtro) {
+            throw new ReglaDeNegocioException('Debe quedar al menos un Administrador activo.');
+        }
+    }
+```
+
+#### CU-04 Gestionar pacientes
+
+| Elemento | Archivo |
+|---|---|
+| Controlador | `app/Http/Controllers/PacienteController.php`, `app/Http/Controllers/AccesoPacienteController.php` |
+| Solicitud de validación | `app/Http/Requests/PacienteRequest.php`, `app/Http/Requests/RenovarAccesoRequest.php` |
+| Servicio | `app/Services/PacienteService.php`, `app/Services/ContrasenaTemporalService.php` |
+| Vistas | `resources/views/pacientes/` (`index`, `create`, `edit`, `show`, `credenciales`, `_formulario`) |
+| Pruebas | `tests/Feature/Pacientes/PacienteTest.php`, `tests/Feature/Pacientes/AccesoPacienteTest.php` |
+
+Reglas aplicadas:
+- El grupo `/pacientes` exige `pacientes:gestionar`; verificar la ficha, crear el acceso y renovar la contraseña exigen además `pacientes:verificar`, `pacientes:crear_acceso` y `accesos:renovar`, respectivamente (RN12, RNF19).
+- Un CI no puede tener dos fichas de paciente (RN01): el Form Request lo rechaza al validar y el servicio lo vuelve a comprobar dentro de la transacción. Si el CI existe como persona sin ficha (por ejemplo, un médico), se reutiliza esa persona sin tocar sus datos personales.
+- La ficha creada por la Recepcionista queda verificada de inmediato (`verificado => true`); la de registro propio (CU-02) se verifica con `verificar()`, que puede renovar la contraseña en el mismo acto.
+- El paciente nunca se elimina: se desactiva (RN11), y su cuenta de paciente sigue ese estado, de modo que un paciente desactivado no puede iniciar sesión. No existe una ruta de eliminación.
+- Crear el acceso genera una contraseña temporal de 72 horas, que se muestra una sola vez. No se crea si el paciente está desactivado ni si la persona ya tiene una cuenta (flujos 5a a 5c).
+
+`app/Services/PacienteService.php`
+
+```php
+        return DB::transaction(function () use ($datos, $actor) {
+            $persona = Persona::where('ci', $datos['ci'])->first();
+            $reutilizada = $persona !== null;
+            $persona ??= Persona::create(Arr::only($datos, self::CAMPOS_PERSONA));
+
+            if ($persona->paciente()->exists()) {
+                throw new ReglaDeNegocioException('Ya existe un paciente registrado con este CI.');
+            }
+
+            $paciente = Paciente::create(
+                ['persona_id' => $persona->id, 'verificado' => true] + Arr::only($datos, self::CAMPOS_FICHA)
+            )->refresh();
+
+            $this->bitacora->registrar('paciente_creado', $actor, 'pacientes', $paciente->id);
+
+            return [$paciente, $reutilizada];
+        });
+```
+
+#### CU-05 Gestionar médicos
+
+| Elemento | Archivo |
+|---|---|
+| Controlador | `app/Http/Controllers/MedicoController.php` (con el trait `ListadoConPestanas`) |
+| Solicitud de validación | `app/Http/Requests/MedicoRequest.php` |
+| Servicio | `app/Services/MedicoService.php` |
+| Vistas | `resources/views/medicos/` (`index`, `create`, `edit`, `_formulario`) |
+| Pruebas | `tests/Feature/Medicos/MedicoTest.php` |
+
+Reglas aplicadas:
+- El grupo `/medicos` exige `medicos:gestionar` (RN12, RNF19).
+- Un CI no puede tener dos fichas de médico (RN02). El número de registro profesional se guarda en mayúsculas y sin espacios de más, y es único: lo comprueba el Form Request y lo garantiza la columna `UNIQUE` de la base de datos (flujo 3a). El correo se valida sin distinguir mayúsculas.
+- Hay que elegir al menos una especialidad, y solo activas; si el médico ya tenía una que luego se desactivó, puede conservarla (flujo 3c).
+- No se puede quitar una especialidad con la que el médico ya tiene citas; el servicio lo comprueba antes de guardar, nombra la especialidad en el mensaje y no aplica ningún cambio (flujo 3d). La clave foránea de la base de datos es la segunda defensa.
+- El médico nunca se elimina: se desactiva (RN04, RN11). Al desactivarlo, su cuenta de médico también se desactiva; al reactivarlo la cuenta no se reactiva sola, sino que lo decide el Administrador en CU-03.
+
+`app/Services/MedicoService.php`
+
+```php
+        $quitadas = $medico->especialidades()->pluck('especialidades.id')
+            ->diff(array_map('intval', $nuevas));
+
+        if ($quitadas->isEmpty()) {
+            return;
+        }
+
+        $conCitas = Cita::where('medico_id', $medico->id)
+            ->whereIn('especialidad_id', $quitadas)
+            ->distinct()
+            ->pluck('especialidad_id');
+
+        if ($conCitas->isNotEmpty()) {
+            $nombres = Especialidad::whereIn('id', $conCitas)->orderBy('nombre')->pluck('nombre')->implode(', ');
+
+            throw new ReglaDeNegocioException(
+                "No se puede quitar la especialidad {$nombres}: el médico tiene citas registradas con ella."
+            );
+        }
+```
+
+#### CU-06 Gestionar especialidades
+
+| Elemento | Archivo |
+|---|---|
+| Controlador | `app/Http/Controllers/EspecialidadController.php` |
+| Solicitud de validación | `app/Http/Requests/EspecialidadRequest.php` |
+| Servicio | `app/Services/EspecialidadService.php` |
+| Vistas | `resources/views/especialidades/` (`index`, `create`, `edit`, `_formulario`) |
+| Pruebas | `tests/Feature/Especialidades/EspecialidadTest.php` |
+
+Reglas aplicadas:
+- El grupo `/especialidades` exige `especialidades:gestionar` (RN12, RNF19).
+- El nombre se normaliza antes de validar (`prepareForValidation`): sin espacios al inicio ni al final y con un solo espacio entre palabras. La unicidad no distingue mayúsculas; el Form Request la comprueba con `lower(btrim(nombre))`, igual que el índice único `especialidades_nombre_uq` de `001_esquema_base.sql`, que la garantiza ante solicitudes simultáneas (flujo 3a).
+- La duración de la cita es un entero entre 5 y 240 minutos, validado en el Form Request y con un `CHECK` en la columna `duracion_min` (flujo 3b). La duración vive en la especialidad, de modo que las citas del Ciclo #2 la tomarán de ahí (RN08).
+- La especialidad nunca se elimina: solo se activa o desactiva con `PATCH /especialidades/{id}/estado`.
+
+`app/Http/Requests/EspecialidadRequest.php`
+
+```php
+                // Nombre normalizado: no se distinguen mayúsculas ni espacios de más (como el índice único).
+                function (string $atributo, mixed $valor, \Closure $fallar) use ($especialidad): void {
+                    $repetido = Especialidad::query()
+                        ->whereRaw('lower(btrim(nombre)) = ?', [mb_strtolower(trim($valor))])
+                        ->when($especialidad, fn ($consulta) => $consulta->where('id', '!=', $especialidad->id))
+                        ->exists();
+
+                    if ($repetido) {
+                        $fallar(EspecialidadService::MENSAJE_NOMBRE_REPETIDO);
+                    }
+                },
+```
+
+#### CU-07 Gestionar horarios de atención
+
+| Elemento | Archivo |
+|---|---|
+| Controlador | `app/Http/Controllers/HorarioController.php` |
+| Solicitud de validación | `app/Http/Requests/HorarioRequest.php` |
+| Servicio | `app/Services/HorarioService.php` |
+| Vistas | `resources/views/horarios/` (`index`, `medico`, `edit`, `_formulario`) |
+| Pruebas | `tests/Feature/Horarios/HorarioTest.php` |
+
+Reglas aplicadas:
+- El grupo `/horarios` exige `horarios:gestionar` (RN12, RNF19). Las rutas de un bloque llevan el médico o el horario en la URL, restringidos a números.
+- Día entre 1 y 7, horas con formato `H:i` y hora final posterior a la inicial (flujo 3a). El consultorio es opcional. La duración de la cita no se define aquí: la determina la especialidad (CU-06).
+- Un médico no puede tener dos bloques superpuestos el mismo día. El Form Request lo detecta y su mensaje nombra el bloque en conflicto (flujo 3b); como los bloques pegados no se superponen, la consulta compara con `<` y `>` estrictos. La restricción `EXCLUDE` de la base de datos (sección 7.2) cubre las solicitudes simultáneas.
+- La sucursal se asigna automáticamente con `Sucursal::predeterminada()`, porque solo hay una.
+- No se registra, modifica ni elimina el horario de un médico desactivado (`exigirMedicoActivo`, flujo 3c).
+- Antes de modificar o eliminar un bloque, el servicio calcula las citas futuras programadas o confirmadas que quedarían fuera del horario; si el cambio deja alguna sin cubrir, lo revierte y nombra las citas. Las que ya estaban fuera antes del cambio no cuentan (flujos 5a y 5b). Las citas pertenecen al Ciclo #2: la tabla `citas` existe desde `002_citas_y_notas.sql`, pero en este ciclo no hay pantallas para crearlas.
+
+`app/Http/Requests/HorarioRequest.php`
+
+```php
+            $choque = HorarioAtencion::query()
+                ->where('medico_id', $medicoId)
+                ->where('dia_semana', (int) $dia)
+                ->where('hora_inicio', '<', $horaFin)
+                ->where('hora_fin', '>', $horaInicio)
+                ->when($ignorarId, fn ($consulta) => $consulta->where('id', '!=', $ignorarId))
+                ->first();
+
+            if ($choque !== null) {
+                $fallar("Este horario se superpone con otro del mismo médico: {$choque->descripcion()}.");
+            }
+```
+
+#### CU-08 Gestionar mi perfil
+
+| Elemento | Archivo |
+|---|---|
+| Controlador | `app/Http/Controllers/PerfilController.php`, `app/Http/Controllers/CambioPasswordController.php` (cambio de contraseña) |
+| Solicitud de validación | `app/Http/Requests/PerfilRequest.php`, `app/Http/Requests/CambiarPasswordRequest.php` |
+| Servicio | Sin servicio propio: el controlador actualiza el teléfono y llama a `BitacoraService` |
+| Vistas | `resources/views/perfil/mostrar.blade.php`, `resources/views/auth/cambiar-password.blade.php` |
+| Pruebas | `tests/Feature/Perfil/PerfilTest.php`, `tests/Feature/Acceso/CambioPasswordTest.php` |
+
+Reglas aplicadas:
+- El grupo `/perfil` exige `perfil:gestionar`, que solo concede el rol Paciente (RN12, RNF19). Una cuenta sin ficha de paciente recibe 404.
+- `PerfilRequest` solo acepta el teléfono, obligatorio y de 7 a 15 dígitos con un `+` inicial opcional. El nombre, el CI, el correo, la información médica y el contacto de emergencia no se pueden modificar desde aquí.
+- El cambio se guarda y se registra en la bitácora solo si el teléfono es distinto del anterior.
+- La contraseña se cambia con el mismo formulario del primer ingreso (`password.cambiar`): pide la contraseña actual, exige que la nueva sea distinta y cumpla la política (8 caracteres, mayúsculas, minúsculas y números), y al guardar limpia las dos columnas de la contraseña temporal a la vez, como exige la base de datos.
+- Las pruebas cubren que la información médica se muestre solo con la ficha verificada.
+
+`app/Http/Controllers/PerfilController.php`
+
+```php
+    public function actualizar(PerfilRequest $request, BitacoraService $bitacora): RedirectResponse
+    {
+        $paciente = $this->paciente();
+        $telefono = $request->validated('telefono');
+
+        if ($paciente->persona->telefono !== $telefono) {
+            $paciente->persona->update(['telefono' => $telefono]);
+            $bitacora->registrar('perfil_modificado', $request->user(), 'personas', $paciente->persona_id, 'Teléfono');
+        }
+
+        return redirect()->route('perfil.mostrar')->with('exito', 'Su teléfono fue actualizado.');
+    }
+```
+
+#### CU-19 Renovar contraseña temporal
+
+| Elemento | Archivo |
+|---|---|
+| Controlador | `app/Http/Controllers/AccesoPacienteController.php` (`renovar`, `credenciales`), `app/Http/Controllers/UsuarioController.php` (`renovar`), `app/Console/Commands/RenovarPasswordAdministrador.php` |
+| Solicitud de validación | `app/Http/Requests/RenovarAccesoRequest.php` |
+| Servicio | `app/Services/PacienteService.php` (`renovarAcceso`), `app/Services/UsuarioService.php` (`renovarContrasena`), `app/Services/ContrasenaTemporalService.php` (`emitirPara`) |
+| Vistas | `resources/views/pacientes/credenciales.blade.php`, `resources/views/usuarios/credenciales.blade.php`, `resources/views/components/comprobante-credenciales.blade.php` |
+| Pruebas | `tests/Feature/Pacientes/AccesoPacienteTest.php`, `tests/Feature/Usuarios/UsuarioTest.php`, `tests/Feature/Consola/RenovarPasswordAdministradorTest.php`, `tests/Unit/ContrasenaTemporalServiceTest.php` |
+
+Reglas aplicadas:
+- La Recepcionista renueva las cuentas de pacientes (`POST /pacientes/{id}/acceso/renovar`) y el Administrador las del personal (`POST /usuarios/{id}/renovar`). Las dos rutas exigen `accesos:renovar` (RN12, RNF19).
+- Sin indicar cómo se verificó la identidad (documento o celular registrado) no se renueva nada: `RenovarAccesoRequest` valida la clave y el servicio la vuelve a exigir (flujo 3a). La forma de verificar queda en el campo `detalle` de la bitácora (RNF13).
+- No se renueva la contraseña de una cuenta de paciente cuyo paciente está desactivado (3b) ni de un paciente sin cuenta (3d). La Recepcionista tampoco renueva una cuenta con otro rol: lo hace el Administrador (3c).
+- Nadie se renueva su propia contraseña desde esta función: para eso existe «Cambiar contraseña» (CU-08).
+- `emitirPara()` genera una contraseña aleatoria de 14 caracteres con 72 horas de vigencia, deja sin efecto la anterior, pone en cero los intentos fallidos y levanta el bloqueo (RNF18). La contraseña se muestra una sola vez en la pantalla de credenciales.
+- Recuperación de emergencia: el comando de consola `php artisan administrador:renovar-password {correo}` renueva solo cuentas de Administrador activas, pide confirmación (salvo con `--force`) y registra `acceso_renovado` sin usuario actor.
+
+`app/Services/PacienteService.php`
+
+```php
+        $formaDeVerificar = self::VERIFICACION_IDENTIDAD[$verificacion]
+            ?? throw new ReglaDeNegocioException('Indique cómo verificó la identidad del titular.');
+
+        $cuenta = $paciente->persona->usuario;
+
+        if ($cuenta === null) {
+            throw new ReglaDeNegocioException('El paciente todavía no tiene una cuenta.');
+        }
+
+        if ($cuenta->rol->codigo !== 'PACIENTE') {
+            throw new ReglaDeNegocioException('La cuenta de esta persona no es de paciente: la renueva el Administrador.');
+        }
+
+        if (! $paciente->estado) {
+            throw new ReglaDeNegocioException('No se puede renovar el acceso de un paciente desactivado.');
+        }
+// ...
+        return DB::transaction(function () use ($paciente, $cuenta, $actor, $formaDeVerificar) {
+            $emitida = $this->contrasenas->emitirPara($cuenta);
+            $this->bitacora->registrar(
+                'acceso_renovado', $actor, 'usuarios', $cuenta->id, "Identidad verificada con: {$formaDeVerificar}"
+            );
+
+            return $emitida + ['usuario' => $paciente->persona->ci];
+        });
+```
 
 ### 7.4 Repositorio
 
@@ -1452,6 +2244,20 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 
 ## Conclusión
 
+Con la Presentación 1 queda terminado el **Ciclo #1**: la base de datos con control de acceso por roles y los nueve casos de uso que sostienen al sistema, es decir, CU-01 (iniciar y cerrar sesión), CU-02 (registro propio del paciente), CU-03 (usuarios y roles), CU-04 (pacientes), CU-05 (médicos), CU-06 (especialidades), CU-07 (horarios de atención), CU-08 (mi perfil) y CU-19 (renovar contraseña temporal). Los diez casos de uso restantes (CU-09 a CU-18), que son las citas y todo lo que gira en torno a ellas, dependen de esa base y corresponden al Ciclo #2.
+
+Lo construido responde a los objetivos específicos que tocan a este ciclo:
+
+- **Base de datos relacional con claves primarias y foráneas:** el esquema en PostgreSQL se implementa con migraciones que ejecutan los archivos de `database/sql/`, con restricciones que hacen cumplir las reglas aunque falle la validación de la aplicación (sección 6.3).
+- **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
+- **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada que usará el cálculo de disponibilidad del Ciclo #2.
+- **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
+- **Pruebas:** la suite automatizada tiene **288 pruebas, y las 288 pasan** (sección 8 y Anexo C).
+
+La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
+
+Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogramación, cancelación, asistencia, agenda, historial y reportes), las notas clínicas y los recordatorios dentro del sistema. Son el contenido del Ciclo #2. La lista de espera y los recordatorios por SMS o correo quedaron descartados del alcance y se proponen como mejoras futuras (sección 4.1 y Recomendación).
+
 ### Limitaciones conocidas
 
 - **Persona compartida entre fichas.** Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico). Sus datos personales viven en una única fila de `personas`, de modo que al editar la ficha del paciente (CU-04) la Recepcionista también modifica el correo con el que el médico entra al sistema. CU-03 y CU-05 evitan este efecto porque reutilizan la persona sin modificar sus datos. Se acepta por ser un caso poco frecuente; evitarlo exigiría bloquear los datos personales en CU-04 cuando la persona tiene una cuenta con otro rol.
@@ -1459,6 +2265,90 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 
 ## Recomendación
 
+**Para el Ciclo #2**
+
+- **Aprovechar la protección que ya tiene la base de datos.** El esquema incluye una restricción de exclusión de PostgreSQL sobre el médico y el intervalo de cada cita, que ignora las canceladas (`EXCLUDE USING gist` en `002_citas_y_notas.sql`, RNF17), igual que la de los bloques de horario en `001_esquema_base.sql`. Así dos solicitudes simultáneas no pueden registrar el mismo horario, aunque pasen la validación a la vez. En el Ciclo #2 hay que sumar la validación en PHP (RF07), ejecutar la comprobación final de disponibilidad dentro de una transacción, traducir el rechazo de la base a un mensaje claro y probarlo con un caso de citas superpuestas.
+- **Reutilizar los servicios del Ciclo #1.** Los horarios y la duración por especialidad ya están modelados; el cálculo de disponibilidad debe apoyarse en ellos y no duplicar reglas.
+- **Mantener la política de baja lógica.** Ninguna operación del módulo de citas debe eliminar registros: cancelar, reprogramar y marcar la asistencia cambian el estado de la cita y conservan el historial (RN10, RN11).
+- **Probar primero.** Los casos de prueba 3 a 8 del enunciado dependen de las citas; conviene escribir esas pruebas junto con cada caso de uso, como se hizo en este ciclo.
+
+**Para una versión posterior**
+
+- **Despliegue real.** Servir la aplicación con Apache o Nginx y PHP, con HTTPS, y programar copias de seguridad de la base de datos. El sistema guarda datos personales y médicos, de modo que el despliegue debe revisarse con ese criterio.
+- **Recuperación de contraseña por cuenta propia.** Exige un servicio de correo y verificar el correo del paciente, que hoy es opcional y no se verifica (sección 4.1).
+- **Recordatorios por SMS o correo y lista de espera,** descartados del alcance actual.
+- **Unicidad de especialidades sin distinguir tildes,** con la extensión `unaccent` de PostgreSQL (limitación conocida).
+
 ## Bibliografía
 
+- Bergmann, S. (s. f.). *PHPUnit Documentation*. https://docs.phpunit.de/en/12.5/
+- Docker Inc. (s. f.). *What is Docker?* https://docs.docker.com/get-started/docker-overview/
+- Ferraiolo, D. F., Sandhu, R., Gavrila, S., Kuhn, D. R. y Chandramouli, R. (2001). Proposed NIST standard for role-based access control. *ACM Transactions on Information and System Security, 4*(3), 224-274. https://doi.org/10.1145/501978.501980
+- Jacobson, I., Booch, G. y Rumbaugh, J. (2000). *El Proceso Unificado de Desarrollo de Software*. Addison-Wesley. (Edición en español de *The Unified Software Development Process*, 1999.)
+- Laravel. (s. f.-a). *CSRF Protection*. https://laravel.com/docs/13.x/csrf
+- Laravel. (s. f.-b). *Routing*. https://laravel.com/docs/13.x/routing
+- Laravel. (s. f.-c). *Blade Templates*. https://laravel.com/docs/13.x/blade
+- Laravel. (s. f.-d). *Validation*. https://laravel.com/docs/13.x/validation
+- Laravel. (s. f.-e). *Authorization*. https://laravel.com/docs/13.x/authorization
+- Laravel. (s. f.-f). *Testing: Getting Started*. https://laravel.com/docs/13.x/testing
+- Object Management Group. (s. f.). *Unified Modeling Language (UML)*. https://www.omg.org/spec/UML/
+- OWASP Foundation. (s. f.-a). *SQL Injection Prevention Cheat Sheet*. https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+- OWASP Foundation. (s. f.-b). *Password Storage Cheat Sheet*. https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+- OWASP Foundation. (s. f.-c). *Cross-Site Request Forgery Prevention Cheat Sheet*. https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
+- OWASP Foundation. (s. f.-d). *Session Management Cheat Sheet*. https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
+- OWASP Foundation. (s. f.-e). *OWASP Top Ten*. https://owasp.org/www-project-top-ten/
+- The PHP Documentation Group. (s. f.-a). *password_hash*. Manual de PHP. https://www.php.net/manual/es/function.password-hash.php
+- The PHP Documentation Group. (s. f.-b). *PHP Data Objects*. Manual de PHP. https://www.php.net/manual/es/book.pdo.php
+- The PHP Documentation Group. (s. f.-c). *Sesiones*. Manual de PHP. https://www.php.net/manual/es/features.sessions.php
+- The PostgreSQL Global Development Group. (s. f.-a). *PostgreSQL 16 Documentation*. https://www.postgresql.org/docs/16/
+- The PostgreSQL Global Development Group. (s. f.-b). *Constraints*. En *PostgreSQL 16 Documentation*. https://www.postgresql.org/docs/16/ddl-constraints.html
+
 ## Anexos
+
+### Anexo A. Estructura del repositorio
+
+| Ruta | Contenido |
+|---|---|
+| `codigo/` | Aplicación Laravel: `app/` (controladores, servicios, modelos, solicitudes de validación y *middleware*), `database/` (migraciones, seeders y esquema SQL), `resources/views/` (vistas Blade), `routes/`, `config/`, `public/` y `tests/`. |
+| `codigo/database/sql/` | Esquema en SQL puro: `001_esquema_base.sql`, `002_citas_y_notas.sql` y `003_catalogos_iniciales.sql`. |
+| `documento/` | Este informe (`Informe-Final.md`) y las decisiones de arquitectura (`adr/`). |
+| `diagramas/` y `pruebas/` | Reservadas para material de apoyo. |
+
+### Anexo B. Rutas del Ciclo #1
+
+| Caso de uso | Rutas |
+|---|---|
+| CU-01 | `GET/POST /login`, `POST /logout`, `GET/PUT /cambiar-password` |
+| CU-02 | `GET/POST /registro` |
+| CU-03 | `GET/POST /usuarios`, `GET /usuarios/nuevo`, `GET /usuarios/{usuario}/editar`, `PUT /usuarios/{usuario}`, `PATCH /usuarios/{usuario}/estado`, `POST /usuarios/{usuario}/renovar`, `GET /usuarios/{usuario}/credenciales` |
+| CU-04 | `GET/POST /pacientes`, `GET /pacientes/nuevo`, `GET /pacientes/{paciente}`, `GET /pacientes/{paciente}/editar`, `PUT /pacientes/{paciente}`, `PATCH /pacientes/{paciente}/estado`, `POST /pacientes/{paciente}/acceso`, `POST /pacientes/{paciente}/verificar`, `GET /pacientes/{paciente}/credenciales` |
+| CU-19 | `POST /pacientes/{paciente}/acceso/renovar` (la renovación de la contraseña del personal por el Administrador es la ruta `POST /usuarios/{usuario}/renovar` de CU-03) |
+| CU-05 | `GET/POST /medicos`, `GET /medicos/nuevo`, `GET /medicos/{medico}/editar`, `PUT /medicos/{medico}`, `PATCH /medicos/{medico}/estado` |
+| CU-06 | `GET/POST /especialidades`, `GET /especialidades/nueva`, `GET /especialidades/{especialidad}/editar`, `PUT /especialidades/{especialidad}`, `PATCH /especialidades/{especialidad}/estado` |
+| CU-07 | `GET /horarios`, `GET/POST /horarios/medico/{medico}`, `GET /horarios/{horario}/editar`, `PUT /horarios/{horario}`, `DELETE /horarios/{horario}` |
+| CU-08 | `GET/PUT /perfil` |
+| Comunes | `GET /inicio`, `GET /` (redirige a `/inicio`) |
+
+Son 48 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar` o `perfil:gestionar` (RNF19).
+
+### Anexo C. Pruebas automatizadas por módulo
+
+Resultado de `php artisan test`: **288 pruebas, 288 aprobadas, 2365 aserciones**, en unos 22 segundos, contra la base `clinica_test`.
+
+| Módulo | Pruebas | Cubre |
+|---|---|---|
+| `Feature\Usuarios\UsuarioTest` | 50 | CU-03 |
+| `Feature\Medicos\MedicoTest` | 39 | CU-05 |
+| `Feature\Horarios\HorarioTest` | 34 | CU-07 |
+| `Feature\Especialidades\EspecialidadTest` | 33 | CU-06 |
+| `Feature\Acceso\LoginTest` | 25 | CU-01 |
+| `Feature\Pacientes\PacienteTest` | 20 | CU-04 |
+| `Feature\Pacientes\AccesoPacienteTest` | 20 | CU-04 y CU-19 |
+| `Feature\Acceso\RegistroTest` | 15 | CU-02 |
+| `Feature\Perfil\PerfilTest` | 13 | CU-08 |
+| `Feature\Acceso\CambioPasswordTest` | 9 | CU-01 y CU-08 |
+| `Feature\Consola\RenovarPasswordAdministradorTest` | 8 | Comando `administrador:renovar-password` |
+| `Unit\CodigoFormateadoTest` | 13 | Códigos con formato (`PAC-`, `MED-`, `CM-`) |
+| `Unit\ContrasenaTemporalServiceTest` | 5 | Contraseñas temporales (RNF18) |
+| `Unit\PaletaTest` | 3 | Paleta de colores de la interfaz |
+| `Unit\ExampleTest` | 1 | Prueba de ejemplo del esqueleto de Laravel |
