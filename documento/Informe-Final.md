@@ -253,7 +253,7 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 - **Identificador de acceso:** el Paciente inicia sesión con su **CI**; el personal (Administrador, Recepcionista, Médico) con su correo. El correo del Paciente es opcional.
 - **Modelo de identidad:** una entidad `Persona` guarda los datos comunes (CI, primer nombre, segundo nombre, apellido paterno, apellido materno, fecha de nacimiento, sexo, teléfono, correo, dirección), más un nombre completo que la base calcula a partir de las partes. De ella cuelgan `Paciente` (ficha clínica y verificación), `Medico` (registro profesional) y `Usuario` (credenciales y rol). Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico); como paciente la atiende la Recepcionista. El personal administrativo es una persona con cuenta y sin ficha. El CI es único en `Persona`.
 - **Duración de la cita:** es un parámetro de la **especialidad** (en minutos), no del horario ni del médico. La cita hereda la duración de la especialidad elegida al reservar. Como la agenda de un médico puede mezclar duraciones, el anti-duplicados compara **intervalos**, no solo la hora de inicio (RF07, RNF17).
-- **Códigos:** el código del paciente (`PAC-000001`), del médico (`MED-000001`) y de la cita (`CM-000001`) lo genera el sistema a partir del `id`, con 6 dígitos y sin truncarse pasado el 999999. Nadie lo escribe a mano.
+- **Códigos:** el «código» de paciente, médico y cita que piden RF02, RF03 y RF06 es su identificador único (`id`). En pantallas e impresos se muestra con formato (`PAC-000001`, `MED-000001`, `CM-000001`), que arma la aplicación a partir del `id`; no se guarda ni se escribe a mano.
 - **Registro propio del Paciente:** primer nombre, apellido paterno, CI, celular y contraseña obligatorios; segundo nombre, apellido materno y correo opcionales. Se crea la cuenta y la ficha del paciente en estado **pendiente de verificación**. Si el CI ya tiene ficha, el registro propio se rechaza y se indica pedir el acceso en recepción.
 - **Alta de cuenta por la Recepcionista:** para reducir la fricción, la Recepcionista también puede crear la cuenta del Paciente. El sistema genera una **contraseña temporal** aleatoria con vigencia de **72 horas**, la muestra **una sola vez** en pantalla (botones Copiar e Imprimir) y la Recepcionista se la entrega impresa o por mensaje de texto o WhatsApp. El sistema no envía correos ni mensajes. En su primer ingreso el Paciente debe cambiarla; si venció, no puede entrar hasta que se renueve.
 - **Renovación y contraseña olvidada:** la Recepcionista o el Administrador pueden generar una nueva contraseña temporal en cualquier momento (porque venció o porque el titular olvidó la suya): se genera otra con nuevas 72 horas y la anterior deja de servir. El titular la solicita a recepción; la pantalla de inicio de sesión muestra el celular de la clínica para ese fin. Para evitar suplantaciones, la contraseña nueva se envía solo al celular registrado en la ficha del paciente (mensaje o WhatsApp) o se entrega en persona con documento, nunca a un número nuevo que indique quien llama.
@@ -459,7 +459,7 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 
 **Flujo principal**
 1. La Recepcionista busca por CI, nombre o apellido, o abre el formulario de alta.
-2. Registra o modifica los datos personales (código, CI, primer nombre, segundo nombre, apellido paterno, apellido materno, fecha de nacimiento, sexo, teléfono, correo, dirección), la información médica (tipo de sangre, alergias, enfermedades crónicas, medicamentos, antecedentes relevantes) y el contacto de emergencia (nombre, parentesco, teléfono).
+2. Registra o modifica los datos personales (CI, primer nombre, segundo nombre, apellido paterno, apellido materno, fecha de nacimiento, sexo, teléfono, correo, dirección), la información médica (tipo de sangre, alergias, enfermedades crónicas, medicamentos, antecedentes relevantes) y el contacto de emergencia (nombre, parentesco, teléfono).
 3. El sistema valida los datos. Si el CI ya existe como persona sin ficha de paciente (por ejemplo, un médico), reutiliza esa persona y le crea la ficha.
 4. El sistema guarda los cambios.
 5. Si el paciente no tiene cuenta, la Recepcionista la crea: el sistema genera una contraseña temporal aleatoria con vigencia de 72 horas y la muestra una sola vez, con botones Copiar e Imprimir. La Recepcionista se la entrega al paciente, impresa o por mensaje de texto o WhatsApp. El paciente entra con su CI.
@@ -617,7 +617,6 @@ classDiagram
     }
     class Paciente {
         <<entity>>
-        codigo
         verificado
         estado
         tipoSangre
@@ -631,7 +630,6 @@ classDiagram
     }
     class Medico {
         <<entity>>
-        codigo
         nroRegistroProfesional
         estado
     }
@@ -657,7 +655,6 @@ classDiagram
     }
     class Cita {
         <<entity>>
-        codigo
         fecha
         horaInicio
         horaFin
@@ -1012,13 +1009,11 @@ erDiagram
     PACIENTES {
         bigint id PK
         bigint persona_id FK
-        string codigo UK
         boolean verificado
     }
     MEDICOS {
         bigint id PK
         bigint persona_id FK
-        string codigo UK
         string nro_registro_profesional UK
     }
     ESPECIALIDADES {
@@ -1036,7 +1031,6 @@ erDiagram
     }
     CITAS {
         bigint id PK
-        string codigo UK
         bigint paciente_id FK
         bigint medico_id FK
         date fecha
@@ -1061,14 +1055,14 @@ erDiagram
 - El correo es obligatorio para el personal y para el Paciente es opcional; esa regla la valida la aplicación, porque depende del rol.
 - Una restricción de exclusión impide horarios de atención superpuestos del mismo médico en el mismo día (CU-07) y citas superpuestas del mismo médico (RNF17); las citas canceladas no cuentan.
 - Una clave foránea compuesta exige que el médico de una cita ejerza la especialidad elegida, y otra ata la nota clínica al médico de su cita. Consecuencia: no se puede quitar una especialidad a un médico que tiene citas con ella.
-- Los códigos `PAC-000001`, `MED-000001` y `CM-000001` son columnas generadas a partir del `id`: siempre coinciden con él, son únicos y no se pueden escribir a mano. Pueden quedar saltos en la numeración, porque el `id` no se revierte si el alta falla. Las listas se ordenan por `id`, no por el texto del código.
+- El código de paciente, médico y cita es el `id`, identificador único (RF02, RF03, RF06); el formato `PAC-000001` se arma al mostrarlo y no se guarda. Pueden quedar saltos en la numeración, porque el `id` no se revierte si el alta falla. La matrícula del médico (`nro_registro_profesional`) es un dato distinto: la emite una entidad externa y se guarda aparte, única y obligatoria.
 - La bitácora es de solo escritura: un disparador impide modificar, borrar o vaciar sus filas.
 - Las claves foráneas llevan índice, porque PostgreSQL no los crea solo.
 - Las reglas que cruzan tablas (cita dentro del horario del médico, duración de la cita, médico activo, fecha futura, transiciones de estado, que un médico no se atienda a sí mismo) las valida la aplicación y se cubren con pruebas.
 
 #### 6.3.2 Modelo físico (DDL PostgreSQL)
 
-El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #1) y `002_citas_y_notas.sql` (Ciclo #2), que las migraciones de Laravel ejecutan; `003_catalogos_iniciales.sql` carga los datos de referencia (sucursal, roles y permisos, ver 4.7). Se verificó en PostgreSQL 16: los `CHECK` de formato, la restricción contra horarios y citas superpuestas, las claves foráneas compuestas, los códigos autogenerados y la bitácora de solo escritura rechazan lo inválido, y `migrate:rollback` deja la base limpia. Las tablas propias del framework (`migrations`) no se listan.
+El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #1) y `002_citas_y_notas.sql` (Ciclo #2), que las migraciones de Laravel ejecutan; `003_catalogos_iniciales.sql` carga los datos de referencia (sucursal, roles y permisos, ver 4.7). Se verificó en PostgreSQL 16: los `CHECK` de formato, la restricción contra horarios y citas superpuestas, las claves foráneas compuestas, el control de acceso y la bitácora de solo escriturarechazan lo inválido, y `migrate:rollback` deja la base limpia. Las tablas propias del framework (`migrations`) no se listan.
 
 ```sql
 -- Ciclo #1: identidad, acceso, datos maestros y bitácora.
@@ -1076,12 +1070,6 @@ El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #
 -- Los textos usan TEXT; los formatos se acotan con CHECK donde importa.
 
 CREATE EXTENSION IF NOT EXISTS btree_gist;
-
--- Códigos legibles (PAC-000001, MED-000001, CM-000001) derivados del id: 6 dígitos y, pasado
--- el 999999, el número completo sin truncar. Cada tabla los calcula con una columna generada.
-CREATE FUNCTION codigo_con_prefijo(prefijo TEXT, n BIGINT) RETURNS TEXT
-    LANGUAGE sql IMMUTABLE
-    AS $$ SELECT prefijo || CASE WHEN n < 1000000 THEN lpad(n::TEXT, 6, '0') ELSE n::TEXT END $$;
 
 CREATE TABLE sucursales (
     id         BIGSERIAL   PRIMARY KEY,
@@ -1161,7 +1149,6 @@ CREATE INDEX usuarios_rol_idx ON usuarios (rol_id);
 CREATE TABLE pacientes (
     id                    BIGSERIAL   PRIMARY KEY,
     persona_id            BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
-    codigo                TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('PAC-', id)) STORED UNIQUE,
     verificado            BOOLEAN     NOT NULL DEFAULT FALSE,
     estado                BOOLEAN     NOT NULL DEFAULT TRUE,
     tipo_sangre           TEXT        CHECK (tipo_sangre IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
@@ -1179,7 +1166,6 @@ CREATE TABLE pacientes (
 CREATE TABLE medicos (
     id                       BIGSERIAL   PRIMARY KEY,
     persona_id               BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
-    codigo                   TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('MED-', id)) STORED UNIQUE,
     nro_registro_profesional TEXT        NOT NULL UNIQUE CHECK (btrim(nro_registro_profesional) <> ''),
     estado                   BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -1252,7 +1238,6 @@ CREATE TRIGGER bitacora_sin_vaciar
 
 CREATE TABLE citas (
     id                 BIGSERIAL   PRIMARY KEY,
-    codigo             TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('CM-', id)) STORED UNIQUE,
     paciente_id        BIGINT      NOT NULL REFERENCES pacientes (id) ON DELETE RESTRICT,
     medico_id          BIGINT      NOT NULL,
     especialidad_id    BIGINT      NOT NULL,
