@@ -5,6 +5,7 @@ use App\Http\Controllers\AccesoPacienteController;
 use App\Http\Controllers\CambioPasswordController;
 use App\Http\Controllers\EspecialidadController;
 use App\Http\Controllers\InicioController;
+use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\RegistroController;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,19 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
 
     Route::get('/cambiar-password', [CambioPasswordController::class, 'formulario'])->name('password.cambiar');
     Route::put('/cambiar-password', [CambioPasswordController::class, 'actualizar'])->name('password.actualizar');
+
+    // CU-05: gestionar médicos (solo el Administrador, con medicos:gestionar).
+    Route::prefix('medicos')->name('medicos.')->middleware('can:medicos:gestionar')->group(function () {
+        Route::get('/', [MedicoController::class, 'index'])->name('index');
+        Route::get('/nuevo', [MedicoController::class, 'create'])->name('create');
+        Route::post('/', [MedicoController::class, 'store'])->name('store');
+
+        Route::prefix('{medico}')->where(['medico' => '[0-9]+'])->group(function () {
+            Route::get('/editar', [MedicoController::class, 'edit'])->name('edit');
+            Route::put('/', [MedicoController::class, 'update'])->name('update');
+            Route::patch('/estado', [MedicoController::class, 'estado'])->name('estado');
+        });
+    });
 
     // CU-06: gestionar especialidades (solo el Administrador, con especialidades:gestionar).
     Route::prefix('especialidades')->name('especialidades.')->middleware('can:especialidades:gestionar')->group(function () {

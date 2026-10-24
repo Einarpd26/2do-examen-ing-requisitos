@@ -73,6 +73,9 @@ return [
         'nombre' => 'nombre',
         'descripcion' => 'descripción',
         'duracion_min' => 'duración de la cita',
+
+        'nro_registro_profesional' => 'registro profesional',
+        'especialidades' => 'especialidades',
     ],
 
 ];
