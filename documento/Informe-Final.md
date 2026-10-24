@@ -571,7 +571,10 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 4. El sistema guarda los cambios.
 
 **Flujos alternos**
-- 3a. Datos inválidos: se indican los campos a corregir.
+- 2a. La contraseña se cambia desde el enlace «Cambiar contraseña» del perfil, con el mismo formulario del primer ingreso (pide la contraseña actual).
+- 3a. Datos inválidos: se indican los campos a corregir. El teléfono es obligatorio y debe tener de 7 a 15 dígitos, con un + inicial opcional.
+- 4a. Solo se registra en la bitácora el cambio de teléfono si el valor es distinto del anterior.
+- 1a. Si la ficha está pendiente de verificación, el perfil avisa y oculta la información médica y el contacto de emergencia.
 - El Paciente no puede modificar su nombre, CI, correo, información médica ni contacto de emergencia; esos cambios los realiza la Recepcionista.
 
 #### CU-19 Renovar contraseña temporal
