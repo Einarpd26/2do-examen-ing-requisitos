@@ -22,8 +22,11 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Una regla del negocio incumplida vuelve a la pantalla anterior con su mensaje.
+        // Las contraseñas escritas no vuelven al formulario.
         $exceptions->render(
-            fn (ReglaDeNegocioException $e) => back()->withInput()->with('error', $e->getMessage())
+            fn (ReglaDeNegocioException $e) => back()
+                ->withInput(request()->except(['password', 'password_confirmation', 'password_actual', 'contrasena']))
+                ->with('error', $e->getMessage())
         );
 
         $exceptions->shouldRenderJsonWhen(

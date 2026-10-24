@@ -14,7 +14,9 @@
     <label for="{{ $name }}" class="form-label">
         {{ $label }}@if ($requerido) <span class="text-danger" aria-hidden="true">*</span>@endif
     </label>
-    <input type="{{ $tipo }}" id="{{ $name }}" name="{{ $name }}" value="{{ old($name, $valor) }}"
+    {{-- Una contraseña escrita nunca se vuelve a imprimir en el formulario. --}}
+    <input type="{{ $tipo }}" id="{{ $name }}" name="{{ $name }}"
+           @if ($tipo !== 'password') value="{{ old($name, $valor) }}" @endif
            @if ($requerido) required @endif
            @if ($patron) pattern="{{ $patron }}" @endif
            @if ($maximo) maxlength="{{ $maximo }}" @endif
