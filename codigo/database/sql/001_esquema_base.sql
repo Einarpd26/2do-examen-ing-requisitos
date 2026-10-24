@@ -4,13 +4,11 @@
 
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
--- Códigos correlativos legibles (PAC-0001, MED-0001, CM-0001) que no se truncan pasado el 9999.
+-- Códigos legibles (PAC-000001, MED-000001, CM-000001) derivados del id: 6 dígitos y, pasado
+-- el 999999, el número completo sin truncar. Cada tabla los calcula con una columna generada.
 CREATE FUNCTION codigo_con_prefijo(prefijo TEXT, n BIGINT) RETURNS TEXT
     LANGUAGE sql IMMUTABLE
-    AS $$ SELECT prefijo || CASE WHEN n < 10000 THEN lpad(n::TEXT, 4, '0') ELSE n::TEXT END $$;
-
-CREATE SEQUENCE seq_codigo_paciente;
-CREATE SEQUENCE seq_codigo_medico;
+    AS $$ SELECT prefijo || CASE WHEN n < 1000000 THEN lpad(n::TEXT, 6, '0') ELSE n::TEXT END $$;
 
 CREATE TABLE sucursales (
     id         BIGSERIAL   PRIMARY KEY,
@@ -55,9 +53,7 @@ CREATE TABLE usuarios (
 CREATE TABLE pacientes (
     id                    BIGSERIAL   PRIMARY KEY,
     persona_id            BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
-    codigo                TEXT        NOT NULL UNIQUE
-                          DEFAULT codigo_con_prefijo('PAC-', nextval('seq_codigo_paciente'))
-                          CHECK (codigo ~ '^PAC-[0-9]{4,}$'),
+    codigo                TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('PAC-', id)) STORED UNIQUE,
     verificado            BOOLEAN     NOT NULL DEFAULT FALSE,
     estado                BOOLEAN     NOT NULL DEFAULT TRUE,
     tipo_sangre           TEXT        CHECK (tipo_sangre IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
@@ -71,20 +67,16 @@ CREATE TABLE pacientes (
     created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-ALTER SEQUENCE seq_codigo_paciente OWNED BY pacientes.codigo;
 
 CREATE TABLE medicos (
     id                       BIGSERIAL   PRIMARY KEY,
     persona_id               BIGINT      NOT NULL UNIQUE REFERENCES personas (id) ON DELETE RESTRICT,
-    codigo                   TEXT        NOT NULL UNIQUE
-                             DEFAULT codigo_con_prefijo('MED-', nextval('seq_codigo_medico'))
-                             CHECK (codigo ~ '^MED-[0-9]{4,}$'),
+    codigo                   TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('MED-', id)) STORED UNIQUE,
     nro_registro_profesional TEXT        NOT NULL UNIQUE CHECK (btrim(nro_registro_profesional) <> ''),
     estado                   BOOLEAN     NOT NULL DEFAULT TRUE,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at               TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-ALTER SEQUENCE seq_codigo_medico OWNED BY medicos.codigo;
 
 CREATE TABLE especialidades (
     id           BIGSERIAL   PRIMARY KEY,

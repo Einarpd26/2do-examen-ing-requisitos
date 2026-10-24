@@ -1,13 +1,9 @@
 -- Ciclo #2: citas médicas y notas clínicas.
 -- Referencia de diseño: documento/Informe-Final.md, sección 6.3.2.
 
-CREATE SEQUENCE seq_codigo_cita;
-
 CREATE TABLE citas (
     id                 BIGSERIAL   PRIMARY KEY,
-    codigo             TEXT        NOT NULL UNIQUE
-                       DEFAULT codigo_con_prefijo('CM-', nextval('seq_codigo_cita'))
-                       CHECK (codigo ~ '^CM-[0-9]{4,}$'),
+    codigo             TEXT        GENERATED ALWAYS AS (codigo_con_prefijo('CM-', id)) STORED UNIQUE,
     paciente_id        BIGINT      NOT NULL REFERENCES pacientes (id) ON DELETE RESTRICT,
     medico_id          BIGINT      NOT NULL,
     especialidad_id    BIGINT      NOT NULL,
@@ -33,7 +29,6 @@ CREATE TABLE citas (
     -- Permite que la nota clínica se ate al médico de la cita.
     UNIQUE (id, medico_id)
 );
-ALTER SEQUENCE seq_codigo_cita OWNED BY citas.codigo;
 CREATE INDEX citas_paciente_idx ON citas (paciente_id);
 CREATE INDEX citas_especialidad_idx ON citas (especialidad_id);
 CREATE INDEX citas_sucursal_idx ON citas (sucursal_id);
