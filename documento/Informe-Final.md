@@ -8,7 +8,8 @@
 | **Integrante** | Einar Padilla Delgadillo |
 | **Docente** | Angeliza Garzon Cuellar |
 | **Presentación** | 1 — Ciclo #1 (24/10/2026) |
-| **Repositorio** | URL + Código QR (completar) |
+| **Repositorio** | https://github.com/Einarpd26/2do-examen-ing-requisitos |
+| **Código QR** | ![Código QR del repositorio](img/qr-repositorio.png) |
 
 ---
 
@@ -2219,7 +2220,17 @@ Reglas aplicadas:
 
 ### 7.4 Repositorio
 
-<!-- URL + Código QR. -->
+El código fuente está publicado en GitHub, con la historia de commits atómicos del desarrollo y un `README.md` con las instrucciones para instalar y ejecutar el sistema.
+
+| | |
+|---|---|
+| **URL** | https://github.com/Einarpd26/2do-examen-ing-requisitos |
+| **Rama principal** | `main` |
+| **Visibilidad** | Pública |
+
+![Código QR del repositorio](img/qr-repositorio.png)
+
+Al escanear el código QR se abre la página del repositorio. La estructura de carpetas se describe en el Anexo A.
 
 ---
 
