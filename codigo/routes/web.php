@@ -4,6 +4,7 @@ use App\Http\Controllers\AccesoController;
 use App\Http\Controllers\AccesoPacienteController;
 use App\Http\Controllers\CambioPasswordController;
 use App\Http\Controllers\EspecialidadController;
+use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\PacienteController;
@@ -29,6 +30,21 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
 
     Route::get('/cambiar-password', [CambioPasswordController::class, 'formulario'])->name('password.cambiar');
     Route::put('/cambiar-password', [CambioPasswordController::class, 'actualizar'])->name('password.actualizar');
+
+    // CU-07: gestionar horarios de atención (solo el Administrador, con horarios:gestionar).
+    Route::prefix('horarios')->name('horarios.')->middleware('can:horarios:gestionar')->group(function () {
+        Route::get('/', [HorarioController::class, 'index'])->name('index');
+        Route::get('/medico/{medico}', [HorarioController::class, 'medico'])
+            ->where(['medico' => '[0-9]+'])->name('medico');
+        Route::post('/medico/{medico}', [HorarioController::class, 'store'])
+            ->where(['medico' => '[0-9]+'])->name('store');
+
+        Route::prefix('{horario}')->where(['horario' => '[0-9]+'])->group(function () {
+            Route::get('/editar', [HorarioController::class, 'edit'])->name('edit');
+            Route::put('/', [HorarioController::class, 'update'])->name('update');
+            Route::delete('/', [HorarioController::class, 'destroy'])->name('destroy');
+        });
+    });
 
     // CU-05: gestionar médicos (solo el Administrador, con medicos:gestionar).
     Route::prefix('medicos')->name('medicos.')->middleware('can:medicos:gestionar')->group(function () {

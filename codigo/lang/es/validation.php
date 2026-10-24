@@ -74,6 +74,11 @@ return [
         'descripcion' => 'descripción',
         'duracion_min' => 'duración de la cita',
 
+        'dia_semana' => 'día',
+        'hora_inicio' => 'hora inicial',
+        'hora_fin' => 'hora final',
+        'consultorio' => 'consultorio',
+
         'nro_registro_profesional' => 'registro profesional',
         'especialidades' => 'especialidades',
     ],
