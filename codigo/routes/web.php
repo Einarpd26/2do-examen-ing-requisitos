@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccesoController;
 use App\Http\Controllers\AccesoPacienteController;
 use App\Http\Controllers\CambioPasswordController;
+use App\Http\Controllers\EspecialidadController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\RegistroController;
@@ -27,6 +28,19 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
 
     Route::get('/cambiar-password', [CambioPasswordController::class, 'formulario'])->name('password.cambiar');
     Route::put('/cambiar-password', [CambioPasswordController::class, 'actualizar'])->name('password.actualizar');
+
+    // CU-06: gestionar especialidades (solo el Administrador, con especialidades:gestionar).
+    Route::prefix('especialidades')->name('especialidades.')->middleware('can:especialidades:gestionar')->group(function () {
+        Route::get('/', [EspecialidadController::class, 'index'])->name('index');
+        Route::get('/nueva', [EspecialidadController::class, 'create'])->name('create');
+        Route::post('/', [EspecialidadController::class, 'store'])->name('store');
+
+        Route::prefix('{especialidad}')->where(['especialidad' => '[0-9]+'])->group(function () {
+            Route::get('/editar', [EspecialidadController::class, 'edit'])->name('edit');
+            Route::put('/', [EspecialidadController::class, 'update'])->name('update');
+            Route::patch('/estado', [EspecialidadController::class, 'estado'])->name('estado');
+        });
+    });
 
     // CU-04: gestionar pacientes. Todo el grupo exige pacientes:gestionar; las acciones
     // sensibles exigen además su propio permiso.

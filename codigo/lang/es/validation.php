@@ -69,6 +69,10 @@ return [
         'emergencia_nombre' => 'nombre del contacto de emergencia',
         'emergencia_parentesco' => 'parentesco del contacto de emergencia',
         'emergencia_telefono' => 'teléfono del contacto de emergencia',
+
+        'nombre' => 'nombre',
+        'descripcion' => 'descripción',
+        'duracion_min' => 'duración de la cita',
     ],
 
 ];
