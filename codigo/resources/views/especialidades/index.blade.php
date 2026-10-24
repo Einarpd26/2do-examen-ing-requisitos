@@ -3,7 +3,12 @@
 @section('titulo', 'Especialidades · Clínica Vida Salud')
 
 @php
-    $pestanas = ['activas' => 'Activas', 'inactivas' => 'Inactivas', 'todas' => 'Todas'];
+    $etiquetas = ['activas' => 'Activas', 'inactivas' => 'Inactivas', 'todas' => 'Todas'];
+    $pestanas = collect($etiquetas)->map(fn ($etiqueta, $clave) => [
+        'etiqueta' => $etiqueta,
+        'url' => route('especialidades.index', $clave === 'activas' ? [] : ['estado' => $clave]),
+        'cuenta' => $cuentas[$clave],
+    ])->all();
     $vacio = [
         'activas' => 'No hay especialidades activas.',
         'inactivas' => 'No hay especialidades inactivas.',
@@ -17,17 +22,7 @@
         <a href="{{ route('especialidades.create') }}" class="btn btn-clinica">Registrar especialidad</a>
     </div>
 
-    <ul class="nav nav-pills mb-3" aria-label="Estado de las especialidades">
-        @foreach ($pestanas as $clave => $etiqueta)
-            <li class="nav-item">
-                <a class="nav-link {{ $vista === $clave ? 'active' : '' }}"
-                   @if ($vista === $clave) aria-current="page" @endif
-                   href="{{ route('especialidades.index', $clave === 'activas' ? [] : ['estado' => $clave]) }}">
-                    {{ $etiqueta }} <span class="badge text-bg-light ms-1">{{ $cuentas[$clave] }}</span>
-                </a>
-            </li>
-        @endforeach
-    </ul>
+    <x-pestanas :pestanas="$pestanas" :activa="$vista" titulo="Estado de las especialidades" />
 
     @if ($especialidades->isEmpty())
         <div class="alert alert-info">{{ $vacio[$vista] }}</div>
