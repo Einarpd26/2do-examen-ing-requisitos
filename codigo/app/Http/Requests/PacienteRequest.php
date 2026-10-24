@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\NormalizaDatosDePersona;
 use App\Models\Paciente;
 use App\Models\Persona;
 use Illuminate\Foundation\Http\FormRequest;
@@ -13,31 +14,13 @@ use Illuminate\Validation\Rule;
  */
 class PacienteRequest extends FormRequest
 {
+    use NormalizaDatosDePersona;
+
     private const TELEFONO = '/^\+?[0-9]{7,15}$/';
 
     public function authorize(): bool
     {
         return true;
-    }
-
-    /** Deja los datos en la forma en que se guardan: CI en mayúsculas, correo en minúsculas, teléfonos sin separadores. */
-    protected function prepareForValidation(): void
-    {
-        $limpio = [];
-
-        if (is_string($this->ci)) {
-            $limpio['ci'] = strtoupper(preg_replace('/\s+/', '', $this->ci));
-        }
-        if (is_string($this->correo)) {
-            $limpio['correo'] = strtolower(trim($this->correo));
-        }
-        foreach (['telefono', 'emergencia_telefono'] as $campo) {
-            if (is_string($this->input($campo))) {
-                $limpio[$campo] = preg_replace('/[\s\-()]/', '', $this->input($campo));
-            }
-        }
-
-        $this->merge($limpio);
     }
 
     public function rules(): array
