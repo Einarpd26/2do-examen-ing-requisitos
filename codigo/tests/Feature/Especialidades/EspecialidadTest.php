@@ -87,7 +87,7 @@ class EspecialidadTest extends TestCase
         $medico->especialidades()->attach($general->id);
 
         $this->actingAs($this->administrador())
-            ->get(route('especialidades.index'))
+            ->get(route('especialidades.index', ['estado' => 'todas']))
             ->assertOk()
             ->assertSeeInOrder(['Medicina general', '20 min', 'Activa'])
             ->assertSeeInOrder(['Odontología', '45 min', 'Inactiva']);
@@ -95,11 +95,128 @@ class EspecialidadTest extends TestCase
         $this->assertSame(1, Especialidad::withCount('medicos')->where('nombre', 'Medicina general')->firstOrFail()->medicos_count);
     }
 
-    public function test_el_listado_vacio_avisa(): void
+    public function test_cada_pestaña_vacia_avisa_con_su_propio_mensaje(): void
     {
+        $this->actingAs($this->administrador());
+
+        $this->get(route('especialidades.index'))->assertSee('No hay especialidades activas.');
+        $this->get(route('especialidades.index', ['estado' => 'inactivas']))->assertSee('No hay especialidades inactivas.');
+        $this->get(route('especialidades.index', ['estado' => 'todas']))->assertSee('Todavía no hay especialidades registradas.');
+    }
+
+    // --- Pestañas Activas / Inactivas / Todas --------------------------------------------
+
+    private function crearActivasEInactivas(): void
+    {
+        $this->crearEspecialidad(['nombre' => 'Medicina general']);
+        $this->crearEspecialidad(['nombre' => 'Pediatría']);
+        $this->crearEspecialidad(['nombre' => 'Odontología', 'estado' => false]);
+    }
+
+    public function test_por_defecto_muestra_solo_las_activas_y_avisa_cuantas_hay_ocultas(): void
+    {
+        $this->crearActivasEInactivas();
+
         $this->actingAs($this->administrador())
             ->get(route('especialidades.index'))
-            ->assertSee('Todavía no hay especialidades registradas');
+            ->assertOk()
+            ->assertSee('Medicina general')
+            ->assertSee('Pediatría')
+            ->assertDontSee('Odontología')
+            ->assertSeeInOrder(['Activas', '2', 'Inactivas', '1', 'Todas', '3'])
+            ->assertSee('aria-current="page"', false);
+    }
+
+    public function test_la_pestaña_inactivas_muestra_solo_las_inactivas(): void
+    {
+        $this->crearActivasEInactivas();
+
+        $this->actingAs($this->administrador())
+            ->get(route('especialidades.index', ['estado' => 'inactivas']))
+            ->assertSee('Odontología')
+            ->assertDontSee('Medicina general')
+            ->assertDontSee('Pediatría');
+    }
+
+    public function test_la_pestaña_todas_muestra_activas_e_inactivas(): void
+    {
+        $this->crearActivasEInactivas();
+
+        $this->actingAs($this->administrador())
+            ->get(route('especialidades.index', ['estado' => 'todas']))
+            ->assertSee('Medicina general')
+            ->assertSee('Pediatría')
+            ->assertSee('Odontología');
+    }
+
+    public function test_una_pestaña_desconocida_cae_en_activas(): void
+    {
+        $this->crearActivasEInactivas();
+
+        $this->actingAs($this->administrador())
+            ->get(route('especialidades.index', ['estado' => 'cualquier-cosa']))
+            ->assertOk()
+            ->assertSee('Medicina general')
+            ->assertDontSee('Odontología');
+    }
+
+    public function test_cada_fila_ofrece_solo_la_accion_que_corresponde_a_su_estado(): void
+    {
+        $this->crearActivasEInactivas();
+        $this->actingAs($this->administrador());
+
+        $this->get(route('especialidades.index'))
+            ->assertSee('Desactivar')
+            ->assertDontSee('Reactivar');
+
+        $this->get(route('especialidades.index', ['estado' => 'inactivas']))
+            ->assertSee('Reactivar')
+            ->assertDontSee('Desactivar');
+
+        $this->get(route('especialidades.index', ['estado' => 'todas']))
+            ->assertSee('Desactivar')
+            ->assertSee('Reactivar');
+    }
+
+    public function test_desactivar_vuelve_a_la_pestaña_desde_la_que_se_hizo(): void
+    {
+        $especialidad = $this->crearEspecialidad();
+        $this->actingAs($this->administrador());
+
+        $this->patch(route('especialidades.estado', $especialidad), ['activa' => 0])
+            ->assertRedirect(route('especialidades.index'))
+            ->assertSessionHas('exito');
+        $this->assertStringContainsString('pestaña Inactivas', session('exito'));
+
+        $this->patch(route('especialidades.estado', $especialidad), ['activa' => 1, 'vista' => 'inactivas'])
+            ->assertRedirect(route('especialidades.index', ['estado' => 'inactivas']));
+        $this->assertStringContainsString('pestaña Activas', session('exito'));
+
+        $this->patch(route('especialidades.estado', $especialidad), ['activa' => 0, 'vista' => 'todas'])
+            ->assertRedirect(route('especialidades.index', ['estado' => 'todas']));
+    }
+
+    public function test_una_pestaña_alterada_en_el_formulario_cae_en_la_de_activas(): void
+    {
+        $especialidad = $this->crearEspecialidad();
+
+        $this->actingAs($this->administrador())
+            ->patch(route('especialidades.estado', $especialidad), ['activa' => 0, 'vista' => 'https://otro.sitio'])
+            ->assertRedirect(route('especialidades.index'));
+    }
+
+    public function test_los_contadores_cambian_al_desactivar(): void
+    {
+        $especialidad = $this->crearEspecialidad();
+        $this->actingAs($this->administrador());
+
+        $this->get(route('especialidades.index'))->assertSeeInOrder(['Activas', '1', 'Inactivas', '0']);
+
+        $this->patch(route('especialidades.estado', $especialidad), ['activa' => 0]);
+
+        $this->get(route('especialidades.index'))
+            ->assertSeeInOrder(['Activas', '0', 'Inactivas', '1'])
+            ->assertSee('No hay especialidades activas.');
     }
 
     // --- Registrar -----------------------------------------------------------------------
