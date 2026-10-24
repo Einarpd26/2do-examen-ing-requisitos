@@ -533,16 +533,21 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 | **Actores** | Administrador |
 | **Requisito** | RF05 |
 | **Precondición** | El Administrador inició sesión y el médico existe y está activo. |
-| **Postcondición** | El horario del médico queda registrado o modificado; el sistema puede calcular los bloques disponibles. |
+| **Postcondición** | El horario del médico queda registrado, modificado o eliminado; el sistema puede calcular los bloques disponibles. |
 
 **Flujo principal**
-1. El Administrador selecciona un médico.
+1. El Administrador abre «Horarios de atención», que lista a los médicos activos con el resumen de su semana (los que no tienen horarios se señalan), y elige uno para ver su semana.
 2. Registra día, hora inicial, hora final y consultorio. La duración de la cita no se define aquí: la determina la especialidad con la que se reserva (CU-06). La sucursal es la única registrada, por lo que se asigna automáticamente.
 3. El sistema valida que la hora final sea posterior a la inicial y que no se superponga con otro horario del médico.
-4. El sistema guarda el horario.
+4. El sistema guarda el horario y lo registra en la bitácora.
+5. El Administrador puede modificar o eliminar un bloque de la semana.
 
 **Flujos alternos**
-- 3a. Horario inválido o superpuesto: se rechaza con un mensaje.
+- 3a. La hora final no es posterior a la inicial, o falta el día, una hora o tiene un formato inválido: se rechaza con un mensaje.
+- 3b. El bloque se superpone con otro del mismo médico el mismo día: se rechaza y el mensaje nombra el bloque en conflicto. Dos bloques pegados (uno termina a las 12:00 y el otro empieza a las 12:00) no se superponen. Lo garantiza también la base de datos.
+- 3c. El médico está desactivado: no se puede registrar, modificar ni eliminar su horario hasta reactivarlo (CU-05).
+- 5a. Modificar o eliminar un bloque dejaría fuera de la atención a una cita futura ya agendada (programada o confirmada): se rechaza, el mensaje indica cuáles y se pide reprogramarlas o cancelarlas antes.
+- 5b. No impiden el cambio las citas canceladas, las pasadas, las de otro médico, las que ya estaban fuera del horario antes del cambio ni las que cubre otro bloque.
 
 #### CU-08 Gestionar mi perfil
 
@@ -1386,7 +1391,7 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 | Lista y formulario de usuarios | Administrador | CU-03 | Alta del personal, rol, vínculo con médico, activar o desactivar, renovar contraseña |
 | Lista y formulario de médicos | Administrador | CU-05 | Búsqueda; pestañas Activos, Inactivos y Todos con su contador; datos, registro profesional, especialidades, estado |
 | Lista y formulario de especialidades | Administrador | CU-06 | Pestañas Activas, Inactivas y Todas con su contador; nombre, descripción, duración de la cita, estado |
-| Horarios de atención | Administrador | CU-07 | Horarios por médico: día, hora inicial, hora final y consultorio |
+| Horarios de atención | Administrador | CU-07 | Lista de médicos activos con el resumen de su semana; por médico, la semana y el formulario de bloques: día, hora inicial, hora final y consultorio |
 
 **Criterio para los listados con baja lógica** (aplicado hoy en especialidades). Los registros que se desactivan en lugar de eliminarse se listan en pestañas **Activas / Inactivas / Todas**, con la cantidad de cada una y las activas por defecto. El contador evita que lo dado de baja desaparezca sin aviso. Cada fila ofrece solo la acción que corresponde a su estado (Desactivar o Reactivar), y el cambio vuelve a la pestaña desde la que se hizo.
 
