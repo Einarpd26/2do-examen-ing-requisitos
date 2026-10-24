@@ -20,8 +20,19 @@ CREATE TABLE sucursales (
 CREATE TABLE personas (
     id               BIGSERIAL   PRIMARY KEY,
     ci               TEXT        NOT NULL UNIQUE CHECK (ci ~ '^[0-9]{5,10}(-[0-9A-Z]{1,2})?$'),
-    nombres          TEXT        NOT NULL CHECK (btrim(nombres) <> ''),
-    apellidos        TEXT        NOT NULL CHECK (btrim(apellidos) <> ''),
+    primer_nombre    TEXT        NOT NULL CHECK (btrim(primer_nombre) <> ''),
+    segundo_nombre   TEXT        CHECK (segundo_nombre IS NULL OR btrim(segundo_nombre) <> ''),
+    apellido_paterno TEXT        NOT NULL CHECK (btrim(apellido_paterno) <> ''),
+    apellido_materno TEXT        CHECK (apellido_materno IS NULL OR btrim(apellido_materno) <> ''),
+    -- Nombre completo derivado: siempre coincide con sus partes y se puede buscar e imprimir.
+    nombre_completo  TEXT        GENERATED ALWAYS AS (
+        TRIM(BOTH FROM (
+            primer_nombre
+            || COALESCE(' ' || segundo_nombre, '')
+            || ' ' || apellido_paterno
+            || COALESCE(' ' || apellido_materno, '')
+        ))
+    ) STORED,
     fecha_nacimiento DATE        CHECK (fecha_nacimiento <= CURRENT_DATE),
     sexo             TEXT        CHECK (sexo IN ('M', 'F')),
     telefono         TEXT        CHECK (telefono ~ '^\+?[0-9]{7,15}$'),
