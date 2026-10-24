@@ -512,12 +512,16 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 
 **Flujo principal**
 1. El Administrador abre el listado de especialidades.
-2. Registra o modifica nombre, descripción (opcional), duración de la cita en minutos (por ejemplo, 30) y estado.
-3. El sistema valida y comprueba que el nombre normalizado no exista.
-4. El sistema guarda los cambios.
+2. Registra o modifica el nombre, la descripción (opcional) y la duración de la cita en minutos (por ejemplo, 30; entre 5 y 240).
+3. El sistema valida los datos y comprueba que el nombre normalizado no exista. El nombre se guarda sin espacios al inicio ni al final y con un solo espacio entre palabras, y no se distinguen mayúsculas.
+4. El sistema guarda los cambios y los registra en la bitácora.
+5. El Administrador puede desactivar o reactivar la especialidad; nunca se elimina, porque los médicos y las citas la referencian.
 
 **Flujos alternos**
-- 3a. Nombre repetido: se rechaza el registro.
+- 3a. Nombre repetido (por ejemplo, «Pediatría» y « pediatría »): se rechaza el registro. Lo garantiza también la base de datos, con un índice único sobre el nombre normalizado.
+- 3b. Duración fuera del rango de 5 a 240 minutos, vacía o no entera: se rechaza el registro.
+- 5a. Una especialidad desactivada no se ofrece para asignarla a médicos (CU-05) ni para nuevas citas; sus médicos y citas ya registrados se conservan.
+- *. Cambiar la duración afecta solo a las citas nuevas: las ya agendadas conservan su hora de inicio y de fin.
 
 #### CU-07 Gestionar horarios de atención
 
