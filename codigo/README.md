@@ -25,6 +25,16 @@ php artisan serve                     # http://localhost:8000
 
 `db:seed` muestra **una sola vez** la contraseña temporal del administrador, que vence a las 72 horas y se debe cambiar en el primer ingreso. El correo y el CI del administrador se cambian con `ADMIN_CORREO` y `ADMIN_CI` en `.env` antes de cargar los datos.
 
+## Si el Administrador olvida su contraseña
+
+Si no hay otro Administrador que se la renueve, quien administra el servidor puede generarle una contraseña temporal desde la consola:
+
+```bash
+php artisan administrador:renovar-password admin@clinicavidasalud.test
+```
+
+Solo sirve para cuentas con rol Administrador, pide confirmación (`--force` la omite), muestra la contraseña una sola vez y deja constancia en la bitácora.
+
 ## Pruebas
 
 ```bash
@@ -63,5 +73,7 @@ php artisan migrate && php artisan db:seed
 - **CU-01 iniciar y cerrar sesión:** sesión con cookie, bloqueo por intentos, contraseña temporal, menú por permisos y bitácora.
 - **CU-02 registro propio del paciente:** crea la cuenta y la ficha en estado pendiente de verificación; limitado a 10 solicitudes por minuto por IP.
 - **CU-04 gestionar pacientes:** alta, búsqueda, edición, desactivación, cuenta con contraseña temporal (se muestra una sola vez), renovación y verificación de la ficha.
+
+- **CU-19 renovar contraseña temporal:** la recepcionista renueva la contraseña del paciente que la olvidó, indicando cómo verificó su identidad (queda en la bitácora). No usa correo electrónico.
 
 Las fechas se muestran en hora de Bolivia (`America/La_Paz`), tanto en la aplicación como en la conexión a PostgreSQL.

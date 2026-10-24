@@ -256,7 +256,7 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 - **Códigos:** el «código» de paciente, médico y cita que piden RF02, RF03 y RF06 es su identificador único (`id`). En pantallas e impresos se muestra con formato (`PAC-000001`, `MED-000001`, `CM-000001`), que arma la aplicación a partir del `id`; no se guarda ni se escribe a mano.
 - **Registro propio del Paciente:** primer nombre, apellido paterno, CI, celular y contraseña obligatorios; segundo nombre, apellido materno y correo opcionales. Se crea la cuenta y la ficha del paciente en estado **pendiente de verificación**. Si el CI ya tiene ficha, el registro propio se rechaza y se indica pedir el acceso en recepción.
 - **Alta de cuenta por la Recepcionista:** para reducir la fricción, la Recepcionista también puede crear la cuenta del Paciente. El sistema genera una **contraseña temporal** aleatoria con vigencia de **72 horas**, la muestra **una sola vez** en pantalla (botones Copiar e Imprimir) y la Recepcionista se la entrega impresa o por mensaje de texto o WhatsApp. El sistema no envía correos ni mensajes. En su primer ingreso el Paciente debe cambiarla; si venció, no puede entrar hasta que se renueve.
-- **Renovación y contraseña olvidada:** la Recepcionista o el Administrador pueden generar una nueva contraseña temporal en cualquier momento (porque venció o porque el titular olvidó la suya): se genera otra con nuevas 72 horas y la anterior deja de servir. El titular la solicita a recepción; la pantalla de inicio de sesión muestra el celular de la clínica para ese fin. Para evitar suplantaciones, la contraseña nueva se envía solo al celular registrado en la ficha del paciente (mensaje o WhatsApp) o se entrega en persona con documento, nunca a un número nuevo que indique quien llama.
+- **Renovación y contraseña olvidada:** la Recepcionista o el Administrador pueden generar una nueva contraseña temporal en cualquier momento (porque venció o porque el titular olvidó la suya): se genera otra con nuevas 72 horas y la anterior deja de servir. El titular la solicita a recepción; la pantalla de inicio de sesión muestra el celular de la clínica para ese fin. Para evitar suplantaciones, la contraseña nueva se envía solo al celular registrado en la ficha del paciente (mensaje o WhatsApp) o se entrega en persona con documento, nunca a un número nuevo que indique quien llama. Es el caso de uso **CU-19**: la renovación exige indicar cómo se verificó la identidad y eso queda en la bitácora. La recuperación por cuenta propia del paciente (por correo) queda fuera del alcance: necesita un servicio de correo y el correo del paciente es opcional y no está verificado.
 - **Verificación de la ficha:** una ficha de registro propio queda pendiente hasta que la Recepcionista compare el documento en persona y la marque como verificada; en ese acto puede renovar la contraseña, para sacar de la cuenta a quien se haya registrado con un CI ajeno. Mientras está pendiente, el Paciente puede iniciar sesión, ver su perfil básico y reservar citas, pero **no ve su información médica ni sus notas clínicas**. Una ficha creada por la Recepcionista queda verificada de inmediato.
 - **Información médica y contacto de emergencia:** los registra y edita la Recepcionista. El Paciente los ve en solo lectura. El Médico los ve en solo lectura.
 - **Edición del Paciente:** solo teléfono y contraseña. No edita nombre (identidad) ni correo (usuario de acceso).
@@ -331,6 +331,7 @@ flowchart LR
         CU06(CU-06 Gestionar especialidades)
         CU07(CU-07 Gestionar horarios de atención)
         CU08(CU-08 Gestionar mi perfil)
+        CU19(CU-19 Renovar contraseña temporal)
     end
 
     subgraph C2["Ciclo #2"]
@@ -346,8 +347,8 @@ flowchart LR
         CU18(CU-18 Ver recordatorio de citas)
     end
 
-    Admin --- CU01 & CU03 & CU05 & CU06 & CU07 & CU15
-    Recep --- CU01 & CU04 & CU09 & CU10 & CU11 & CU12 & CU13 & CU14 & CU17
+    Admin --- CU01 & CU03 & CU05 & CU06 & CU07 & CU15 & CU19
+    Recep --- CU01 & CU04 & CU19 & CU09 & CU10 & CU11 & CU12 & CU13 & CU14 & CU17
     Medico --- CU01 & CU12 & CU13 & CU16 & CU17
     Pac --- CU01 & CU02 & CU08 & CU09 & CU10 & CU11 & CU14 & CU17 & CU18
 ```
@@ -374,6 +375,7 @@ flowchart LR
 | CU-16 Registrar nota clínica | RF16 | Media | 2 | Requiere citas atendidas (CU-12). |
 | CU-17 Consultar notas clínicas | RF16 | Media | 2 | Depende de CU-16. |
 | CU-18 Ver recordatorio de citas | RF15 | Baja | 2 | Banner al iniciar sesión; depende de CU-09. |
+| CU-19 Renovar contraseña temporal | RF01, RF14 | Alta | 1 | Recupera el acceso sin servidor de correo; es la vía de quien olvidó su contraseña. |
 
 **Criterio:** el Ciclo #1 entrega la base (acceso y datos maestros) y el Ciclo #2 el núcleo de citas, que necesita esa base estable.
 
@@ -554,6 +556,36 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 - 3a. Datos inválidos: se indican los campos a corregir.
 - El Paciente no puede modificar su nombre, CI, correo, información médica ni contacto de emergencia; esos cambios los realiza la Recepcionista.
 
+#### CU-19 Renovar contraseña temporal
+
+| | |
+|---|---|
+| **Actores** | Recepcionista (cuentas de pacientes) y Administrador (cuentas del personal, desde CU-03). El titular de la cuenta participa pidiendo la renovación. |
+| **Requisito** | RF01, RF14 |
+| **Precondición** | La cuenta existe y está activa. El titular pidió una contraseña nueva porque olvidó la suya o la temporal venció. |
+| **Postcondición** | La cuenta tiene una contraseña temporal nueva de 72 horas, la anterior no sirve, se levantó el bloqueo y quedó en la bitácora quién la renovó y cómo se verificó la identidad. |
+
+**Flujo principal**
+1. El titular pide una contraseña nueva a recepción (la pantalla de inicio de sesión muestra el celular de la clínica) o, si es del personal, al Administrador.
+2. La Recepcionista **comprueba la identidad** del titular: compara su documento de identidad en persona, o responde solo al celular registrado en su ficha.
+3. Abre la ficha del paciente (CU-04), elige «Renovar contraseña temporal» e indica cómo verificó la identidad.
+4. El sistema genera una contraseña temporal aleatoria de 14 caracteres con vigencia de 72 horas, invalida la anterior, pone en cero los intentos fallidos y levanta el bloqueo.
+5. El sistema muestra la contraseña **una sola vez** (botones Copiar e Imprimir) y registra en la bitácora quién renovó, a quién y cómo se verificó la identidad.
+6. La Recepcionista entrega la contraseña impresa, en persona, o por mensaje al celular registrado.
+7. El titular entra (CU-01) y el sistema le obliga a elegir una contraseña propia.
+
+**Flujos alternos**
+- 2a. No se puede comprobar la identidad: no se renueva ni se entrega nada.
+- 2b. Quien llama pide que se envíe a un número distinto del registrado: no se envía; debe presentarse con su documento.
+- 3a. El sistema exige indicar cómo se verificó la identidad: sin esa indicación no se renueva.
+- 3b. El paciente está desactivado: no se renueva; primero se reactiva (CU-04).
+- 3c. La persona tiene una cuenta con otro rol (por ejemplo, Médico): la recepcionista no la renueva; lo hace el Administrador.
+- 3d. El paciente no tiene cuenta: se crea su acceso (CU-04, paso 5) en lugar de renovar.
+- 7a. La contraseña temporal vence sin usarse (72 horas): se vuelve a renovar.
+- *. Un Administrador olvida su contraseña: otro Administrador se la renueva. Si no hay otro, el administrador del servidor ejecuta en la consola `php artisan administrador:renovar-password {correo}`, que solo sirve para cuentas de Administrador y deja constancia en la bitácora, sin usuario actor.
+
+**Fuera del alcance:** la recuperación por cuenta propia del paciente mediante un enlace enviado por correo.
+
 ### 4.7 Control de acceso (RBAC)
 
 Cada operación exige un permiso con formato `recurso:accion`. Los permisos se agrupan en roles y cada cuenta tiene un único rol. El catálogo es fijo en este proyecto: el Administrador asigna el rol de una cuenta (CU-03), pero no edita qué permisos concede cada rol.
@@ -695,6 +727,7 @@ classDiagram
         accion
         entidad
         entidadId
+        detalle
     }
 
     Persona "1" -- "0..1" Usuario : accede con
@@ -726,6 +759,7 @@ classDiagram
 | CU-06 Gestionar especialidades | ListaEspecialidades, FormEspecialidad | ControlEspecialidad | Especialidad |
 | CU-07 Gestionar horarios de atención | ListaHorarios, FormHorario | ControlHorario | HorarioAtencion, Medico, Sucursal |
 | CU-08 Gestionar mi perfil | VistaPerfil | ControlPerfil | Persona, Paciente, Usuario |
+| CU-19 Renovar contraseña temporal | FichaPaciente, ComprobanteCredenciales | ControlAccesoPaciente | Persona, Paciente, Usuario, Bitacora |
 
 ### 5.2 Diagramas de comunicación / colaboración
 
@@ -934,7 +968,7 @@ sequenceDiagram
     end
 ```
 
-**CU-04 Crear o renovar la cuenta de un paciente**
+**CU-04 Crear la cuenta de un paciente**
 
 ```mermaid
 sequenceDiagram
@@ -945,15 +979,47 @@ sequenceDiagram
     participant U as Usuario
     participant B as BitacoraService
 
-    R->>F: pide crear o renovar el acceso del paciente
+    R->>F: pide crear el acceso del paciente
     F->>C: POST /pacientes/{id}/acceso
     C->>T: generar contraseña temporal
     T-->>C: contraseña (14 caracteres) y vencimiento (72 h)
-    C->>U: crear o actualizar cuenta (hash, debe_cambiar_password, vencimiento)
-    C->>B: registrar creación o renovación
+    C->>U: crear cuenta (hash, debe_cambiar_password, vencimiento)
+    C->>B: registrar creación del acceso
     C-->>F: mostrar la contraseña una sola vez (Copiar / Imprimir)
     F-->>R: la entrega al paciente, impresa o por mensaje
 ```
+
+**CU-19 Renovar contraseña temporal**
+
+```mermaid
+sequenceDiagram
+    actor P as Paciente
+    actor R as Recepcionista
+    participant F as FichaPaciente (Blade)
+    participant C as AccesoPacienteController
+    participant V as RenovarAccesoRequest
+    participant T as ContraseñaTemporalService
+    participant U as Usuario
+    participant B as BitacoraService
+
+    P->>R: pide una contraseña nueva (llamada, mensaje o en persona)
+    R->>R: comprueba la identidad (documento o celular registrado)
+    R->>F: elige «Renovar» e indica cómo verificó la identidad
+    F->>C: POST /pacientes/{id}/acceso/renovar
+    C->>V: validar que indicó la forma de verificación
+    alt no indicó cómo verificó la identidad
+        V-->>F: rechazar, no se renueva nada
+    else
+        C->>T: generar contraseña temporal
+        T-->>C: contraseña (14 caracteres) y vencimiento (72 h)
+        C->>U: reemplazar el hash, exigir cambio, levantar el bloqueo
+        C->>B: registrar renovación con cómo se verificó la identidad
+        C-->>F: mostrar la contraseña una sola vez (Copiar / Imprimir)
+        R->>P: la entrega impresa, en persona o por mensaje al celular registrado
+    end
+```
+
+El Administrador renueva las cuentas del personal con el mismo flujo desde CU-03. Si el único Administrador olvida su contraseña, el administrador del servidor usa el comando de consola `php artisan administrador:renovar-password {correo}`, que deja constancia en la bitácora.
 
 ### 6.3 Diseño de datos
 
@@ -1063,7 +1129,7 @@ erDiagram
 - Una restricción de exclusión impide horarios de atención superpuestos del mismo médico en el mismo día (CU-07) y citas superpuestas del mismo médico (RNF17); las citas canceladas no cuentan.
 - Una clave foránea compuesta exige que el médico de una cita ejerza la especialidad elegida, y otra ata la nota clínica al médico de su cita. Consecuencia: no se puede quitar una especialidad a un médico que tiene citas con ella.
 - El código de paciente, médico y cita es el `id`, identificador único (RF02, RF03, RF06); el formato `PAC-000001` se arma al mostrarlo y no se guarda. Pueden quedar saltos en la numeración, porque el `id` no se revierte si el alta falla. La matrícula del médico (`nro_registro_profesional`) es un dato distinto: la emite una entidad externa y se guarda aparte, única y obligatoria.
-- La bitácora es de solo escritura: un disparador impide modificar, borrar o vaciar sus filas.
+- La bitácora es de solo escritura: un disparador impide modificar, borrar o vaciar sus filas. Su campo `detalle` guarda el contexto de la acción, por ejemplo cómo se verificó la identidad al renovar una contraseña (CU-19).
 - Las claves foráneas llevan índice, porque PostgreSQL no los crea solo.
 - Las reglas que cruzan tablas (cita dentro del horario del médico, duración de la cita, médico activo, fecha futura, transiciones de estado, que un médico no se atienda a sí mismo) las valida la aplicación y se cubren con pruebas.
 
@@ -1221,12 +1287,14 @@ CREATE TABLE bitacora (
     accion     TEXT        NOT NULL CHECK (btrim(accion) <> ''),
     entidad    TEXT,
     entidad_id BIGINT,
+    -- Contexto de la acción, por ejemplo cómo se verificó la identidad al renovar una contraseña.
+    detalle    TEXT,
     fecha      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX bitacora_usuario_idx ON bitacora (usuario_id);
 CREATE INDEX bitacora_fecha_idx ON bitacora (fecha);
 
-CREATE FUNCTION bitacora_solo_agregar() RETURNS TRIGGER
+CREATE OR REPLACE FUNCTION bitacora_solo_agregar() RETURNS TRIGGER
     LANGUAGE plpgsql
     AS $$
 BEGIN
