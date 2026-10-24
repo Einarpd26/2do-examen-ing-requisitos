@@ -2345,11 +2345,11 @@ Comando: `php artisan test`, ejecutado el 24/10/2026 en el repositorio del proye
 
 | Resultado | Valor |
 |---|---|
-| Pruebas ejecutadas | 288 |
-| Pruebas aprobadas | 288 |
+| Pruebas ejecutadas | 292 |
+| Pruebas aprobadas | 292 |
 | Pruebas fallidas | 0 |
-| Aserciones | 2365 |
-| Duración | 17 segundos |
+| Aserciones | 2382 |
+| Duración | 18 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1, 2, 9 y 10 del enunciado:
 
@@ -2442,7 +2442,7 @@ Lo construido responde a los objetivos específicos que tocan a este ciclo:
 - **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
 - **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada que usará el cálculo de disponibilidad del Ciclo #2.
 - **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
-- **Pruebas:** la suite automatizada tiene **288 pruebas, y las 288 pasan** (sección 8 y Anexo C).
+- **Pruebas:** la suite automatizada tiene **292 pruebas, y las 292 pasan** (sección 8 y Anexo C).
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -2523,7 +2523,7 @@ Son 48 rutas en total, según `php artisan route:list --except-vendor`. Solo el 
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **288 pruebas, 288 aprobadas, 2365 aserciones**, en unos 17 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **292 pruebas, 292 aprobadas, 2382 aserciones**, en unos 18 segundos, contra la base `clinica_test`.
 
 | Módulo | Pruebas | Cubre |
 |---|---|---|
@@ -2538,6 +2538,7 @@ Resultado de `php artisan test`: **288 pruebas, 288 aprobadas, 2365 aserciones**
 | `Feature\Perfil\PerfilTest` | 13 | CU-08 |
 | `Feature\Acceso\CambioPasswordTest` | 9 | CU-01 y CU-08 |
 | `Feature\Consola\RenovarPasswordAdministradorTest` | 8 | Comando `administrador:renovar-password` |
+| `Feature\Consola\DemoSeederTest` | 4 | Datos de demostración (solo en entorno local) |
 | `Unit\CodigoFormateadoTest` | 13 | Códigos con formato (`PAC-`, `MED-`, `CM-`) |
 | `Unit\ContrasenaTemporalServiceTest` | 5 | Contraseñas temporales (RNF18) |
 | `Unit\PaletaTest` | 3 | Paleta de colores de la interfaz |
