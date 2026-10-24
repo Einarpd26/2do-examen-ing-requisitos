@@ -127,6 +127,31 @@ class EspecialidadTest extends TestCase
             ->assertSee('aria-current="page"', false);
     }
 
+    public function test_las_pestañas_usan_el_componente_con_subrayado_y_contador(): void
+    {
+        $this->crearActivasEInactivas();
+
+        $this->actingAs($this->administrador())
+            ->get(route('especialidades.index'))
+            ->assertSee('nav nav-underline pestanas', false)
+            ->assertSee('class="pestanas-cuenta"', false)
+            ->assertSee('aria-label="Estado de las especialidades"', false)
+            ->assertDontSee('nav-pills', false);
+    }
+
+    public function test_solo_la_pestaña_seleccionada_se_marca_como_actual(): void
+    {
+        $this->crearActivasEInactivas();
+        $this->actingAs($this->administrador());
+
+        foreach (['activas' => 'Activas', 'inactivas' => 'Inactivas', 'todas' => 'Todas'] as $clave => $etiqueta) {
+            $html = $this->get(route('especialidades.index', ['estado' => $clave]))->getContent();
+
+            $this->assertSame(1, substr_count($html, 'aria-current="page"'), "pestaña {$clave}");
+            $this->assertMatchesRegularExpression('/nav-link active"\s+aria-current="page"\s*>\s*'.$etiqueta.'/', $html);
+        }
+    }
+
     public function test_la_pestaña_inactivas_muestra_solo_las_inactivas(): void
     {
         $this->crearActivasEInactivas();
