@@ -297,7 +297,7 @@ La lista de espera y los recordatorios por SMS o correo se mencionan como mejora
 | RNF12 | Usabilidad | Diseño profesional y mensajes de error comprensibles. |
 | RNF13 | Seguridad | Bitácora de auditoría: se registra usuario, acción, entidad afectada y fecha al iniciar sesión y al crear o modificar usuarios, pacientes, información médica y notas clínicas, y al crear o renovar cuentas y verificar fichas. Solo escrituras, sin registrar lecturas. |
 | RNF14 | Seguridad | Cierre automático de la sesión tras 30 minutos de inactividad. |
-| RNF15 | Seguridad | Bloqueo temporal de la cuenta tras 5 intentos fallidos de inicio de sesión, y token CSRF en los formularios que modifican datos. |
+| RNF15 | Seguridad | Bloqueo de la cuenta durante 15 minutos tras 5 intentos fallidos seguidos de inicio de sesión, y token CSRF en los formularios que modifican datos. |
 | RNF16 | Privacidad | Los avisos y recordatorios muestran solo fecha, hora y médico, nunca motivo, diagnóstico ni datos médicos. |
 | RNF17 | Integridad | Además de la validación en PHP, la base de datos impide por restricción citas superpuestas del mismo médico (Ciclo #2). |
 | RNF19 | Seguridad | Control de acceso por permisos (RBAC): cada operación exige un permiso `recurso:accion` concedido por el rol de la cuenta. La interfaz oculta lo no permitido y el servidor lo verifica en cada solicitud (RN12). |
@@ -402,8 +402,9 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 - 2c. Contraseña temporal vigente: tras validar, el sistema obliga a cambiarla antes de continuar.
 - 2d. Contraseña temporal vencida: se rechaza el acceso y se indica pedir su renovación a recepción.
 - 2e. El usuario olvidó su contraseña: la pantalla de inicio de sesión muestra el celular de la clínica para pedir a recepción una contraseña temporal nueva.
-- 2f. Cuenta bloqueada: tras 5 intentos fallidos se bloquea temporalmente y se informa el tiempo de espera.
+- 2f. Cuenta bloqueada: tras 5 intentos fallidos seguidos se bloquea durante 15 minutos y se informa el tiempo de espera.
 - *. Inactividad: tras 30 minutos sin actividad la sesión se cierra.
+- *. Cuenta desactivada con la sesión abierta: en la solicitud siguiente se cierra la sesión, porque se comprueba el estado de la cuenta en cada solicitud.
 - *. Acceso a una página interna sin sesión válida: se redirige al inicio de sesión.
 
 #### CU-02 Registrarse como paciente
@@ -1046,6 +1047,8 @@ erDiagram
 **Decisiones del modelo**
 - Todos los textos son de tipo `TEXT`; los formatos que importan (CI, teléfono, correo, tipo de sangre, códigos) se acotan con `CHECK`.
 - El nombre de la persona es atómico: `primer_nombre` y `apellido_paterno` obligatorios, `segundo_nombre` y `apellido_materno` opcionales (si se escriben, no pueden estar en blanco). `nombre_completo` es una columna generada que une las partes, así que nunca se desincroniza y sirve para buscar e imprimir.
+- En `usuarios`, `debe_cambiar_password` y `password_temporal_vence` van siempre juntas (restricción `CHECK`): una contraseña temporal siempre tiene vencimiento y, al cambiarla, ambas se limpian a la vez. El contador `intentos_fallidos` se pone en cero al entrar bien o al renovar la contraseña.
+- Una cuenta se da de baja desactivándola (`estado = false`), no eliminándola: la bitácora y las notas clínicas la referencian con `RESTRICT`, para no perder quién hizo cada cosa. La aplicación no ofrece eliminar cuentas.
 - Todos los identificadores son `BIGINT`, para no mezclar tipos en las claves foráneas. `SMALLINT` se reserva para valores acotados por naturaleza: `duracion_min`, `dia_semana` e `intentos_fallidos`.
 - El control de acceso es RBAC normalizado: `roles`, `permisos` y `rol_permisos` son tablas, y `usuarios.rol_id` es una clave foránea al rol. Los permisos tienen formato `recurso:accion` (restricción `CHECK`) y se asignan a los roles por claves foráneas, así que la base rechaza un permiso inexistente. Cada cuenta tiene un solo rol: una persona puede ser médico y paciente a la vez, pero su cuenta tiene rol Médico; como paciente la atiende la recepción. Los catálogos iniciales se cargan con `003_catalogos_iniciales.sql`.
 - El estado activo/inactivo vive en cada especialización (`pacientes.estado`, `medicos.estado`), no en `personas`: desactivar a un paciente no debe desactivar a la misma persona como médico (RN11).
@@ -1142,7 +1145,8 @@ CREATE TABLE usuarios (
     password_temporal_vence TIMESTAMPTZ,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CHECK (debe_cambiar_password OR password_temporal_vence IS NULL)
+    -- Las dos columnas van juntas: una contraseña temporal siempre tiene vencimiento.
+    CHECK (debe_cambiar_password = (password_temporal_vence IS NOT NULL))
 );
 CREATE INDEX usuarios_rol_idx ON usuarios (rol_id);
 
