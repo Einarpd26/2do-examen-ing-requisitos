@@ -2390,6 +2390,46 @@ Una revisión del código del Ciclo #1 encontró cuatro problemas reales, que se
 
 <!-- Completar: resultado de la lista de verificación por caso de uso (CU-06, 05, 07, 03, 04, 02, 08, 01, 19 y transversal) y capturas de pantalla. -->
 
+#### 8.3.5 Capturas de pantalla
+
+Capturas del sistema en funcionamiento, tomadas el 24/10/2026 con la sesión del Administrador sobre el servidor de desarrollo (`http://127.0.0.1:8000`).
+
+**Figura 1.** Inicio del Administrador, con el menú y los accesos de su rol (CU-01).
+
+![Inicio del Administrador](img/capturas/01-inicio-administrador.jpg)
+
+**Figura 2.** Lista de usuarios del personal, con pestañas Activos, Inactivos y Todos, búsqueda y acciones por fila (CU-03).
+
+![Lista de usuarios](img/capturas/02-usuarios-lista.jpg)
+
+**Figura 3.** Formulario para registrar un usuario del personal (CU-03).
+
+![Registrar usuario](img/capturas/03-usuarios-registrar.jpg)
+
+**Figura 4.** Lista de médicos, con código, registro profesional, especialidades y estado (CU-05).
+
+![Lista de médicos](img/capturas/04-medicos-lista.jpg)
+
+**Figura 5.** Lista de especialidades, con su duración de cita y cantidad de médicos (CU-06).
+
+![Lista de especialidades](img/capturas/05-especialidades-lista.jpg)
+
+**Figura 6.** Horarios de atención de un médico: la semana y el formulario para agregar un bloque (CU-07).
+
+![Horarios de un médico](img/capturas/06-horarios-medico.jpg)
+
+**Figura 7.** Cambio de contraseña (CU-01 y CU-08).
+
+![Cambiar contraseña](img/capturas/07-cambiar-password.jpg)
+
+**Figura 8.** Lista de usuarios con un ancho de teléfono de 390 px: el menú se pliega en un botón y la tabla se desplaza dentro de su propio recuadro, sin ensanchar la página.
+
+![Lista de usuarios en un teléfono](img/capturas/08-usuarios-telefono-390px.jpg)
+
+**Adaptación a pantallas angostas.** Se midió el ancho de cada pantalla del Administrador con 390 px de ancho y ninguna desborda horizontalmente: inicio, usuarios (lista, alta y edición), médicos (lista, alta y edición), especialidades (lista y alta), horarios (índice y semana de un médico) y cambio de contraseña. En la medición se encontró y corrigió un defecto: el texto oculto de las cabeceras de las tablas ensanchaba la página en las listas de usuarios, médicos y especialidades. Las pantallas de la Recepcionista y del Paciente no se midieron.
+
+<!-- Pendiente: capturas de los roles Recepcionista (pacientes) y Paciente (registro, perfil). -->
+
 ---
 
 ## Conclusión
