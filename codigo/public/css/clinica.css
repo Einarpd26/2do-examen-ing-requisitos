@@ -28,6 +28,15 @@
     color: rgba(255, 255, 255, 0.45);
 }
 
+/* Fila de un registro dado de baja: atenuada. Bootstrap fija el color de las celdas de la tabla, así que se aplica a cada celda. */
+.fila-inactiva > td {
+    color: var(--bs-secondary-color);
+}
+
+.fila-inactiva > td:first-child {
+    font-weight: 500;
+}
+
 /* Pestañas de filtro de los listados (componente x-pestanas): subrayado en el color de la clínica. */
 .pestanas {
     --bs-nav-link-color: #6c757d;

@@ -42,7 +42,7 @@
                     </thead>
                     <tbody>
                         @foreach ($especialidades as $especialidad)
-                            <tr @class(['text-secondary' => ! $especialidad->estado])>
+                            <tr @class(['fila-inactiva' => ! $especialidad->estado])>
                                 <td class="fw-semibold">{{ $especialidad->nombre }}</td>
                                 <td class="small">{{ $especialidad->descripcion ?? '—' }}</td>
                                 <td class="text-end text-nowrap">{{ $especialidad->duracion_min }} min</td>
