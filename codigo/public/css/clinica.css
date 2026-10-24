@@ -1,0 +1,29 @@
+/* Estilos propios de la Clínica Vida Salud sobre Bootstrap 5. */
+
+:root {
+    --clinica: #0b6e6e;
+    --clinica-oscuro: #095a5a;
+}
+
+.bg-clinica {
+    background-color: var(--clinica);
+}
+
+.text-clinica {
+    color: var(--clinica);
+}
+
+.btn-clinica {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--clinica);
+    --bs-btn-border-color: var(--clinica);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--clinica-oscuro);
+    --bs-btn-hover-border-color: var(--clinica-oscuro);
+    --bs-btn-active-bg: var(--clinica-oscuro);
+    --bs-btn-active-border-color: var(--clinica-oscuro);
+}
+
+.navbar .nav-link.disabled {
+    color: rgba(255, 255, 255, 0.45);
+}
