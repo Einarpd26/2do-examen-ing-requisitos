@@ -2365,6 +2365,7 @@ Los resultados obtenidos salen de la ejecución de la suite del 24/10/2026 (secc
 | CP-38 | CU-08         | Modificar el teléfono                                       | Se guarda y queda en la bitácora; el teléfono inválido o vacío se rechaza                                                                    | `PerfilTest::actualiza_el_telefono_y_queda_en_la_bitacora`, `valida_el_telefono_en_el_servidor`                                                                                                                                                                               | Aprobada |
 | CP-39 | CU-08         | Intentar cambiar otros datos                                | Solo el teléfono es editable; los demás datos no cambian aunque se envíen                                                                    | `PerfilTest::solo_el_telefono_es_editable_y_enlaza_al_cambio_de_contrasena`, `no_acepta_modificar_otros_datos_por_esta_via`                                                                                                                                                   | Aprobada |
 | CP-40 | Todos         | Un rol sin permiso abre una pantalla de otro rol            | Error 403                                                                                                                                    | `solo_el_administrador_gestiona_…` y `solo_la_recepcionista_gestiona_pacientes` en cada módulo; `PerfilTest::solo_el_paciente_tiene_perfil`                                                                                                                                   | Aprobada |
+| CP-41 | Todos | Páginas de error | Los errores 403, 404, 419 y 500 se muestran en español, con el diseño de la clínica y un botón para volver | `PaginasDeErrorTest` (6 pruebas) | Aprobada |
 
 ### 8.3 Evidencias
 
@@ -2374,11 +2375,11 @@ Comando: `php artisan test`, ejecutado el 24/10/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 292         |
-| Pruebas aprobadas  | 292         |
+| Pruebas ejecutadas | 298         |
+| Pruebas aprobadas  | 298         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 2382        |
-| Duración           | 18 segundos |
+| Aserciones         | 2405        |
+| Duración           | 19 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1, 2, 9 y 10 del enunciado:
 
@@ -2682,6 +2683,10 @@ Capturas del sistema en funcionamiento, tomadas el 24/10/2026 con las sesiones d
 
 ![Perfil en un teléfono](img/capturas/19-perfil-telefono-390px.jpg)
 
+**Figura 20.** Página de error 404 en español, con el diseño de la clínica y un botón para volver al inicio.
+
+![Página de error 404](img/capturas/20-error-404.jpg)
+
 **Adaptación a pantallas angostas.** Se midió el ancho de las pantallas con 390 px de ancho y ninguna desborda horizontalmente. Con la sesión del Administrador: inicio, usuarios (lista, alta y edición), médicos (lista, alta y edición), especialidades (lista y alta), horarios (índice y semana de un médico) y cambio de contraseña. Con la sesión del Paciente: inicio, perfil y cambio de contraseña. El login y el registro, que son públicos, tampoco desbordan. En la medición se encontró y corrigió un defecto: el texto oculto de las cabeceras de las tablas ensanchaba la página en las listas de usuarios, médicos y especialidades. Las pantallas de la Recepcionista no se midieron en este ancho.
 
 ---
@@ -2696,7 +2701,7 @@ Lo construido responde a los objetivos específicos que tocan a este ciclo:
 - **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
 - **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada que usará el cálculo de disponibilidad del Ciclo #2.
 - **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
-- **Pruebas:** la suite automatizada tiene **292 pruebas, y las 292 pasan** (sección 8 y Anexo C).
+- **Pruebas:** la suite automatizada tiene **298 pruebas, y las 298 pasan** (sección 8 y Anexo C).
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -2777,7 +2782,7 @@ Son 48 rutas en total, según `php artisan route:list --except-vendor`. Solo el 
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **292 pruebas, 292 aprobadas, 2382 aserciones**, en unos 18 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **298 pruebas, 298 aprobadas, 2405 aserciones**, en unos 19 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -2793,6 +2798,7 @@ Resultado de `php artisan test`: **292 pruebas, 292 aprobadas, 2382 aserciones**
 | `Feature\Acceso\CambioPasswordTest`                | 9       | CU-01 y CU-08                                 |
 | `Feature\Consola\RenovarPasswordAdministradorTest` | 8       | Comando `administrador:renovar-password`      |
 | `Feature\Consola\DemoSeederTest`                   | 4       | Datos de demostración (solo en entorno local) |
+| `Feature\Acceso\PaginasDeErrorTest` | 6 | Páginas de error 403, 404, 419, 429 y 500 en español |
 | `Unit\CodigoFormateadoTest`                        | 13      | Códigos con formato (`PAC-`, `MED-`, `CM-`)   |
 | `Unit\ContrasenaTemporalServiceTest`               | 5       | Contraseñas temporales (RNF18)                |
 | `Unit\PaletaTest`                                  | 3       | Paleta de colores de la interfaz              |
