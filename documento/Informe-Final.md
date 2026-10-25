@@ -2635,7 +2635,7 @@ Capturas del sistema en funcionamiento, tomadas el 24/10/2026 con las sesiones d
 
 ![Cambiar contraseña](img/capturas/07-cambiar-password.jpg)
 
-**Figura 8.** Lista de usuarios con un ancho de teléfono de 390 px: el menú se pliega en un botón y la tabla se desplaza dentro de su propio recuadro, sin ensanchar la página.
+**Figura 8.** Lista de usuarios con un ancho de teléfono de 390 px: el menú se pliega en un botón, el título y el botón de acción pasan a filas separadas y la tabla se desplaza dentro de su propio recuadro, sin ensanchar la página.
 
 ![Lista de usuarios en un teléfono](img/capturas/08-usuarios-telefono-390px.jpg)
 
@@ -2687,7 +2687,7 @@ Capturas del sistema en funcionamiento, tomadas el 24/10/2026 con las sesiones d
 
 ![Página de error 404](img/capturas/20-error-404.jpg)
 
-**Adaptación a pantallas angostas.** Se midió el ancho de las pantallas con 390 px de ancho y ninguna desborda horizontalmente. Con la sesión del Administrador: inicio, usuarios (lista, alta y edición), médicos (lista, alta y edición), especialidades (lista y alta), horarios (índice y semana de un médico) y cambio de contraseña. Con la sesión del Paciente: inicio, perfil y cambio de contraseña. El login y el registro, que son públicos, tampoco desbordan. En la medición se encontró y corrigió un defecto: el texto oculto de las cabeceras de las tablas ensanchaba la página en las listas de usuarios, médicos y especialidades. Las pantallas de la Recepcionista no se midieron en este ancho.
+**Adaptación a pantallas angostas.** Se midió el ancho de las pantallas con 390 px de ancho y ninguna desborda horizontalmente. Con la sesión del Administrador: inicio, usuarios (lista, alta y edición), médicos (lista, alta y edición), especialidades (lista y alta), horarios (índice y semana de un médico) y cambio de contraseña. Con la sesión del Paciente: inicio, perfil y cambio de contraseña. El login y el registro, que son públicos, tampoco desbordan. En la medición se encontraron y corrigieron dos defectos: el texto oculto de las cabeceras de las tablas ensanchaba la página en las listas de usuarios, médicos y especialidades, y el título de cada pantalla quedaba pegado a su botón de acción. Las pantallas de la Recepcionista no se midieron en este ancho.
 
 ---
 
