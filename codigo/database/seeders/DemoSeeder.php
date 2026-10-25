@@ -33,6 +33,11 @@ class DemoSeeder extends Seeder
         }
 
         $creadas = DB::transaction(function () {
+            $administrador = $this->cuenta('ADMINISTRADOR', [
+                'ci' => '8000005', 'primer_nombre' => 'Ricardo', 'apellido_paterno' => 'Montero',
+                'apellido_materno' => 'Cuéllar', 'telefono' => '70010005', 'correo' => 'demo.admin@clinica.test',
+            ]);
+
             $recepcionista = $this->cuenta('RECEPCIONISTA', [
                 'ci' => '8000001', 'primer_nombre' => 'Lucía', 'apellido_paterno' => 'Fernández',
                 'apellido_materno' => 'Quiroga', 'telefono' => '70010001', 'correo' => 'demo.recepcion@clinica.test',
@@ -56,7 +61,7 @@ class DemoSeeder extends Seeder
                 'fecha_nacimiento' => '1985-11-02', 'telefono' => '70010004',
             ], [], verificado: false);
 
-            return array_filter([$recepcionista, $medico, $paciente, $pendiente]);
+            return array_filter([$administrador, $recepcionista, $medico, $paciente, $pendiente]);
         });
 
         $this->command->info('Cuentas de demostración (contraseña: la constante DemoSeeder::CONTRASENA):');

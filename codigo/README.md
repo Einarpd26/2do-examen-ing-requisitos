@@ -35,7 +35,7 @@ Para probar el sistema con cada rol sin crear las cuentas a mano:
 php artisan db:seed --class=DemoSeeder
 ```
 
-Crea una Recepcionista, un Médico con su cuenta, su especialidad y sus horarios, y dos Pacientes con cuenta (uno con la ficha verificada y otro con la ficha pendiente de verificación). El comando muestra con qué correo o CI entra cada una. La contraseña de demostración es la constante `CONTRASENA` de `database/seeders/DemoSeeder.php`.
+Crea un Administrador, una Recepcionista, un Médico con su cuenta, su especialidad y sus horarios, y dos Pacientes con cuenta (uno con la ficha verificada y otro con la ficha pendiente de verificación). El comando muestra con qué correo o CI entra cada una. La contraseña de demostración es la constante `CONTRASENA` de `database/seeders/DemoSeeder.php`.
 
 Las cuentas tienen una contraseña conocida, así que el seeder **solo corre con `APP_ENV=local`** y se niega en cualquier otro entorno. No modifica datos existentes: si el CI ya existe, esa cuenta se omite, de modo que se puede ejecutar más de una vez.
 

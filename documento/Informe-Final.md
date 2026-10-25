@@ -2393,12 +2393,14 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 **Preparación**
 
 - Servidor en `http://127.0.0.1:8000` y la base de datos levantada.
-- Cuentas: el Administrador inicial y las cuentas de demostración cargadas con `php artisan db:seed --class=DemoSeeder` (Recepcionista, Médico y dos Pacientes: uno con la ficha verificada y otro pendiente). Las credenciales de demostración están en `database/seeders/DemoSeeder.php`.
+- Cuentas: las de demostración, cargadas con `php artisan db:seed --class=DemoSeeder` (Administrador, Recepcionista, Médico y dos Pacientes: uno con la ficha verificada y otro pendiente). El usuario y la contraseña de cada caso de uso están indicados debajo de su título; las credenciales se definen en `database/seeders/DemoSeeder.php`.
 - Una ventana privada por rol, para que las sesiones no se mezclen.
 - Orden sugerido, para que cada prueba ya tenga sus datos: CU-06, CU-05, CU-07, CU-03, CU-04, CU-02, CU-08, CU-01 y CU-19.
 - Quedan fuera las pruebas que dependen de las citas (quitar una especialidad con citas o cambiar un horario que deja una cita sin cubrir), que corresponden al Ciclo #2, y la regla de que siempre quede un Administrador activo, que desde la pantalla no se puede provocar y está cubierta por pruebas automáticas.
 
 **CU-06 Gestionar especialidades** (rol: Administrador)
+
+Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo-2026`
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
@@ -2412,6 +2414,8 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 | PM-08 | Crear «Odontologia» y «Odontología» como especialidades distintas. | Limitación conocida: el sistema las acepta como dos. Se registra como observación, no como fallo. |  |  |
 
 **CU-05 Gestionar médicos** (rol: Administrador)
+
+Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo-2026`
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
@@ -2427,6 +2431,8 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 
 **CU-07 Gestionar horarios de atención** (rol: Administrador)
 
+Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo-2026`
+
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
 | PM-18 | Agregar el bloque Lunes 08:00 a 12:00 con consultorio a un médico activo. | Queda en la semana del médico. |  |  |
@@ -2438,6 +2444,8 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 | PM-24 | Abrir los horarios de un médico desactivado. | Se ven, pero no permite agregar, editar ni eliminar bloques. |  |  |
 
 **CU-03 Gestionar usuarios y roles** (rol: Administrador)
+
+Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo-2026`
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
@@ -2463,6 +2471,8 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 
 **CU-04 Gestionar pacientes** (rol: Recepcionista)
 
+Usuario de prueba: Recepcionista `demo.recepcion@clinica.test` · Contraseña: `Demo-2026`
+
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
 | PM-44 | Registrar un paciente con datos personales, información médica y contacto de emergencia. | Se crea con código PAC-00000N. |  |  |
@@ -2478,6 +2488,8 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 
 **CU-02 Registro propio del paciente** (rol: Sin sesión)
 
+Sin usuario: se prueba sin iniciar sesión. Para el paso de la ficha pendiente se usa la Recepcionista de demostración.
+
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
 | PM-54 | Registrarse con CI, celular, contraseña y nombres, sin correo. | Se crea la cuenta y se puede entrar con el CI. |  |  |
@@ -2487,6 +2499,8 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 | PM-58 | Con la sesión iniciada, abrir /registro. | Redirige al inicio. |  |  |
 
 **CU-08 Gestionar mi perfil** (rol: Paciente)
+
+Usuarios de prueba: Paciente con la ficha verificada, CI `8000003`; Paciente con la ficha pendiente, CI `8000004` · Contraseña de ambos: `Demo-2026`
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
@@ -2501,6 +2515,8 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 | PM-67 | Con otro rol, abrir /perfil. | Error 403 y el menú no ofrece Mi perfil. |  |  |
 
 **CU-01 Iniciar y cerrar sesión** (rol: Todos los roles)
+
+Usuarios de prueba: Administrador `demo.admin@clinica.test`, Recepcionista `demo.recepcion@clinica.test`, Médico `demo.medico@clinica.test`, Paciente CI `8000003` · Contraseña de todos: `Demo-2026`
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
@@ -2519,6 +2535,8 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 
 **CU-19 Renovar contraseña temporal** (rol: Recepcionista y Administrador)
 
+Usuarios de prueba: Recepcionista `demo.recepcion@clinica.test` (contraseñas de pacientes) y Administrador `demo.admin@clinica.test` (contraseñas del personal) · Contraseña de ambos: `Demo-2026`
+
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
 | PM-80 | Renovar la contraseña de una cuenta bloqueada por intentos fallidos. | Se levanta el bloqueo y la anterior deja de servir. |  |  |
@@ -2527,6 +2545,8 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 | PM-83 | Consultar la tabla `bitacora` en la base de datos. | Hay registros de ingresos, altas, cambios y renovaciones, con el usuario que actuó. |  |  |
 
 **Transversales** (rol: Todos los roles)
+
+Usuarios de prueba: los mismos de CU-01.
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|

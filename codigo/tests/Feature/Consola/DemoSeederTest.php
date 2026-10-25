@@ -33,7 +33,7 @@ class DemoSeederTest extends TestCase
         $this->artisan('db:seed', ['--class' => DemoSeeder::class])->assertSuccessful();
 
         $roles = Usuario::with('rol')->get()->pluck('rol.codigo')->sort()->values()->all();
-        $this->assertSame(['MEDICO', 'PACIENTE', 'PACIENTE', 'RECEPCIONISTA'], $roles);
+        $this->assertSame(['ADMINISTRADOR', 'MEDICO', 'PACIENTE', 'PACIENTE', 'RECEPCIONISTA'], $roles);
 
         $this->assertSame(1, Medico::count());
         $this->assertSame(2, Medico::firstOrFail()->horarios()->count());
@@ -62,7 +62,7 @@ class DemoSeederTest extends TestCase
         $this->artisan('db:seed', ['--class' => DemoSeeder::class])->assertSuccessful();
         $this->artisan('db:seed', ['--class' => DemoSeeder::class])->assertSuccessful();
 
-        $this->assertSame(3, Usuario::count(), 'médico y dos pacientes; la recepcionista se omite porque su CI ya existía');
+        $this->assertSame(4, Usuario::count(), 'administrador, médico y dos pacientes; la recepcionista se omite porque su CI ya existía');
         $this->assertSame('Existente', Persona::where('ci', '8000001')->firstOrFail()->primer_nombre);
         $this->assertNull(Persona::where('ci', '8000001')->firstOrFail()->usuario, 'no se le crea cuenta a una persona que ya existía');
         $this->assertSame(1, Persona::where('ci', '8000002')->count());
