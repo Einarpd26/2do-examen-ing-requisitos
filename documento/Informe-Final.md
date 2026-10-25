@@ -2,7 +2,7 @@
 
 |                  |                                                        |
 | ---------------- | ------------------------------------------------------ |
-| **Materia**      | Ingeniería de Requisitos — SC                          |
+| **Materia**      | Ingeniería de Requisitos y Modelado INF-219-SC         |
 | **Examen**       | Segundo Examen Parcial                                 |
 | **Grupo**        | SC                                                     |
 | **Integrantes**  | Einar Padilla Delgadillo<br>Daniel Acosta Roca         |

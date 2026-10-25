@@ -6,7 +6,7 @@
 
 ![Logo de la Facultad](img/logo-uagrm.png)
 
-# Ingeniería de Requisitos — SC
+# Ingeniería de Requisitos y Modelado INF-219-SC
 
 ## SEGUNDO EXAMEN PARCIAL
 
