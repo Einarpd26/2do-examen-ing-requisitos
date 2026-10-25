@@ -2390,10 +2390,24 @@ Una revisión del código del Ciclo #1 encontró cuatro problemas reales, que se
 
 Lista de verificación para ejecutar en el navegador, por rol y por caso de uso. Complementa a las pruebas automatizadas: comprueba lo que ve y hace una persona, incluida la vista en un teléfono. Las columnas **Resultado obtenido** y **Estado** se completan al ejecutar cada prueba (Aprobada o Falló).
 
+**Cuentas para probar**
+
+| Rol | Usuario | Contraseña | Observación |
+|---|---|---|---|
+| Administrador | `demo.admin@clinica.test` | `Demo-2026` | Usuarios, médicos, especialidades y horarios |
+| Recepcionista | `demo.recepcion@clinica.test` | `Demo-2026` | Pacientes |
+| Médico | `demo.medico@clinica.test` | `Demo-2026` | Médico con especialidad y horarios cargados |
+| Paciente (ficha verificada) | CI `8000003` | `Demo-2026` | Ve su información médica y su contacto de emergencia |
+| Paciente (ficha pendiente) | CI `8000004` | `Demo-2026` | Ve el aviso de verificación pendiente |
+
+El personal entra con su correo y los pacientes con su CI, en la misma pantalla de inicio de sesión. Son cuentas solo de pruebas: el comando que las crea se niega a correr fuera del entorno local.
+
+**Cómo ejecutar el sistema** (detalle en el `README.md` del repositorio): `composer install`, `docker compose up -d`, `php artisan migrate`, `php artisan db:seed --class=DemoSeeder` y `php artisan serve`; luego abrir `http://127.0.0.1:8000`.
+
 **Preparación**
 
 - Servidor en `http://127.0.0.1:8000` y la base de datos levantada.
-- Cuentas: las de demostración, cargadas con `php artisan db:seed --class=DemoSeeder` (Administrador, Recepcionista, Médico y dos Pacientes: uno con la ficha verificada y otro pendiente). El usuario y la contraseña de cada caso de uso están indicados debajo de su título; las credenciales se definen en `database/seeders/DemoSeeder.php`.
+- Cuentas de demostración, para que la docente ingrese y pruebe cada rol. Se cargan con `php artisan db:seed --class=DemoSeeder`; el usuario y la contraseña de cada caso de uso están además indicados debajo de su título.
 - Una ventana privada por rol, para que las sesiones no se mezclen.
 - Orden sugerido, para que cada prueba ya tenga sus datos: CU-06, CU-05, CU-07, CU-03, CU-04, CU-02, CU-08, CU-01 y CU-19.
 - Quedan fuera las pruebas que dependen de las citas (quitar una especialidad con citas o cambiar un horario que deja una cita sin cubrir), que corresponden al Ciclo #2, y la regla de que siempre quede un Administrador activo, que desde la pantalla no se puede provocar y está cubierta por pruebas automáticas.
