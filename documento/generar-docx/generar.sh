@@ -16,3 +16,4 @@ python3 -I "$AQUI/preparar-md.py" "$ENTRADA" "$AQUI/portada.md" "$SCRATCH/inform
 cd "$AQUI/.."   # las imagenes del informe (img/...) se resuelven desde documento/
 pandoc "$SCRATCH/informe.md" -f gfm+tex_math_dollars -t docx --lua-filter "$AQUI/informe.lua" \
   --reference-doc "$SCRATCH/reference.docx" --resource-path=. -o "$SALIDA"
+python3 -I "$AQUI/ajustar-docx.py" "$SALIDA"   # agranda los diagramas de las paginas horizontales

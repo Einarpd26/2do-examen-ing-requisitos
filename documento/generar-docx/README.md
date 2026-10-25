@@ -14,6 +14,8 @@ Qué hace:
 2. `informe.lua` renderiza los bloques Mermaid como PNG, acota imágenes y tablas al ancho de la página, convierte cada `---` en un salto de página y centra los datos de la portada.
 3. `crear-reference.py` genera la plantilla de estilos (portada con títulos en negrita, bordes en las tablas) y el pie de página con el número.
 
-Numeración: el documento tiene dos secciones. La carátula y el índice no llevan número de página; la segunda sección empieza en «1. Perfil», que es la página 1.
+Páginas horizontales: cada diagrama de secuencia (`sequenceDiagram`) va en su propia hoja horizontal, con su título `**CU-xx …**` encima. `informe.lua` abre y cierra las secciones, y `ajustar-docx.py` agranda esas imágenes dentro del Word, porque pandoc las recorta al ancho de la hoja vertical.
+
+Numeración: el documento tiene varias secciones. La portada y el índice son la primera. La carátula y el índice no llevan número de página; la segunda sección empieza en «1. Perfil», que es la página 1, y la numeración sigue continua en las páginas horizontales.
 
 La portada se edita en `portada.md` (el logo está en `img/logo-uagrm.png`). Al abrir el Word hay que actualizar el índice: clic derecho sobre el índice y «Actualizar campo». Los diagramas quedan en `/tmp/generar-docx/mermaid` y se reutilizan si no cambian.

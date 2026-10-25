@@ -27,8 +27,7 @@ for item in src.infolist():
             '<w:footerReference w:type="default" r:id="rIdPie1"/>'
             '<w:pgSz w:w="12240" w:h="15840"/>'
             '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>'
-            '<w:pgNumType w:start="1"/>'
-        )
+        )  # el reinicio de la numeración en 1 lo pone informe.lua en la primera sección del cuerpo
         xml = re.sub(r"(<w:sectPr[^>]*>)", lambda m: m.group(1) + pagina, xml, count=1)
         if 'xmlns:r=' not in xml.split(">", 2)[1] and 'xmlns:r=' not in xml[:2000]:
             xml = xml.replace("<w:document ", '<w:document xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ', 1)
