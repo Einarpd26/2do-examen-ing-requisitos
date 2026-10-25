@@ -2390,6 +2390,8 @@ Una revisión del código del Ciclo #1 encontró cuatro problemas reales, que se
 
 Lista de verificación para ejecutar en el navegador, por rol y por caso de uso. Complementa a las pruebas automatizadas: comprueba lo que ve y hace una persona, incluida la vista en un teléfono. Las columnas **Resultado obtenido** y **Estado** se completan al ejecutar cada prueba (Aprobada o Falló).
 
+**Ejecutadas hasta ahora (24/10/2026):** PM-02, PM-44, PM-56, PM-57 y PM-76, que corresponden a las pruebas 1, 2, 9 y 10 del enunciado. Se ejecutaron en el navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y se comprobó en la base de datos que los rechazos no dejaron registros. Las demás figuran como «Pendiente de ejecución».
+
 **Cuentas para probar**
 
 | Rol | Usuario | Contraseña | Observación |
@@ -2418,14 +2420,14 @@ Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| PM-01 | Crear «Cardiología» con duración 30. | Aparece en la pestaña Activas y el contador de la pestaña sube en uno. |  |  |
-| PM-02 | Crear una especialidad con duración 4 y otra con 241. | Se rechazan con un mensaje en español y no se guardan. |  |  |
-| PM-03 | Crear «cardiología» (en minúsculas, con espacios al final). | Se rechaza por nombre repetido, sin distinguir mayúsculas ni espacios. |  |  |
-| PM-04 | Editar el nombre y la duración de una especialidad. | Los cambios se ven en el listado. |  |  |
-| PM-05 | Desactivar una especialidad. | Pasa a Inactivas, la fila se ve atenuada y ya no está en Activas. |  |  |
-| PM-06 | Reactivar la especialidad. | Vuelve a Activas. |  |  |
-| PM-07 | Buscar por parte del nombre una especialidad inactiva. | La búsqueda la encuentra y avisa que incluye a las inactivas. |  |  |
-| PM-08 | Crear «Odontologia» y «Odontología» como especialidades distintas. | Limitación conocida: el sistema las acepta como dos. Se registra como observación, no como fallo. |  |  |
+| PM-01 | Crear «Cardiología» con duración 30. | Aparece en la pestaña Activas y el contador de la pestaña sube en uno. |  | Pendiente de ejecución |
+| PM-02 | Crear una especialidad con duración 4 y otra con 241. | Se rechazan con un mensaje en español y no se guardan. | Con duración 4 y con 241 el navegador impidió el envío: el campo quedó en rojo con «Revise este campo.», junto a la ayuda «Entre 5 y 240», y la página no avanzó. No se creó ninguna especialidad (comprobado en la base de datos). | Aprobada |
+| PM-03 | Crear «cardiología» (en minúsculas, con espacios al final). | Se rechaza por nombre repetido, sin distinguir mayúsculas ni espacios. |  | Pendiente de ejecución |
+| PM-04 | Editar el nombre y la duración de una especialidad. | Los cambios se ven en el listado. |  | Pendiente de ejecución |
+| PM-05 | Desactivar una especialidad. | Pasa a Inactivas, la fila se ve atenuada y ya no está en Activas. |  | Pendiente de ejecución |
+| PM-06 | Reactivar la especialidad. | Vuelve a Activas. |  | Pendiente de ejecución |
+| PM-07 | Buscar por parte del nombre una especialidad inactiva. | La búsqueda la encuentra y avisa que incluye a las inactivas. |  | Pendiente de ejecución |
+| PM-08 | Crear «Odontologia» y «Odontología» como especialidades distintas. | Limitación conocida: el sistema las acepta como dos. Se registra como observación, no como fallo. |  | Pendiente de ejecución |
 
 **CU-05 Gestionar médicos** (rol: Administrador)
 
@@ -2433,15 +2435,15 @@ Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| PM-09 | Registrar un médico con CI, nombres, teléfono, correo, nro. de registro profesional y al menos una especialidad. | Se crea con código MED-00000N y aparece en Activos. |  |  |
-| PM-10 | Intentar registrar un médico sin ninguna especialidad. | Se rechaza con un mensaje que pide elegir una. |  |  |
-| PM-11 | Repetir el nro. de registro profesional de otro médico. | Se rechaza por registro repetido. |  |  |
-| PM-12 | Registrar un médico con el CI de una persona que ya existe sin ficha de médico (por ejemplo, un paciente). | Reutiliza la persona y no duplica el CI. |  |  |
-| PM-13 | Editar los datos y cambiar las especialidades del médico. | Los cambios quedan guardados. |  |  |
-| PM-14 | Desactivar un médico que tiene cuenta, y probar el ingreso con esa cuenta. | El médico pasa a Inactivos y su cuenta ya no entra. |  |  |
-| PM-15 | Reactivar al médico. | Vuelve a Activos, pero su cuenta no se reactiva sola: se reactiva en Usuarios. |  |  |
-| PM-16 | Buscar por nombre, especialidad, CI, nro. de registro y código MED-. | Cada búsqueda encuentra al médico. |  |  |
-| PM-17 | Buscar el nombre de un médico inactivo estando en la pestaña Activos. | Lo muestra y avisa que la búsqueda incluye a los inactivos. |  |  |
+| PM-09 | Registrar un médico con CI, nombres, teléfono, correo, nro. de registro profesional y al menos una especialidad. | Se crea con código MED-00000N y aparece en Activos. |  | Pendiente de ejecución |
+| PM-10 | Intentar registrar un médico sin ninguna especialidad. | Se rechaza con un mensaje que pide elegir una. |  | Pendiente de ejecución |
+| PM-11 | Repetir el nro. de registro profesional de otro médico. | Se rechaza por registro repetido. |  | Pendiente de ejecución |
+| PM-12 | Registrar un médico con el CI de una persona que ya existe sin ficha de médico (por ejemplo, un paciente). | Reutiliza la persona y no duplica el CI. |  | Pendiente de ejecución |
+| PM-13 | Editar los datos y cambiar las especialidades del médico. | Los cambios quedan guardados. |  | Pendiente de ejecución |
+| PM-14 | Desactivar un médico que tiene cuenta, y probar el ingreso con esa cuenta. | El médico pasa a Inactivos y su cuenta ya no entra. |  | Pendiente de ejecución |
+| PM-15 | Reactivar al médico. | Vuelve a Activos, pero su cuenta no se reactiva sola: se reactiva en Usuarios. |  | Pendiente de ejecución |
+| PM-16 | Buscar por nombre, especialidad, CI, nro. de registro y código MED-. | Cada búsqueda encuentra al médico. |  | Pendiente de ejecución |
+| PM-17 | Buscar el nombre de un médico inactivo estando en la pestaña Activos. | Lo muestra y avisa que la búsqueda incluye a los inactivos. |  | Pendiente de ejecución |
 
 **CU-07 Gestionar horarios de atención** (rol: Administrador)
 
@@ -2449,13 +2451,13 @@ Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| PM-18 | Agregar el bloque Lunes 08:00 a 12:00 con consultorio a un médico activo. | Queda en la semana del médico. |  |  |
-| PM-19 | Agregar un bloque con hora final menor o igual a la inicial. | Se rechaza con un mensaje claro. |  |  |
-| PM-20 | Escribir una hora inválida como 25:00. | Se rechaza como hora inválida, sin mostrar un error técnico. |  |  |
-| PM-21 | Agregar un bloque que se superpone con otro del mismo día, por ejemplo 11:00 a 13:00. | Se rechaza por superposición. |  |  |
-| PM-22 | Agregar un bloque pegado, por ejemplo 12:00 a 14:00 después del de 08:00 a 12:00. | Se acepta: los bloques pegados sí, los superpuestos no. |  |  |
-| PM-23 | Editar un bloque y eliminar otro. | Ambos cambios se reflejan en la semana. |  |  |
-| PM-24 | Abrir los horarios de un médico desactivado. | Se ven, pero no permite agregar, editar ni eliminar bloques. |  |  |
+| PM-18 | Agregar el bloque Lunes 08:00 a 12:00 con consultorio a un médico activo. | Queda en la semana del médico. |  | Pendiente de ejecución |
+| PM-19 | Agregar un bloque con hora final menor o igual a la inicial. | Se rechaza con un mensaje claro. |  | Pendiente de ejecución |
+| PM-20 | Escribir una hora inválida como 25:00. | Se rechaza como hora inválida, sin mostrar un error técnico. |  | Pendiente de ejecución |
+| PM-21 | Agregar un bloque que se superpone con otro del mismo día, por ejemplo 11:00 a 13:00. | Se rechaza por superposición. |  | Pendiente de ejecución |
+| PM-22 | Agregar un bloque pegado, por ejemplo 12:00 a 14:00 después del de 08:00 a 12:00. | Se acepta: los bloques pegados sí, los superpuestos no. |  | Pendiente de ejecución |
+| PM-23 | Editar un bloque y eliminar otro. | Ambos cambios se reflejan en la semana. |  | Pendiente de ejecución |
+| PM-24 | Abrir los horarios de un médico desactivado. | Se ven, pero no permite agregar, editar ni eliminar bloques. |  | Pendiente de ejecución |
 
 **CU-03 Gestionar usuarios y roles** (rol: Administrador)
 
@@ -2463,25 +2465,25 @@ Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| PM-25 | Registrar un usuario con rol Recepcionista. | Muestra la contraseña temporal una sola vez, con vigencia de 72 horas. |  |  |
-| PM-26 | Recargar la página de credenciales. | La contraseña no vuelve a mostrarse y avisa con un mensaje. |  |  |
-| PM-27 | Entrar con ese correo y la contraseña temporal. | Entra y lo obliga a cambiar la contraseña antes de seguir. |  |  |
-| PM-28 | Registrar un usuario con rol Administrador. | Se crea y el listado muestra los dos administradores. |  |  |
-| PM-29 | Registrar un usuario con rol Médico. | Pide elegir un médico ya registrado y no pide datos personales. |  |  |
-| PM-30 | Abrir el formulario con rol Médico cuando no quedan médicos sin cuenta. | Avisa que no hay médicos activos sin cuenta. |  |  |
-| PM-31 | Usar el CI de una persona que ya tiene cuenta. | Se rechaza e indica el rol que ya tiene. |  |  |
-| PM-32 | Usar el CI de un paciente que no tiene cuenta. | Reutiliza la persona y no cambia sus datos personales. |  |  |
-| PM-33 | Repetir un correo escrito en mayúsculas. | Se rechaza por correo repetido. |  |  |
-| PM-34 | Editar los datos personales y cambiar el rol entre Recepcionista y Administrador. | Los cambios se guardan. |  |  |
-| PM-35 | Abrir la edición de una cuenta de Médico. | Muestra los datos de solo lectura y un enlace a Médicos. |  |  |
-| PM-36 | Mirar la fila del propio usuario en el listado. | Dice «Usted» y no ofrece el botón Desactivar. |  |  |
-| PM-37 | En la edición del propio usuario, mirar el selector de rol. | Está bloqueado con el aviso «No puede cambiar su propio rol». |  |  |
-| PM-38 | Desactivar a otro usuario, probar su ingreso y luego reactivarlo. | Desactivado no entra; al reactivarlo recupera el acceso. |  |  |
-| PM-39 | Reactivar la cuenta de un médico cuya ficha sigue desactivada. | Se rechaza hasta reactivar al médico en Médicos. |  |  |
-| PM-40 | Renovar la contraseña de otro usuario sin elegir cómo se verificó su identidad. | Se rechaza: la verificación es obligatoria. |  |  |
-| PM-41 | Renovar con la verificación elegida e intentar entrar con la contraseña anterior y con la nueva. | Solo sirve la nueva, que se muestra una vez. |  |  |
-| PM-42 | Probar la búsqueda por nombre, CI, correo y rol, y las pestañas Activos, Inactivos y Todos. | Cada filtro responde y los contadores coinciden con el listado. |  |  |
-| PM-43 | Buscar una cuenta de paciente en el listado de usuarios. | No aparece: las cuentas de pacientes se gestionan en Pacientes. |  |  |
+| PM-25 | Registrar un usuario con rol Recepcionista. | Muestra la contraseña temporal una sola vez, con vigencia de 72 horas. |  | Pendiente de ejecución |
+| PM-26 | Recargar la página de credenciales. | La contraseña no vuelve a mostrarse y avisa con un mensaje. |  | Pendiente de ejecución |
+| PM-27 | Entrar con ese correo y la contraseña temporal. | Entra y lo obliga a cambiar la contraseña antes de seguir. |  | Pendiente de ejecución |
+| PM-28 | Registrar un usuario con rol Administrador. | Se crea y el listado muestra los dos administradores. |  | Pendiente de ejecución |
+| PM-29 | Registrar un usuario con rol Médico. | Pide elegir un médico ya registrado y no pide datos personales. |  | Pendiente de ejecución |
+| PM-30 | Abrir el formulario con rol Médico cuando no quedan médicos sin cuenta. | Avisa que no hay médicos activos sin cuenta. |  | Pendiente de ejecución |
+| PM-31 | Usar el CI de una persona que ya tiene cuenta. | Se rechaza e indica el rol que ya tiene. |  | Pendiente de ejecución |
+| PM-32 | Usar el CI de un paciente que no tiene cuenta. | Reutiliza la persona y no cambia sus datos personales. |  | Pendiente de ejecución |
+| PM-33 | Repetir un correo escrito en mayúsculas. | Se rechaza por correo repetido. |  | Pendiente de ejecución |
+| PM-34 | Editar los datos personales y cambiar el rol entre Recepcionista y Administrador. | Los cambios se guardan. |  | Pendiente de ejecución |
+| PM-35 | Abrir la edición de una cuenta de Médico. | Muestra los datos de solo lectura y un enlace a Médicos. |  | Pendiente de ejecución |
+| PM-36 | Mirar la fila del propio usuario en el listado. | Dice «Usted» y no ofrece el botón Desactivar. |  | Pendiente de ejecución |
+| PM-37 | En la edición del propio usuario, mirar el selector de rol. | Está bloqueado con el aviso «No puede cambiar su propio rol». |  | Pendiente de ejecución |
+| PM-38 | Desactivar a otro usuario, probar su ingreso y luego reactivarlo. | Desactivado no entra; al reactivarlo recupera el acceso. |  | Pendiente de ejecución |
+| PM-39 | Reactivar la cuenta de un médico cuya ficha sigue desactivada. | Se rechaza hasta reactivar al médico en Médicos. |  | Pendiente de ejecución |
+| PM-40 | Renovar la contraseña de otro usuario sin elegir cómo se verificó su identidad. | Se rechaza: la verificación es obligatoria. |  | Pendiente de ejecución |
+| PM-41 | Renovar con la verificación elegida e intentar entrar con la contraseña anterior y con la nueva. | Solo sirve la nueva, que se muestra una vez. |  | Pendiente de ejecución |
+| PM-42 | Probar la búsqueda por nombre, CI, correo y rol, y las pestañas Activos, Inactivos y Todos. | Cada filtro responde y los contadores coinciden con el listado. |  | Pendiente de ejecución |
+| PM-43 | Buscar una cuenta de paciente en el listado de usuarios. | No aparece: las cuentas de pacientes se gestionan en Pacientes. |  | Pendiente de ejecución |
 
 **CU-04 Gestionar pacientes** (rol: Recepcionista)
 
@@ -2489,16 +2491,16 @@ Usuario de prueba: Recepcionista `demo.recepcion@clinica.test` · Contraseña: `
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| PM-44 | Registrar un paciente con datos personales, información médica y contacto de emergencia. | Se crea con código PAC-00000N. |  |  |
-| PM-45 | Buscar por CI, nombre, apellido y código PAC-. | Cada búsqueda lo encuentra. |  |  |
-| PM-46 | Editar los datos de un paciente y guardar. | Los cambios aparecen en su ficha. |  |  |
-| PM-47 | Crear el acceso de un paciente que no tiene cuenta. | Muestra la contraseña temporal una sola vez, con botones Copiar e Imprimir. |  |  |
-| PM-48 | Entrar como ese paciente con su CI y la contraseña temporal. | Entra y lo obliga a cambiar la contraseña. |  |  |
-| PM-49 | Renovar la contraseña de un paciente sin indicar cómo se verificó su identidad. | Se rechaza; con la verificación elegida genera otra y queda registrada. |  |  |
-| PM-50 | Verificar una ficha pendiente, con y sin la casilla de renovar la contraseña. | La ficha pasa a verificada; con la casilla, además se renueva la contraseña. |  |  |
-| PM-51 | Desactivar a un paciente y probar su ingreso; luego reactivarlo. | No entra mientras está desactivado y el historial se conserva; al reactivarlo vuelve a entrar. |  |  |
-| PM-52 | Abrir la ficha de una persona cuya cuenta tiene rol Médico. | Avisa que como paciente la atiende la recepción y no ofrece crear acceso. |  |  |
-| PM-53 | Con la sesión de Administrador, abrir /pacientes. | Error 403: el Administrador no gestiona pacientes. |  |  |
+| PM-44 | Registrar un paciente con datos personales, información médica y contacto de emergencia. | Se crea con código PAC-00000N. | El sistema mostró «Paciente registrado.» y creó la ficha PAC-000006 con CI 8100001, fecha de nacimiento 20/05/1990, información médica (tipo de sangre A+) y contacto de emergencia. La ficha quedó activa y verificada. | Aprobada |
+| PM-45 | Buscar por CI, nombre, apellido y código PAC-. | Cada búsqueda lo encuentra. |  | Pendiente de ejecución |
+| PM-46 | Editar los datos de un paciente y guardar. | Los cambios aparecen en su ficha. |  | Pendiente de ejecución |
+| PM-47 | Crear el acceso de un paciente que no tiene cuenta. | Muestra la contraseña temporal una sola vez, con botones Copiar e Imprimir. |  | Pendiente de ejecución |
+| PM-48 | Entrar como ese paciente con su CI y la contraseña temporal. | Entra y lo obliga a cambiar la contraseña. |  | Pendiente de ejecución |
+| PM-49 | Renovar la contraseña de un paciente sin indicar cómo se verificó su identidad. | Se rechaza; con la verificación elegida genera otra y queda registrada. |  | Pendiente de ejecución |
+| PM-50 | Verificar una ficha pendiente, con y sin la casilla de renovar la contraseña. | La ficha pasa a verificada; con la casilla, además se renueva la contraseña. |  | Pendiente de ejecución |
+| PM-51 | Desactivar a un paciente y probar su ingreso; luego reactivarlo. | No entra mientras está desactivado y el historial se conserva; al reactivarlo vuelve a entrar. |  | Pendiente de ejecución |
+| PM-52 | Abrir la ficha de una persona cuya cuenta tiene rol Médico. | Avisa que como paciente la atiende la recepción y no ofrece crear acceso. |  | Pendiente de ejecución |
+| PM-53 | Con la sesión de Administrador, abrir /pacientes. | Error 403: el Administrador no gestiona pacientes. |  | Pendiente de ejecución |
 
 **CU-02 Registro propio del paciente** (rol: Sin sesión)
 
@@ -2506,11 +2508,11 @@ Sin usuario: se prueba sin iniciar sesión. Para el paso de la ficha pendiente s
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| PM-54 | Registrarse con CI, celular, contraseña y nombres, sin correo. | Se crea la cuenta y se puede entrar con el CI. |  |  |
-| PM-55 | Mirar la ficha del registrado desde la sesión de la Recepcionista. | Aparece como pendiente de verificación. |  |  |
-| PM-56 | Registrarse con un CI que ya tiene cuenta o ficha. | Se rechaza con un mensaje claro que manda a la recepción. |  |  |
-| PM-57 | Usar una contraseña débil y un celular inválido. | Se rechazan con mensajes en español; el navegador también avisa antes de enviar. |  |  |
-| PM-58 | Con la sesión iniciada, abrir /registro. | Redirige al inicio. |  |  |
+| PM-54 | Registrarse con CI, celular, contraseña y nombres, sin correo. | Se crea la cuenta y se puede entrar con el CI. |  | Pendiente de ejecución |
+| PM-55 | Mirar la ficha del registrado desde la sesión de la Recepcionista. | Aparece como pendiente de verificación. |  | Pendiente de ejecución |
+| PM-56 | Registrarse con un CI que ya tiene cuenta o ficha. | Se rechaza con un mensaje claro que manda a la recepción. | El servidor rechazó el registro y mostró bajo el campo CI: «Este CI ya está registrado. Si es suyo, pida su acceso en recepción: +591 70000000.» No se creó ninguna persona nueva (comprobado en la base de datos). | Aprobada |
+| PM-57 | Usar una contraseña débil y un celular inválido. | Se rechazan con mensajes en español; el navegador también avisa antes de enviar. | Con el celular «12» y la contraseña «abc» el navegador impidió el envío: Celular y Contraseña quedaron en rojo con «Revise este campo.» y la página no avanzó. No se creó ninguna persona (comprobado en la base de datos). | Aprobada |
+| PM-58 | Con la sesión iniciada, abrir /registro. | Redirige al inicio. |  | Pendiente de ejecución |
 
 **CU-08 Gestionar mi perfil** (rol: Paciente)
 
@@ -2518,15 +2520,15 @@ Usuarios de prueba: Paciente con la ficha verificada, CI `8000003`; Paciente con
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| PM-59 | Abrir Mi perfil con la ficha pendiente de verificación. | Muestra el aviso y oculta la información médica y el contacto de emergencia. |  |  |
-| PM-60 | Abrir Mi perfil después de que la recepción verifica la ficha. | Aparecen la información médica y el contacto de emergencia, en solo lectura. |  |  |
-| PM-61 | Cambiar el teléfono por uno válido. | Se guarda y muestra «Su teléfono fue actualizado». |  |  |
-| PM-62 | Dejar el teléfono vacío o escribir «12». | Se rechaza con un mensaje en español. |  |  |
-| PM-63 | Buscar un campo para editar el nombre, el CI o el correo. | No existe: solo el teléfono es editable. |  |  |
-| PM-64 | Usar «Cambiar contraseña» con la contraseña actual incorrecta. | Se rechaza. |  |  |
-| PM-65 | Cambiar a una contraseña débil o igual a la actual. | Se rechaza e indica el motivo. |  |  |
-| PM-66 | Cambiar a una contraseña válida, cerrar sesión y volver a entrar. | Entra con la nueva y no con la anterior. |  |  |
-| PM-67 | Con otro rol, abrir /perfil. | Error 403 y el menú no ofrece Mi perfil. |  |  |
+| PM-59 | Abrir Mi perfil con la ficha pendiente de verificación. | Muestra el aviso y oculta la información médica y el contacto de emergencia. |  | Pendiente de ejecución |
+| PM-60 | Abrir Mi perfil después de que la recepción verifica la ficha. | Aparecen la información médica y el contacto de emergencia, en solo lectura. |  | Pendiente de ejecución |
+| PM-61 | Cambiar el teléfono por uno válido. | Se guarda y muestra «Su teléfono fue actualizado». |  | Pendiente de ejecución |
+| PM-62 | Dejar el teléfono vacío o escribir «12». | Se rechaza con un mensaje en español. |  | Pendiente de ejecución |
+| PM-63 | Buscar un campo para editar el nombre, el CI o el correo. | No existe: solo el teléfono es editable. |  | Pendiente de ejecución |
+| PM-64 | Usar «Cambiar contraseña» con la contraseña actual incorrecta. | Se rechaza. |  | Pendiente de ejecución |
+| PM-65 | Cambiar a una contraseña débil o igual a la actual. | Se rechaza e indica el motivo. |  | Pendiente de ejecución |
+| PM-66 | Cambiar a una contraseña válida, cerrar sesión y volver a entrar. | Entra con la nueva y no con la anterior. |  | Pendiente de ejecución |
+| PM-67 | Con otro rol, abrir /perfil. | Error 403 y el menú no ofrece Mi perfil. |  | Pendiente de ejecución |
 
 **CU-01 Iniciar y cerrar sesión** (rol: Todos los roles)
 
@@ -2534,18 +2536,18 @@ Usuarios de prueba: Administrador `demo.admin@clinica.test`, Recepcionista `demo
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| PM-68 | Entrar como paciente con CI y contraseña. | Va al inicio con el menú del paciente. |  |  |
-| PM-69 | Entrar como personal con el correo. | Cada rol ve solo su menú; lo no implementado figura como «Próximamente». |  |  |
-| PM-70 | Escribir el CI con espacios, por ejemplo «8000 003». | Entra igual que si estuviera bien escrito. |  |  |
-| PM-71 | Escribir una contraseña incorrecta. | Mensaje genérico, sin revelar si la cuenta existe. |  |  |
-| PM-72 | Fallar la contraseña 5 veces seguidas. | Bloquea la cuenta 15 minutos con aviso; la contraseña correcta tampoco entra en ese lapso. |  |  |
-| PM-73 | Enviar más de 10 solicitudes de inicio de sesión en un minuto. | La solicitud 11 muestra «Demasiadas solicitudes» en español. |  |  |
-| PM-74 | Entrar con una cuenta desactivada. | No entra. |  |  |
-| PM-75 | Entrar con una contraseña temporal. | Lo lleva a cambiar la contraseña y bloquea el resto de las páginas hasta hacerlo. |  |  |
-| PM-76 | Abrir /usuarios sin sesión. | Redirige al login. |  |  |
-| PM-77 | Con el rol Paciente, abrir /usuarios. | Error 403. |  |  |
-| PM-78 | Cerrar sesión y usar el botón Atrás del navegador. | No muestra páginas privadas: pide iniciar sesión. |  |  |
-| PM-79 | Desactivar una cuenta con su sesión abierta en otra ventana y recargar esa ventana. | Cierra la sesión en la siguiente solicitud. |  |  |
+| PM-68 | Entrar como paciente con CI y contraseña. | Va al inicio con el menú del paciente. |  | Pendiente de ejecución |
+| PM-69 | Entrar como personal con el correo. | Cada rol ve solo su menú; lo no implementado figura como «Próximamente». |  | Pendiente de ejecución |
+| PM-70 | Escribir el CI con espacios, por ejemplo «8000 003». | Entra igual que si estuviera bien escrito. |  | Pendiente de ejecución |
+| PM-71 | Escribir una contraseña incorrecta. | Mensaje genérico, sin revelar si la cuenta existe. |  | Pendiente de ejecución |
+| PM-72 | Fallar la contraseña 5 veces seguidas. | Bloquea la cuenta 15 minutos con aviso; la contraseña correcta tampoco entra en ese lapso. |  | Pendiente de ejecución |
+| PM-73 | Enviar más de 10 solicitudes de inicio de sesión en un minuto. | La solicitud 11 muestra «Demasiadas solicitudes» en español. |  | Pendiente de ejecución |
+| PM-74 | Entrar con una cuenta desactivada. | No entra. |  | Pendiente de ejecución |
+| PM-75 | Entrar con una contraseña temporal. | Lo lleva a cambiar la contraseña y bloquea el resto de las páginas hasta hacerlo. |  | Pendiente de ejecución |
+| PM-76 | Abrir /usuarios sin sesión. | Redirige al login. | El sistema redirigió al formulario de inicio de sesión y no mostró la lista de usuarios. | Aprobada |
+| PM-77 | Con el rol Paciente, abrir /usuarios. | Error 403. |  | Pendiente de ejecución |
+| PM-78 | Cerrar sesión y usar el botón Atrás del navegador. | No muestra páginas privadas: pide iniciar sesión. |  | Pendiente de ejecución |
+| PM-79 | Desactivar una cuenta con su sesión abierta en otra ventana y recargar esa ventana. | Cierra la sesión en la siguiente solicitud. |  | Pendiente de ejecución |
 
 **CU-19 Renovar contraseña temporal** (rol: Recepcionista y Administrador)
 
@@ -2553,10 +2555,10 @@ Usuarios de prueba: Recepcionista `demo.recepcion@clinica.test` (contraseñas de
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| PM-80 | Renovar la contraseña de una cuenta bloqueada por intentos fallidos. | Se levanta el bloqueo y la anterior deja de servir. |  |  |
-| PM-81 | Renovar la contraseña de una cuenta con la temporal vencida. | La nueva entra y desaparece el bloqueo por vencimiento. |  |  |
-| PM-82 | Ejecutar en la consola `php artisan administrador:renovar-password` con el correo del Administrador. | Genera una contraseña temporal para el Administrador y deja constancia en la bitácora. |  |  |
-| PM-83 | Consultar la tabla `bitacora` en la base de datos. | Hay registros de ingresos, altas, cambios y renovaciones, con el usuario que actuó. |  |  |
+| PM-80 | Renovar la contraseña de una cuenta bloqueada por intentos fallidos. | Se levanta el bloqueo y la anterior deja de servir. |  | Pendiente de ejecución |
+| PM-81 | Renovar la contraseña de una cuenta con la temporal vencida. | La nueva entra y desaparece el bloqueo por vencimiento. |  | Pendiente de ejecución |
+| PM-82 | Ejecutar en la consola `php artisan administrador:renovar-password` con el correo del Administrador. | Genera una contraseña temporal para el Administrador y deja constancia en la bitácora. |  | Pendiente de ejecución |
+| PM-83 | Consultar la tabla `bitacora` en la base de datos. | Hay registros de ingresos, altas, cambios y renovaciones, con el usuario que actuó. |  | Pendiente de ejecución |
 
 **Transversales** (rol: Todos los roles)
 
@@ -2564,10 +2566,10 @@ Usuarios de prueba: los mismos de CU-01.
 
 | N.º | Prueba | Resultado esperado | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| PM-84 | Revisar el menú con cada rol. | Administrador, Recepcionista, Médico y Paciente ven solo sus opciones. |  |  |
-| PM-85 | Abrir las pantallas con un ancho de teléfono (unos 400 px). | No hay desplazamiento horizontal fuera de las tablas. |  |  |
-| PM-86 | Provocar un error de validación en cualquier formulario. | Los datos escritos se conservan y el mensaje está en español. |  |  |
-| PM-87 | Mirar una hora guardada, como un horario o un ingreso en la bitácora. | Está en hora de La Paz. |  |  |
+| PM-84 | Revisar el menú con cada rol. | Administrador, Recepcionista, Médico y Paciente ven solo sus opciones. |  | Pendiente de ejecución |
+| PM-85 | Abrir las pantallas con un ancho de teléfono (unos 400 px). | No hay desplazamiento horizontal fuera de las tablas. |  | Pendiente de ejecución |
+| PM-86 | Provocar un error de validación en cualquier formulario. | Los datos escritos se conservan y el mensaje está en español. |  | Pendiente de ejecución |
+| PM-87 | Mirar una hora guardada, como un horario o un ingreso en la bitácora. | Está en hora de La Paz. |  | Pendiente de ejecución |
 
 Total: 87 pruebas manuales.
 
