@@ -230,6 +230,7 @@ Hoy ese proceso se apoya en cuadernos, llamadas telefónicas y hojas de cálculo
 | CUN-07 | Emitir reportes administrativos                | Administrador           |
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart LR
     Paciente([Paciente])
     Recep([Recepcionista])
@@ -238,11 +239,11 @@ flowchart LR
 
     subgraph Clinica["Clínica Vida Salud"]
         CUN01(Registrar paciente)
-        CUN02(Administrar médicos,\nespecialidades y horarios)
+        CUN02(Administrar médicos,<br/>especialidades y horarios)
         CUN03(Programar cita médica)
-        CUN04(Reprogramar o\ncancelar cita)
+        CUN04(Reprogramar o<br/>cancelar cita)
         CUN05(Atender consulta médica)
-        CUN06(Registrar asistencia /\ninasistencia)
+        CUN06(Registrar asistencia /<br/>inasistencia)
         CUN07(Emitir reportes)
     end
 
@@ -264,6 +265,7 @@ flowchart LR
 Proceso: **Programar cita médica** (CUN-03).
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
     A([Inicio: el paciente solicita una cita]) --> B{¿Paciente registrado?}
     B -- No --> C["Se registra el paciente (Recepcionista o autorregistro)"]
@@ -404,6 +406,7 @@ La lista de espera y los recordatorios por SMS o correo se mencionan como mejora
 ### 4.4 Diagrama de casos de uso
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart LR
     Admin([Administrador])
     Recep([Recepcionista])
@@ -896,9 +899,9 @@ Se presentan CU-01, CU-02 y CU-04 del Ciclo #1. Los números en las flechas indi
 
 ```mermaid
 flowchart LR
-    U([Usuario]) -- "1: ingresar(identificador, contraseña)" --> B[FormLogin]
-    B -- "2: autenticar(identificador, contraseña)" --> C[ControlAcceso]
-    C -- "3: buscarPorCIoCorreo(identificador)" --> P[Persona]
+    U([Usuario]) -- "1: ingresar(identificador,<br/>contraseña)" --> B[FormLogin]
+    B -- "2: autenticar(identificador,<br/>contraseña)" --> C[ControlAcceso]
+    C -- "3: buscarPorCIoCorreo<br/>(identificador)" --> P[Persona]
     C -- "4: obtenerCuenta(persona)" --> E[Usuario]
     C -- "5: registrar(login)" --> L[Bitacora]
     C -- "6: rol, sesión iniciada" --> M[MenuPrincipal]
@@ -909,7 +912,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    V([Visitante]) -- "1: registrar(nombre, apellido paterno, CI, celular, contraseña)" --> B[FormRegistro]
+    V([Visitante]) -- "1: registrar(nombre,<br/>apellido paterno, CI,<br/>celular, contraseña)" --> B[FormRegistro]
     B -- "2: crearCuenta(datos)" --> C[ControlRegistro]
     C -- "3: existeCI(ci)" --> P[Persona]
     C -- "4: crearPersona(datos)" --> P
@@ -923,12 +926,12 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    R([Recepcionista]) -- "1: guardar(datos, info médica, emergencia)" --> B[FormPaciente]
+    R([Recepcionista]) -- "1: guardar(datos,<br/>info médica, emergencia)" --> B[FormPaciente]
     B -- "2: guardarPaciente(datos)" --> C[ControlPaciente]
     C -- "3: existeCI(ci)" --> P[Persona]
     C -- "4: guardar(persona y ficha)" --> P
-    C -- "5: crearCuenta(contraseña temporal) / verificar ficha" --> U[Usuario]
-    C -- "6: registrar(alta/modificación)" --> L[Bitacora]
+    C -- "5: crearCuenta<br/>(contraseña temporal) /<br/>verificar ficha" --> U[Usuario]
+    C -- "6: registrar<br/>(alta/modificación)" --> L[Bitacora]
     C -- "7: resultado" --> B
     B -- "8: mostrar resultado" --> R
 ```
@@ -938,7 +941,7 @@ flowchart LR
 ```mermaid
 stateDiagram-v2
     [*] --> Programada : registrar cita
-    Programada --> Confirmada : confirmar asistencia (Recepcionista o Paciente)
+    Programada --> Confirmada : confirmar asistencia<br/>(Recepcionista o Paciente)
     Programada --> Cancelada : cancelar
     Confirmada --> Cancelada : cancelar
     Programada --> Atendida : marcar atendida
@@ -971,18 +974,19 @@ Una cita cancelada no puede marcarse como atendida sin un procedimiento autoriza
 Arquitectura en capas sobre el patrón MVC de Laravel. Cada estereotipo del análisis (sección 5) se materializa en un artefacto concreto.
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TB
     subgraph Presentacion["Presentación"]
-        V["Vistas Blade + Bootstrap 5 + JavaScript\n(«boundary»)"]
+        V["Vistas Blade + Bootstrap 5 + JavaScript<br/>(«boundary»)"]
     end
     subgraph Aplicacion["Aplicación"]
         R["Rutas (routes/web.php)"]
-        M["Middleware: auth (sesión válida),\ncuenta.vigente (cuenta activa y cambio\nobligatorio de contraseña),\ncan: (permiso de cada operación)"]
-        C["Controladores + Form Requests\n(«control»)"]
-        S["Servicios: uno por módulo, más\nAutenticación, ContraseñaTemporal\ny Bitácora"]
+        M["Middleware: auth (sesión válida),<br/>cuenta.vigente (cuenta activa y cambio<br/>obligatorio de contraseña),<br/>can: (permiso de cada operación)"]
+        C["Controladores + Form Requests<br/>(«control»)"]
+        S["Servicios: uno por módulo, más<br/>Autenticación, ContraseñaTemporal<br/>y Bitácora"]
     end
     subgraph Dominio["Dominio y datos"]
-        E["Modelos Eloquent\n(«entity»)"]
+        E["Modelos Eloquent<br/>(«entity»)"]
         D[("PostgreSQL")]
     end
 
@@ -1012,15 +1016,16 @@ flowchart TB
 #### 6.1.2 Arquitectura física (despliegue)
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart LR
     subgraph Cliente["Equipo del usuario"]
-        N["Navegador web\nHTML5 · Bootstrap 5 · JavaScript"]
+        N["Navegador web<br/>HTML5 · Bootstrap 5 · JavaScript"]
     end
-    subgraph Servidor["Servidor local (entorno PHP equivalente a XAMPP)"]
-        A["PHP 8.4+ · servidor embebido\nLaravel (public/ como raíz web)"]
+    subgraph Servidor["Servidor local"]
+        A["PHP 8.4+ · servidor embebido<br/>Laravel (public/ como raíz web)<br/>Entorno equivalente a XAMPP"]
     end
-    subgraph BD["Base de datos (contenedor Docker)"]
-        P[("PostgreSQL 16\n(pdo_pgsql)")]
+    subgraph BD["Base de datos (Docker)"]
+        P[("PostgreSQL 16<br/>(pdo_pgsql)")]
     end
     N -- "HTTP(S)" --> A
     A -- "PDO" --> P
@@ -1043,6 +1048,7 @@ Se diseñan CU-01, CU-02 y CU-04 (creación de cuenta con contraseña temporal).
 **CU-01 Iniciar sesión**
 
 ```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
 sequenceDiagram
     actor U as Usuario
     participant V as FormLogin (Blade)
@@ -1088,6 +1094,7 @@ sequenceDiagram
 **CU-02 Registrarse como paciente**
 
 ```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
 sequenceDiagram
     actor V as Visitante
     participant F as FormRegistro (Blade)
@@ -1121,6 +1128,7 @@ sequenceDiagram
 **CU-04 Crear la cuenta de un paciente**
 
 ```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
 sequenceDiagram
     actor R as Recepcionista
     participant F as FormPaciente (Blade)
@@ -1150,6 +1158,7 @@ sequenceDiagram
 **CU-19 Renovar contraseña temporal**
 
 ```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
 sequenceDiagram
     actor P as Paciente
     actor R as Recepcionista
