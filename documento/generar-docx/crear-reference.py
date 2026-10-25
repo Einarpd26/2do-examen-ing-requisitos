@@ -20,6 +20,29 @@ src = zipfile.ZipFile(base)
 out = zipfile.ZipFile(f"{out_dir}/reference.docx", "w", zipfile.ZIP_DEFLATED)
 for item in src.infolist():
     data = src.read(item.filename)
+    if item.filename == "word/document.xml":
+        # Sección del cuerpo (desde «1. Perfil»): carta, márgenes, pie con el número de página y numeración desde 1.
+        xml = data.decode()
+        pagina = (
+            '<w:footerReference w:type="default" r:id="rIdPie1"/>'
+            '<w:pgSz w:w="12240" w:h="15840"/>'
+            '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>'
+            '<w:pgNumType w:start="1"/>'
+        )
+        xml = re.sub(r"(<w:sectPr[^>]*>)", lambda m: m.group(1) + pagina, xml, count=1)
+        if 'xmlns:r=' not in xml.split(">", 2)[1] and 'xmlns:r=' not in xml[:2000]:
+            xml = xml.replace("<w:document ", '<w:document xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ', 1)
+        data = xml.encode()
+    elif item.filename == "word/_rels/document.xml.rels":
+        xml = data.decode().replace(
+            "</Relationships>",
+            '<Relationship Id="rIdPie1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>')
+        data = xml.encode()
+    elif item.filename == "[Content_Types].xml":
+        xml = data.decode().replace(
+            "</Types>",
+            '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>')
+        data = xml.encode()
     if item.filename == "word/styles.xml":
         xml = data.decode()
         estilo = re.search(r'<w:style w:type="table"[^>]*w:styleId="Table".*?</w:style>', xml, re.S).group(0)
@@ -49,4 +72,14 @@ for item in src.infolist():
                    '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>')
         data = xml.replace("</w:styles>", portada + "</w:styles>").encode()
     out.writestr(item, data)
+pie = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+       '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+       'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+       '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'
+       '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'
+       '<w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>'
+       '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'
+       '<w:r><w:t>1</w:t></w:r>'
+       '<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>')
+out.writestr("word/footer1.xml", pie)
 out.close()

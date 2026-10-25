@@ -5,7 +5,8 @@
 --  * links relativos -> URL de GitHub
 --  * portada (todo lo que va antes de <!-- fin-portada -->): titulos -> Title/Subtitle, fuera del indice;
 --    parrafos de Docente, Empresa, Lugar, Repositorio y las imagenes -> centrados
---  * indice de contenido despues de la portada
+--  * indice de contenido despues de la portada; ahi termina la primera seccion (sin numero de pagina) y la
+--    segunda seccion, desde «1. Perfil», lleva el numero de pagina y reinicia la numeracion en 1
 --  * linea horizontal -> salto de pagina
 -- Variables de entorno:
 --  SCRATCH     carpeta de trabajo (diagramas renderizados y pptr.json)
@@ -142,7 +143,7 @@ end
 local TOC = [[<w:p><w:r><w:br w:type="page"/></w:r></w:p>
 <w:p><w:pPr><w:pStyle w:val="TOCHeading"/></w:pPr><w:r><w:t>Índice</w:t></w:r></w:p>
 <w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \o "1-3" \h \z \u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Actualice el índice (clic derecho → Actualizar campo).</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>
-<w:p><w:r><w:br w:type="page"/></w:r></w:p>]]
+<w:p><w:pPr><w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:pPr></w:p>]]
 
 function Pandoc(doc)
   if FRAGMENTO then return nil end
