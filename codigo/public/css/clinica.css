@@ -69,6 +69,19 @@
     min-width: 5.5rem;
 }
 
+/* Horarios disponibles de una cita: botones con el verde de la clínica. */
+.btn-outline-primary {
+    --bs-btn-color: var(--clinica);
+    --bs-btn-border-color: var(--clinica);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--clinica);
+    --bs-btn-hover-border-color: var(--clinica);
+    --bs-btn-focus-shadow-rgb: 11, 110, 110;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--clinica-oscuro);
+    --bs-btn-active-border-color: var(--clinica-oscuro);
+}
+
 .navbar .nav-link.disabled {
     color: rgba(255, 255, 255, 0.45);
 }

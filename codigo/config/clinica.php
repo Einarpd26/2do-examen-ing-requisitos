@@ -47,4 +47,18 @@ return [
         'bloqueo_minutos' => 15,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Citas
+    |--------------------------------------------------------------------------
+    |
+    | Una cita se puede registrar hasta dias_anticipacion_max días después de hoy
+    | (hora de La Paz), para cualquier rol (CU-09).
+    |
+    */
+
+    'citas' => [
+        'dias_anticipacion_max' => 60,
+    ],
+
 ];

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccesoController;
 use App\Http\Controllers\AccesoPacienteController;
 use App\Http\Controllers\CambioPasswordController;
+use App\Http\Controllers\CitaController;
 use App\Http\Controllers\EspecialidadController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\InicioController;
@@ -39,6 +40,22 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
     Route::prefix('perfil')->name('perfil.')->middleware('can:perfil:gestionar')->group(function () {
         Route::get('/', [PerfilController::class, 'mostrar'])->name('mostrar');
         Route::put('/', [PerfilController::class, 'actualizar'])->name('actualizar');
+    });
+
+    // CU-09: registrar cita. La Recepcionista (citas:gestionar) agenda para cualquier paciente;
+    // el Paciente (citas:gestionar_propias) solo para sí mismo. Mismo controlador, grupos separados.
+    Route::prefix('citas')->name('citas.')->middleware('can:citas:gestionar')->group(function () {
+        Route::get('/nueva', [CitaController::class, 'nueva'])->name('nueva');
+        Route::post('/', [CitaController::class, 'store'])->name('store');
+        Route::get('/{cita}', [CitaController::class, 'comprobante'])
+            ->where(['cita' => '[0-9]+'])->name('comprobante');
+    });
+
+    Route::prefix('mis-citas')->name('mis-citas.')->middleware('can:citas:gestionar_propias')->group(function () {
+        Route::get('/nueva', [CitaController::class, 'nueva'])->name('nueva');
+        Route::post('/', [CitaController::class, 'store'])->name('store');
+        Route::get('/{cita}', [CitaController::class, 'comprobante'])
+            ->where(['cita' => '[0-9]+'])->name('comprobante');
     });
 
     // CU-03: gestionar usuarios y roles del personal (solo el Administrador, con usuarios:gestionar).

@@ -95,7 +95,7 @@ El sistema es una aplicación web accesible desde un navegador (PHP, PostgreSQL,
 | Ciclo    | Requisitos                                                                                                                                        | Estado    |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios · RF14 Cuenta y perfil del paciente                      | En curso  |
-| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | Pendiente |
+| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | En curso: CU-09 implementado |
 
 ---
 
@@ -310,6 +310,7 @@ Se aplican independientemente de lo que el usuario escriba en los formularios.
 | RN14   | Los datos se almacenarán de forma persistente en PostgreSQL.                                                                                         |
 | RN15   | El Paciente solo podrá cancelar o reprogramar una cita con al menos 24 horas de anticipación; la Recepcionista no tiene esta restricción (Ciclo #2). |
 | RN16   | Un médico no puede atenderse a sí mismo: la persona del médico y la del paciente de una cita deben ser distintas (Ciclo #2).                         |
+| RN17   | Un paciente no puede tener dos citas superpuestas, ni siquiera con médicos distintos; la base de datos también lo impide (Ciclo #2).                 |
 
 ---
 
@@ -354,6 +355,7 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 - **RF16 Historial médico:** el Médico registra una nota clínica por cada cita atendida con motivo de consulta, diagnóstico, tratamiento o indicaciones, y observaciones. Cada Médico edita solo sus propias notas; al editarla se sobrescribe y se guarda quién y cuándo la modificó por última vez, sin conservar versiones. Ven las notas: el Médico, el Paciente y la Recepcionista, todas en solo lectura salvo el autor.
 - **Acceso del Médico:** solo a los pacientes que tienen o tuvieron cita con él; ve sus datos básicos, información médica, contacto de emergencia y las notas clínicas, incluidas las de otros médicos.
 - **Modalidad:** la cita tiene un campo `modalidad` (presencial o virtual).
+- **Reserva de citas (CU-09):** la Recepcionista y el Paciente comparten las mismas reglas. Un Paciente con la ficha pendiente de verificación **puede reservar**; la verificación solo condiciona la información médica y las notas clínicas. Un paciente no puede tener citas superpuestas, ni siquiera con médicos distintos (RN17). Los horarios disponibles salen de una cuadrícula fija: dentro de cada bloque de atención del médico, desde su hora inicial y de a la duración de la especialidad; se quitan los que chocan con una cita no cancelada del médico o del paciente, los que ya pasaron y los que terminarían después del bloque. Pueden quedar huecos sin usar. Se puede reservar desde hoy hasta 60 días adelante, para todos los roles; el límite es un único valor de configuración (`config/clinica.php`). "Hoy" y "ahora" se miden en la hora de La Paz.
 - **Sucursal:** la base de datos incluye la tabla `sucursales` con una sola sucursal cargada y `sucursal_id` en horarios de atención y citas, para poder escalar. No hay pantalla de gestión de sucursales. El `consultorio` se registra en el horario de atención. No hay filtro por ubicación.
 
 **Opcionales abiertos** (el enunciado los marca como opcionales; se implementan solo si el tiempo del Ciclo #2 lo permite):
@@ -375,7 +377,7 @@ La lista de espera y los recordatorios por SMS o correo se mencionan como mejora
 | ------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | RNF01  | Tecnología     | Backend en PHP con el framework Laravel, base de datos PostgreSQL y acceso a datos sobre PDO (`pdo_pgsql`).                                                                                                                                                                                                                                                                       |
 | RNF02  | Tecnología     | Interfaz con HTML5 y CSS3 generados en el servidor mediante plantillas Blade de Laravel; JavaScript para validaciones e interacción.                                                                                                                                                                                                                                              |
-| RNF03  | Despliegue     | Ejecución en un entorno PHP local equivalente a Apache/XAMPP: en desarrollo, PHP 8.4 o superior (probado con 8.5.4) con su servidor embebido (`php artisan serve`) y PostgreSQL en un contenedor Docker; el directorio `public/` de Laravel es la raíz web. El servidor embebido es solo para desarrollo: un despliegue real usaría Apache o Nginx con PHP apuntando a `public/`. |
+| RNF03  | Despliegue     | Ejecución en un entorno PHP local equivalente a Apache/XAMPP: en desarrollo, PHP 8.4 o superior (probado con 8.4.27) con su servidor embebido (`php artisan serve`) y PostgreSQL en un contenedor Docker; el directorio `public/` de Laravel es la raíz web. El servidor embebido es solo para desarrollo: un despliegue real usaría Apache o Nginx con PHP apuntando a `public/`. |
 | RNF04  | Seguridad      | Contraseñas almacenadas con un hash seguro (`password_hash()` de PHP, que usa internamente el hasher de Laravel) y verificadas con `password_verify()` o su equivalente.                                                                                                                                                                                                          |
 | RNF05  | Seguridad      | Consultas SQL parametrizadas para evitar inyección SQL.                                                                                                                                                                                                                                                                                                                           |
 | RNF06  | Seguridad      | Uso de sesiones; las páginas internas rechazan el acceso sin sesión válida.                                                                                                                                                                                                                                                                                                       |
@@ -389,7 +391,7 @@ La lista de espera y los recordatorios por SMS o correo se mencionan como mejora
 | RNF14  | Seguridad      | Cierre automático de la sesión tras 30 minutos de inactividad.                                                                                                                                                                                                                                                                                                                    |
 | RNF15  | Seguridad      | Bloqueo de la cuenta durante 15 minutos tras 5 intentos fallidos seguidos de inicio de sesión, límite de 10 solicitudes de inicio de sesión por minuto desde una misma dirección IP, y token CSRF en los formularios que modifican datos.                                                                                                                                         |
 | RNF16  | Privacidad     | Los avisos y recordatorios muestran solo fecha, hora y médico, nunca motivo, diagnóstico ni datos médicos.                                                                                                                                                                                                                                                                        |
-| RNF17  | Integridad     | Además de la validación en PHP, la base de datos impide por restricción citas superpuestas del mismo médico (Ciclo #2).                                                                                                                                                                                                                                                           |
+| RNF17  | Integridad     | Además de la validación en PHP, la base de datos impide por restricción citas superpuestas del mismo médico y del mismo paciente.                                                                                                                                                                                                                                                 |
 | RNF18  | Seguridad      | Las contraseñas temporales se generan de forma aleatoria con un generador criptográfico, vencen a las 72 horas, se muestran una sola vez, se guardan solo como hash y obligan a cambiarlas en el primer ingreso.                                                                                                                                                                  |
 | RNF19  | Seguridad      | Control de acceso por permisos (RBAC): cada operación exige un permiso `recurso:accion` concedido por el rol de la cuenta. La interfaz oculta lo no permitido y el servidor lo verifica en cada solicitud (RN12).                                                                                                                                                                 |
 | RNF20  | Seguridad      | El registro propio del paciente es público, así que se limita a 10 solicitudes por minuto por dirección IP, y una contraseña escrita nunca se vuelve a mostrar en el formulario.                                                                                                                                                                                                  |
@@ -472,7 +474,7 @@ flowchart LR
 
 ### 4.6 Especificación de casos de uso
 
-Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la segunda presentación.
+Se especifican los casos de uso del Ciclo #1 y el primero del Ciclo #2 (CU-09). Los demás del Ciclo #2 (CU-10 a CU-18) se agregan en la segunda presentación.
 
 #### CU-01 Iniciar y cerrar sesión
 
@@ -684,6 +686,40 @@ Se especifican los casos de uso del Ciclo #1. Los del Ciclo #2 se agregan en la 
 - 1a. Si la ficha está pendiente de verificación, el perfil avisa y oculta la información médica y el contacto de emergencia.
 - El Paciente no puede modificar su nombre, CI, correo, información médica ni contacto de emergencia; esos cambios los realiza la Recepcionista.
 
+#### CU-09 Registrar cita
+
+|                   |                                                                                                                                                                                                                                   |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Actores**       | Recepcionista (cualquier paciente) y Paciente (solo para sí mismo)                                                                                                                                                                |
+| **Requisito**     | RF06, RF07                                                                                                                                                                                                                        |
+| **Precondición**  | El actor inició sesión. El paciente existe y está activo (una ficha pendiente de verificación puede reservar). Hay un médico activo que ejerce una especialidad activa y tiene horarios de atención.                              |
+| **Postcondición** | La cita queda registrada como «Programada», con su hora final calculada; el médico y el paciente quedan ocupados en ese horario; la operación consta en la bitácora y el sistema muestra el comprobante con el código de la cita. |
+
+**Flujo principal**
+
+1. La Recepcionista abre «Registrar cita» y busca al paciente por CI, nombre, apellido o código (PAC-000042); solo se ofrecen pacientes activos. El Paciente abre «Reservar cita» y no elige paciente: la cita siempre es para él.
+2. Elige la especialidad. El sistema lista los médicos activos que la ejercen.
+3. Elige al médico y la fecha, desde hoy hasta 60 días adelante (valor de configuración).
+4. El sistema muestra los horarios disponibles. Parte de cada bloque de atención del médico para ese día de la semana, desde su hora inicial y de a la duración de la especialidad, y quita los horarios que chocan con una cita no cancelada del médico o del paciente, los que ya pasaron hoy y los que terminarían después del bloque.
+5. Elige un horario, la modalidad (presencial por defecto, o virtual) y, si quiere, un motivo breve.
+6. El sistema vuelve a comprobar todas las reglas en el servidor dentro de una transacción, calcula la hora final con la duración de la especialidad, toma la sucursal del bloque de atención, guarda la cita y registra `cita_creada` en la bitácora.
+7. El sistema muestra el comprobante con el código (CM-000001), el paciente, el médico, la especialidad, la fecha, el horario, la modalidad y la sucursal.
+
+**Flujos alternos**
+
+- 1a. Una cuenta de paciente sin ficha de paciente no puede reservar: el sistema responde «no encontrado», como en el perfil (CU-08).
+- 1b. El Paciente envía en la solicitud el identificador de otro paciente: se ignora, y la cita se registra para el paciente de la sesión.
+- 1c. Un médico no puede agendarse una cita consigo mismo como paciente (RN16).
+- 3a. La fecha es pasada, no existe o supera el límite de anticipación: el sistema lo indica y no ofrece horarios (RN06).
+- 4a. No hay horarios disponibles ese día: el sistema lo indica y propone otra fecha.
+- 6a. El horario elegido no está en un bloque de atención del médico, no cae en la cuadrícula o ya pasó (RN05, RN06): se rechaza con un mensaje.
+- 6b. Otra cita no cancelada del médico (RN07) o del paciente (RN17) se superpone con el horario: se rechaza y el mensaje dice quién está ocupado. Si dos solicitudes compiten por el mismo horario, la base de datos acepta una sola y la otra recibe el mismo mensaje.
+- 6c. El médico, la especialidad o el paciente están desactivados, o el médico no ejerce la especialidad (RN03, RN04): se rechaza.
+- 6d. Datos inválidos (modalidad distinta de presencial o virtual, motivo de más de 500 caracteres, fecha u hora con formato incorrecto): se señalan los campos a corregir.
+- \*. Las citas canceladas no ocupan disponibilidad (RN09). La hora final nunca se toma del formulario (RN08).
+
+**Fuera del alcance:** reprogramar y cancelar la cita (CU-10 y CU-11).
+
 #### CU-19 Renovar contraseña temporal
 
 |                   |                                                                                                                                                                                |
@@ -743,7 +779,7 @@ Cada operación exige un permiso con formato `recurso:accion`. Los permisos se a
 | `reportes:consultar`       |       ✓       |               |        |          |
 | **Total**                  |       6       |       9       |   5    |    5     |
 
-**Alcance dentro del permiso.** El permiso dice qué acción se puede hacer, no sobre qué datos. La aplicación acota el alcance: el Paciente solo ve lo propio (`citas:gestionar_propias`, `historial:consultar`, `notas:consultar`), y solo con la ficha verificada; el Médico solo ve a los pacientes que tienen o tuvieron cita con él y edita solo sus notas.
+**Alcance dentro del permiso.** El permiso dice qué acción se puede hacer, no sobre qué datos. La aplicación acota el alcance: el Paciente solo ve lo propio (`citas:gestionar_propias`, `historial:consultar`, `notas:consultar`). La ficha verificada condiciona únicamente su información médica y sus notas clínicas: con la ficha pendiente puede reservar citas, pero no ve esos datos hasta que la Recepcionista la verifique; el Médico solo ve a los pacientes que tienen o tuvieron cita con él y edita solo sus notas.
 
 **Aplicación en Laravel.** Cada permiso se declara como _Gate_; las rutas lo exigen con el middleware `can:` y las vistas ocultan lo no permitido (RNF19).
 
@@ -1310,7 +1346,7 @@ erDiagram
 
 #### 6.3.2 Modelo físico (DDL PostgreSQL)
 
-El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #1) y `002_citas_y_notas.sql` (Ciclo #2), que las migraciones de Laravel ejecutan; `003_catalogos_iniciales.sql` carga los datos de referencia (sucursal, roles y permisos, ver 4.7). Se verificó en PostgreSQL 16: los `CHECK` de formato, la restricción contra horarios y citas superpuestas, las claves foráneas compuestas, el control de acceso y la bitácora de solo escritura rechazan lo inválido, y `migrate:rollback` deja la base limpia. Las tablas propias del framework (`migrations`) no se listan.
+El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #1) y `002_citas_y_notas.sql` y `004_citas_sin_superposicion_paciente.sql` (Ciclo #2), que las migraciones de Laravel ejecutan; `003_catalogos_iniciales.sql` carga los datos de referencia (sucursal, roles y permisos, ver 4.7). Se verificó en PostgreSQL 16: los `CHECK` de formato, la restricción contra horarios y citas superpuestas (del médico y del paciente), las claves foráneas compuestas, el control de acceso y la bitácora de solo escritura rechazan lo inválido, y `migrate:rollback` deja la base limpia. Las tablas propias del framework (`migrations`) no se listan.
 
 ```sql
 -- Ciclo #1: identidad, acceso, datos maestros y bitácora.
@@ -1534,6 +1570,14 @@ CREATE TABLE notas_clinicas (
     FOREIGN KEY (cita_id, medico_id) REFERENCES citas (id, medico_id) ON DELETE RESTRICT
 );
 CREATE INDEX notas_clinicas_medico_idx ON notas_clinicas (medico_id);
+
+-- Ciclo #2 (CU-09): un paciente no puede tener dos citas superpuestas, ni siquiera con médicos
+-- distintos; las canceladas no ocupan horario (RN17, RN09).
+-- Referencia de diseño: documento/Informe-Final.md, sección 6.3.2.
+
+ALTER TABLE citas
+    ADD CONSTRAINT citas_paciente_sin_superposicion
+    EXCLUDE USING gist (paciente_id WITH =, periodo WITH &&) WHERE (estado <> 'CANCELADA');
 ```
 
 ### 6.4 Diseño de interfaces
@@ -1563,9 +1607,9 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 | Rol           | Opciones                                       |
 | ------------- | ---------------------------------------------- |
 | Administrador | Usuarios · Médicos · Especialidades · Horarios |
-| Recepcionista | Pacientes                                      |
+| Recepcionista | Registrar cita · Pacientes                     |
 | Médico        | (Ciclo #2: agenda y notas clínicas)            |
-| Paciente      | Mi perfil (Ciclo #2: mis citas)                |
+| Paciente      | Reservar cita · Mi perfil                      |
 
 ---
 
@@ -1575,7 +1619,7 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 
 | Capa                  | Herramienta                                    | Versión                                                           | Uso en el proyecto                                                                                                                                    |
 | --------------------- | ---------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Lenguaje del servidor | PHP                                            | 8.4.1 o superior (lo exige el `composer.lock`); probado con 8.5.4 | Lógica de negocio y acceso a datos (RNF01).                                                                                                           |
+| Lenguaje del servidor | PHP                                            | 8.4.1 o superior (lo exige el `composer.lock`); probado con 8.4.27 | Lógica de negocio y acceso a datos (RNF01).                                                                                                           |
 | _Framework_           | Laravel                                        | 13.38                                                             | Rutas, controladores, validación, autenticación por sesión, Eloquent y plantillas Blade.                                                              |
 | Base de datos         | PostgreSQL                                     | 16                                                                | Almacenamiento persistente (RN14). Corre en un contenedor Docker.                                                                                     |
 | Acceso a datos        | PDO con `pdo_pgsql`                            | Incluido en PHP                                                   | Conexión con consultas parametrizadas, a través de Eloquent (RNF05).                                                                                  |
@@ -1892,7 +1936,7 @@ La plantilla base `resources/views/layouts/base.blade.php` dibuja la barra de na
 
 ### 7.3 Implementación de la arquitectura de subsistemas
 
-Cada caso de uso del Ciclo #1 sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso del Ciclo #2 (CU-09 a CU-18) no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
+Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y el CU-09 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
 
 Todos los servicios de este ciclo usan `BitacoraService` (RNF13) y `ReglaDeNegocioException` (sección 7.2); no se repite en cada tabla.
 
@@ -2154,7 +2198,7 @@ Reglas aplicadas:
 - Un médico no puede tener dos bloques superpuestos el mismo día. El Form Request lo detecta y su mensaje nombra el bloque en conflicto (flujo 3b); como los bloques pegados no se superponen, la consulta compara con `<` y `>` estrictos. La restricción `EXCLUDE` de la base de datos (sección 7.2) cubre las solicitudes simultáneas.
 - La sucursal se asigna automáticamente con `Sucursal::predeterminada()`, porque solo hay una.
 - No se registra, modifica ni elimina el horario de un médico desactivado (`exigirMedicoActivo`, flujo 3c).
-- Antes de modificar o eliminar un bloque, el servicio calcula las citas futuras programadas o confirmadas que quedarían fuera del horario; si el cambio deja alguna sin cubrir, lo revierte y nombra las citas. Las que ya estaban fuera antes del cambio no cuentan (flujos 5a y 5b). Las citas pertenecen al Ciclo #2: la tabla `citas` existe desde `002_citas_y_notas.sql`, pero en este ciclo no hay pantallas para crearlas.
+- Antes de modificar o eliminar un bloque, el servicio calcula las citas futuras programadas o confirmadas que quedarían fuera del horario; si el cambio deja alguna sin cubrir, lo revierte y nombra las citas. Las que ya estaban fuera antes del cambio no cuentan (flujos 5a y 5b). Las citas pertenecen al Ciclo #2: la tabla `citas` existe desde `002_citas_y_notas.sql` y las crea el CU-09.
 
 `app/Http/Requests/HorarioRequest.php`
 
@@ -2205,6 +2249,55 @@ Reglas aplicadas:
 
         return redirect()->route('perfil.mostrar')->with('exito', 'Su teléfono fue actualizado.');
     }
+```
+
+#### CU-09 Registrar cita
+
+| Elemento                | Archivo                                                                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Controlador             | `app/Http/Controllers/CitaController.php` (lo comparten la Recepcionista y el Paciente)                                                |
+| Solicitud de validación | `app/Http/Requests/CitaRequest.php`                                                                                                    |
+| Servicio                | `app/Services/CitaService.php`                                                                                                         |
+| Modelo                  | `app/Models/Cita.php`                                                                                                                  |
+| Vistas                  | `resources/views/citas/nueva.blade.php`, `resources/views/citas/comprobante.blade.php`, `public/js/citas.js` (comodidad opcional)      |
+| Base de datos           | `database/sql/004_citas_sin_superposicion_paciente.sql` y su migración `2026_11_05_000004_impedir_citas_superpuestas_del_paciente.php` |
+| Pruebas                 | `tests/Feature/Citas/CitaTest.php`                                                                                                     |
+
+Reglas aplicadas:
+
+- Dos grupos de rutas con el mismo controlador: `/citas` exige `citas:gestionar` (Recepcionista) y `/mis-citas` exige `citas:gestionar_propias` (Paciente) (RN12, RNF19). Cada rol solo entra al suyo; las pruebas lo comprueban con los cuatro roles.
+- El Paciente siempre agenda para el paciente de su sesión: el campo `paciente_id` solo se pide y se lee en `/citas`; en `/mis-citas` se ignora. Una cuenta de paciente sin ficha recibe 404. El comprobante lo ve la Recepcionista (cualquiera) o el Paciente dueño de la cita; para otro paciente responde 404.
+- Un Paciente con la ficha pendiente de verificación puede reservar (sección 4.1).
+- El formulario avanza por pasos con parámetros GET (paciente, especialidad, médico y fecha) y funciona sin JavaScript; `public/js/citas.js` solo envía el paso al elegir una opción.
+- `CitaService` calcula la cuadrícula de horarios (flujo 4) y, al guardar, vuelve a comprobar dentro de una transacción la fecha (no pasada y hasta el límite de `config/clinica.php`, en hora de La Paz), que las partes estén activas, que el médico ejerza la especialidad, que no sea el propio paciente (RN16) y que el horario esté libre (RN03 a RN07, RN09, RN13, RN17).
+- La hora final se calcula en el servidor con la duración de la especialidad y la sucursal sale del bloque de atención; ninguna de las dos viene del formulario (RN08).
+- La base de datos es la última defensa: la restricción de exclusión de `citas` por médico (`002`) y la nueva por paciente (`004`, `citas_paciente_sin_superposicion`) rechazan la cita que gane una carrera. El servicio traduce el error `23P01` de PostgreSQL y, con el nombre de la restricción que trae la excepción, distingue si el que choca es el paciente o el médico.
+- La creación queda en la bitácora como `cita_creada`.
+- Las pruebas simulan la carrera insertando una cita competidora justo antes del guardado, para el médico y para el paciente, y comprueban también que la base rechaza la superposición aunque se salte la aplicación.
+
+`app/Services/CitaService.php`
+
+```php
+        foreach ($bloques as $bloque) {
+            $limite = $this->minutos($bloque->hora_fin);
+
+            for ($inicio = $this->minutos($bloque->hora_inicio); $inicio + $duracion <= $limite; $inicio += $duracion) {
+                $fin = $inicio + $duracion;
+                $choques = $citas->filter(fn (array $cita) => $cita['inicio'] < $fin && $cita['fin'] > $inicio);
+
+                $espacios[] = [
+                    'hora_inicio' => $this->hora($inicio),
+                    'hora_fin' => $this->hora($fin),
+                    'sucursal_id' => (int) $bloque->sucursal_id,
+                    'estado' => match (true) {
+                        $inicio <= $minutosAhora => self::YA_PASO,
+                        $choques->contains('del_medico', true) => self::MEDICO_OCUPADO,
+                        $choques->isNotEmpty() => self::PACIENTE_OCUPADO,
+                        default => self::LIBRE,
+                    },
+                ];
+            }
+        }
 ```
 
 #### CU-19 Renovar contraseña temporal
@@ -2278,7 +2371,7 @@ Al escanear el código QR se abre la página del repositorio. La estructura de c
 
 **Objetivo.** Comprobar que el sistema cumple los casos de uso y las reglas de negocio del Ciclo #1 (CU-01 a CU-08 y CU-19), que rechaza los datos y los accesos inválidos, y que la base de datos hace cumplir sus restricciones aunque la aplicación falle.
 
-**Alcance.** Ciclo #1: acceso y roles, usuarios, pacientes, médicos, especialidades, horarios y perfil del paciente. Las pruebas 3 a 8 del enunciado dependen de las citas (CU-09 en adelante) y se ejecutan en el Ciclo #2.
+**Alcance.** Ciclo #1: acceso y roles, usuarios, pacientes, médicos, especialidades, horarios y perfil del paciente. Las pruebas 3 a 8 del enunciado dependen de las citas (CU-09 en adelante) y se ejecutan en el Ciclo #2: las pruebas 3, 4 y 5 ya se ejecutaron con el CU-09 (sección 8.2.1).
 
 **Estrategia.** Cada caso de uso se prueba en tres frentes: automatizado, contra la base de datos real y de forma manual.
 
@@ -2300,30 +2393,30 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 5. **Concurrencia:** una solicitud simultánea que choca con la base se informa como regla de negocio, sin error técnico.
 6. **Auditoría:** la acción queda en la bitácora (RNF13).
 
-**Entorno.** PHP 8.5.4, Laravel 13, PHPUnit 12.5.40 y PostgreSQL 16 en un contenedor Docker, con la base `clinica_test` separada de la de desarrollo. Cada prueba parte de una base vacía y con los catálogos cargados.
+**Entorno.** PHP 8.4.27, Laravel 13, PHPUnit 12.5.40 y PostgreSQL 16 en un contenedor Docker, con la base `clinica_test` separada de la de desarrollo. Cada prueba parte de una base vacía y con los catálogos cargados.
 
 **Criterio de aprobación.** Un caso se aprueba cuando se obtiene el resultado esperado. El ciclo se da por probado cuando la suite completa pasa sin fallos.
 
 **Cronograma.**
 
-| Ciclo | Pruebas                                                                                 | Estado                   |
-| ----- | --------------------------------------------------------------------------------------- | ------------------------ |
-| #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2) |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | Pendientes               |
+| Ciclo | Pruebas                                                                                 | Estado                                                               |
+| ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | En curso: pruebas 3, 4 y 5 ejecutadas con CU-09; el resto, pendiente |
 
 ### 8.2 Casos de prueba
 
 #### 8.2.1 Pruebas mínimas del enunciado
 
-Los resultados obtenidos salen de la ejecución de la suite del 24/10/2026 (sección 8.3). En cada fila, la prueba automatizada está indicada como `Clase::método`.
+Los resultados obtenidos salen de la ejecución de la suite del 05/11/2026 (sección 8.3). En cada fila, la prueba automatizada está indicada como `Clase::método`.
 
 | N.º | Prueba                                               | Resultado esperado                                | Resultado obtenido                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Estado   |
 | --- | ---------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | 1   | Registrar un paciente nuevo                          | El paciente queda guardado                        | La Recepcionista registra al paciente: se crean la persona (con su nombre completo calculado) y la ficha en estado verificado y activo, y queda un registro `paciente_creado` en la bitácora. Con el registro propio se crea además la cuenta y la ficha queda pendiente de verificación. Pruebas `PacienteTest::registra_un_paciente_verificado_con_su_persona_y_su_ficha` y `RegistroTest::crea_la_persona_la_ficha_pendiente_y_la_cuenta_de_paciente`.                             | Aprobada |
 | 2   | Registrar un paciente con CI duplicado               | El sistema rechaza el duplicado                   | El sistema devuelve un error en el campo CI y no crea otra ficha: la cantidad de pacientes sigue en uno. En el registro propio manda además al paciente a la recepción. Pruebas `PacienteTest::rechaza_un_ci_que_ya_tiene_ficha_de_paciente` y `RegistroTest::rechaza_un_ci_que_ya_esta_registrado_y_manda_a_recepcion`.                                                                                                                                                              | Aprobada |
-| 3   | Programar una cita en horario disponible             | La cita queda registrada                          | Depende de CU-09                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Ciclo #2 |
-| 4   | Programar otra cita superpuesta para el mismo médico | El sistema impide el conflicto                    | Depende de CU-09                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Ciclo #2 |
-| 5   | Intentar reservar fuera del horario médico           | El sistema rechaza la cita                        | Depende de CU-09                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Ciclo #2 |
+| 3   | Programar una cita en horario disponible             | La cita queda registrada                          | La Recepcionista elige paciente, especialidad, médico y fecha; el formulario lista solo los horarios libres y, al elegir uno, la cita queda guardada como «Programada», con la hora final calculada por el servidor a partir de la duración de la especialidad, la sucursal del bloque de atención y un registro `cita_creada` en la bitácora; luego se muestra el comprobante con el código `CM-`. El Paciente reserva igual, siempre para sí mismo. Pruebas `CitaTest::programa_una_cita_en_un_horario_disponible` y `CitaTest::el_paciente_reserva_para_si_mismo_aunque_envie_otro_paciente`. | Aprobada |
+| 4   | Programar otra cita superpuesta para el mismo médico | El sistema impide el conflicto                    | El sistema rechaza la segunda cita con un mensaje y no la guarda: la cantidad de citas sigue en una. Si dos solicitudes compiten por el mismo horario, la restricción de exclusión de la base de datos acepta una sola y la otra se informa como regla de negocio, sin error técnico; lo mismo ocurre con las citas superpuestas de un mismo paciente con médicos distintos (RN17). Pruebas `CitaTest::impide_otra_cita_superpuesta_para_el_mismo_medico`, `CitaTest::si_otra_solicitud_ocupa_al_medico_antes_de_guardar_la_base_lo_rechaza` y `CitaTest::rn17_un_paciente_no_puede_tener_dos_citas_superpuestas_con_medicos_distintos`. | Aprobada |
+| 5   | Intentar reservar fuera del horario médico           | El sistema rechaza la cita                        | El sistema rechaza las horas anteriores a la apertura, posteriores al cierre o que no caen en la cuadrícula del bloque, y los días en que el médico no atiende; no se guarda ninguna cita. La cuadrícula tampoco ofrece los horarios que terminarían después del bloque. Pruebas `CitaTest::rechaza_reservar_fuera_del_horario_del_medico` y `CitaTest::la_cuadricula_parte_de_cada_bloque_y_cada_horario_termina_dentro_de_su_bloque`.                                               | Aprobada |
 | 6   | Cancelar una cita                                    | Cambia a estado cancelado y conserva el historial | Depende de CU-11                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Ciclo #2 |
 | 7   | Consultar el historial de un paciente                | Aparecen sus citas registradas                    | Depende de CU-14                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Ciclo #2 |
 | 8   | Buscar las citas de un médico por fecha              | Se muestran los resultados correctos              | Depende de CU-13                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Ciclo #2 |
@@ -2380,17 +2473,17 @@ Los resultados obtenidos salen de la ejecución de la suite del 24/10/2026 (secc
 
 #### 8.3.1 Resultado de la suite automatizada
 
-Comando: `php artisan test`, ejecutado el 24/10/2026 en el repositorio del proyecto, con PHP 8.5.4 y PHPUnit 12.5.40.
+Comando: `php artisan test`, ejecutado el 05/11/2026 en el repositorio del proyecto, con PHP 8.4.27 y PHPUnit 12.5.40.
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 298         |
-| Pruebas aprobadas  | 298         |
+| Pruebas ejecutadas | 330         |
+| Pruebas aprobadas  | 330         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 2405        |
-| Duración           | 19 segundos |
+| Aserciones         | 2549        |
+| Duración           | 21 segundos |
 
-La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1, 2, 9 y 10 del enunciado:
+La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
 
 ```text
 Paciente (Tests\Feature\Pacientes\Paciente)
@@ -2403,6 +2496,11 @@ Login (Tests\Feature\Acceso\Login)
 
 Registro (Tests\Feature\Acceso\Registro)
  Crea la persona la ficha pendiente y la cuenta de paciente
+
+Cita (Tests\Feature\Citas\Cita)
+ Programa una cita en un horario disponible
+ Impide otra cita superpuesta para el mismo medico
+ Rechaza reservar fuera del horario del medico
 ```
 
 #### 8.3.2 Las pruebas detectan los defectos
@@ -2710,7 +2808,7 @@ Lo construido responde a los objetivos específicos que tocan a este ciclo:
 - **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
 - **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada que usará el cálculo de disponibilidad del Ciclo #2.
 - **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
-- **Pruebas:** la suite automatizada tiene **298 pruebas, y las 298 pasan** (sección 8 y Anexo C).
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el CU-09 son 330 (sección 8 y Anexo C).
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -2772,7 +2870,7 @@ Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogram
 | `documento/`              | Este informe (`Informe-Final.md`) y las decisiones de arquitectura (`adr/`).                                                                                                                                                               |
 | `diagramas/` y `pruebas/` | Reservadas para material de apoyo.                                                                                                                                                                                                         |
 
-### Anexo B. Rutas del Ciclo #1
+### Anexo B. Rutas
 
 | Caso de uso | Rutas                                                                                                                                                                                                                                                                                                    |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -2785,13 +2883,14 @@ Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogram
 | CU-06       | `GET/POST /especialidades`, `GET /especialidades/nueva`, `GET /especialidades/{especialidad}/editar`, `PUT /especialidades/{especialidad}`, `PATCH /especialidades/{especialidad}/estado`                                                                                                                |
 | CU-07       | `GET /horarios`, `GET/POST /horarios/medico/{medico}`, `GET /horarios/{horario}/editar`, `PUT /horarios/{horario}`, `DELETE /horarios/{horario}`                                                                                                                                                         |
 | CU-08       | `GET/PUT /perfil`                                                                                                                                                                                                                                                                                        |
+| CU-09       | `GET /citas/nueva`, `POST /citas`, `GET /citas/{cita}` (Recepcionista, `citas:gestionar`); `GET /mis-citas/nueva`, `POST /mis-citas`, `GET /mis-citas/{cita}` (Paciente, `citas:gestionar_propias`)                                                                                                      |
 | Comunes     | `GET /inicio`, `GET /` (redirige a `/inicio`)                                                                                                                                                                                                                                                            |
 
-Son 48 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar` o `perfil:gestionar` (RNF19).
+Son 54 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **298 pruebas, 298 aprobadas, 2405 aserciones**, en unos 19 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **330 pruebas, 330 aprobadas, 2549 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -2799,7 +2898,8 @@ Resultado de `php artisan test`: **298 pruebas, 298 aprobadas, 2405 aserciones**
 | `Feature\Medicos\MedicoTest`                       | 39      | CU-05                                         |
 | `Feature\Horarios\HorarioTest`                     | 34      | CU-07                                         |
 | `Feature\Especialidades\EspecialidadTest`          | 33      | CU-06                                         |
-| `Feature\Acceso\LoginTest`                         | 25      | CU-01                                         |
+| `Feature\Citas\CitaTest`                           | 31      | CU-09                                         |
+| `Feature\Acceso\LoginTest`                         | 26      | CU-01                                         |
 | `Feature\Pacientes\PacienteTest`                   | 20      | CU-04                                         |
 | `Feature\Pacientes\AccesoPacienteTest`             | 20      | CU-04 y CU-19                                 |
 | `Feature\Acceso\RegistroTest`                      | 15      | CU-02                                         |

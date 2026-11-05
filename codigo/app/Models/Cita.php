@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
- * Cita médica (Ciclo #2). La base impide citas superpuestas del mismo médico, salvo las
- * canceladas, y exige que el médico ejerza la especialidad elegida.
+ * Cita médica (Ciclo #2). La base impide citas superpuestas del mismo médico y del mismo
+ * paciente, salvo las canceladas, y exige que el médico ejerza la especialidad elegida.
  */
 class Cita extends Model
 {
@@ -37,6 +37,18 @@ class Cita extends Model
     protected function casts(): array
     {
         return ['fecha' => 'date'];
+    }
+
+    /** Hora inicial como HH:MM (la base la devuelve con segundos). */
+    public function desde(): string
+    {
+        return substr($this->hora_inicio, 0, 5);
+    }
+
+    /** Hora final como HH:MM. */
+    public function hasta(): string
+    {
+        return substr($this->hora_fin, 0, 5);
     }
 
     public function paciente(): BelongsTo
