@@ -64,9 +64,12 @@
     --bs-btn-active-border-color: var(--clinica-oscuro);
 }
 
-/* Ancho fijo: el campo no cambia de tamaño al pasar de "Mostrar" a "Ocultar". */
+/* Botón de ojo del campo de contraseña: el ícono queda centrado y sin cambiar el ancho del campo. */
 .btn-mostrar-contrasena {
-    min-width: 5.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
 }
 
 /* Horarios disponibles de una cita: botones con el verde de la clínica. */

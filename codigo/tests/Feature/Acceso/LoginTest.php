@@ -37,6 +37,7 @@ class LoginTest extends TestCase
             ->assertOk()
             ->assertSee('type="password"', false)
             ->assertSee('data-mostrar-contrasena="contrasena"', false)
+            ->assertSee('aria-label="Mostrar contraseña"', false)
             ->assertSee('js/mostrar-contrasena.js');
     }
 
