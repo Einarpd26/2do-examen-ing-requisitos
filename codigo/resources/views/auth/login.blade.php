@@ -30,11 +30,16 @@
 
                         <div class="mb-3">
                             <label for="contrasena" class="form-label">Contraseña</label>
-                            <input type="password" id="contrasena" name="contrasena" required
-                                   autocomplete="current-password"
-                                   class="form-control @error('contrasena') is-invalid @enderror">
-                            <div class="invalid-feedback">
-                                @error('contrasena') {{ $message }} @else Ingrese su contraseña. @enderror
+                            <div class="input-group has-validation">
+                                <input type="password" id="contrasena" name="contrasena" required
+                                       autocomplete="current-password"
+                                       class="form-control @error('contrasena') is-invalid @enderror">
+                                <button type="button" class="btn btn-outline-secondary btn-mostrar-contrasena"
+                                        data-mostrar-contrasena="contrasena" aria-controls="contrasena"
+                                        aria-pressed="false">Mostrar</button>
+                                <div class="invalid-feedback">
+                                    @error('contrasena') {{ $message }} @else Ingrese su contraseña. @enderror
+                                </div>
                             </div>
                         </div>
 
@@ -56,3 +61,7 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/mostrar-contrasena.js') }}"></script>
+@endpush

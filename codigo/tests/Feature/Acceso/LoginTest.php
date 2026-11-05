@@ -31,6 +31,15 @@ class LoginTest extends TestCase
         $this->get(route('login'))->assertOk()->assertSee('+591 71234567');
     }
 
+    public function test_el_formulario_permite_mostrar_la_contrasena(): void
+    {
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('type="password"', false)
+            ->assertSee('data-mostrar-contrasena="contrasena"', false)
+            ->assertSee('js/mostrar-contrasena.js');
+    }
+
     public function test_el_personal_entra_con_su_correo(): void
     {
         $cuenta = $this->crearCuenta('RECEPCIONISTA', ['correo' => 'recepcion@clinica.test']);
