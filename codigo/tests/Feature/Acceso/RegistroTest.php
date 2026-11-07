@@ -49,6 +49,18 @@ class RegistroTest extends TestCase
         $this->get(route('login'))->assertSee(route('registro.formulario'), false);
     }
 
+    public function test_las_dos_contraseñas_del_registro_tienen_el_boton_para_mostrarlas(): void
+    {
+        $html = $this->get(route('registro.formulario'))
+            ->assertOk()
+            ->assertSee('data-mostrar-contrasena="password"', false)
+            ->assertSee('data-mostrar-contrasena="password_confirmation"', false)
+            ->getContent();
+
+        // El script se incluye una sola vez aunque haya dos campos de contraseña.
+        $this->assertSame(1, substr_count($html, 'js/mostrar-contrasena.js'));
+    }
+
     public function test_quien_ya_inicio_sesion_no_ve_el_registro(): void
     {
         $this->actingAs($this->crearCuenta('MEDICO'));

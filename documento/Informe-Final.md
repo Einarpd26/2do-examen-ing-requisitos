@@ -2598,7 +2598,7 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 | Registrar cita     | Horarios del médico elegido              | Aviso para pedir los horarios al Administrador o elegir otro médico; no se ofrecen fechas                                        |
 | Registrar usuario  | Médicos activos sin cuenta               | La opción de rol «Médico» aparece deshabilitada como «Médico (no hay médicos sin cuenta)»                                        |
 
-**Contraseñas visibles a pedido.** Los campos de contraseña del inicio de sesión y del cambio de contraseña tienen un botón con un ojo que muestra u oculta lo escrito, para revisar la contraseña antes de enviarla. Es el componente `resources/views/components/boton-ojo.blade.php` con `public/js/mostrar-contrasena.js`; sin JavaScript el campo sigue oculto y el formulario funciona igual.
+**Contraseñas visibles a pedido.** Los campos de contraseña del inicio de sesión, del registro de paciente y del cambio de contraseña tienen un botón con un ojo que muestra u oculta lo escrito, para revisar la contraseña antes de enviarla. Es el componente `resources/views/components/boton-ojo.blade.php` con `public/js/mostrar-contrasena.js`; el componente de campo `x-campo` lo agrega solo cuando el campo es de contraseña; sin JavaScript el campo sigue oculto y el formulario funciona igual.
 
 **Menú por rol**
 
@@ -3768,10 +3768,10 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 525         |
-| Pruebas aprobadas  | 525         |
+| Pruebas ejecutadas | 526         |
+| Pruebas aprobadas  | 526         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 3316        |
+| Aserciones         | 3320        |
 | Duración           | 33 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
@@ -4242,7 +4242,7 @@ Lo construido responde a los objetivos específicos del enunciado:
 - **Citas sin conflictos de horario:** el servidor calcula la disponibilidad, vuelve a comprobarla dentro de una transacción y las restricciones de exclusión de PostgreSQL rechazan la cita superpuesta del médico y del paciente aunque dos solicitudes compitan (RN07, RN13, RN17). La reprogramación usa las mismas reglas.
 - **Control de estados:** una cita pasa de programada a confirmada, atendida, con inasistencia o cancelada solo por transiciones válidas, nunca se elimina y el Paciente cancela o reprograma con 24 horas de anticipación (RN10, RN15).
 - **Consultas y reportes:** agenda por médico y fecha, historial por paciente y reportes de citas y de pacientes con rango de fechas, filtros y totales, cada uno limitado a los roles autorizados (RN12).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 fueron 481 y, tras agregar CU-20 y corregir los defectos de las pruebas manuales, son 525 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 fueron 481 y, tras agregar CU-20 y corregir los defectos de las pruebas manuales, son 526 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -4340,7 +4340,7 @@ Son 72 rutas en total, según `php artisan route:list --except-vendor`. Solo el 
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **525 pruebas, 525 aprobadas, 3316 aserciones**, en unos 33 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **526 pruebas, 526 aprobadas, 3320 aserciones**, en unos 33 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -4363,7 +4363,7 @@ Resultado de `php artisan test`: **525 pruebas, 525 aprobadas, 3316 aserciones**
 | `Feature\Pacientes\FichaMedicoTest`                 | 8       | CU-13                                         |
 | `Feature\Interfaz\ValidacionClienteTest`             | 5       | CU-10, CU-11, CU-15 y CU-16 (cliente)         |
 | `Feature\Pacientes\AccesoPacienteTest`             | 20      | CU-04 y CU-19                                 |
-| `Feature\Acceso\RegistroTest`                      | 15      | CU-02                                         |
+| `Feature\Acceso\RegistroTest`                      | 16      | CU-02                                         |
 | `Feature\Perfil\PerfilTest`                        | 13      | CU-08                                         |
 | `Feature\Acceso\CambioPasswordTest`                | 9       | CU-01 y CU-08                                 |
 | `Feature\Consola\RenovarPasswordAdministradorTest` | 8       | Comando `administrador:renovar-password`      |
