@@ -6,6 +6,7 @@ use App\Models\Usuario;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -32,6 +33,11 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('usuario', fn (string $valor) => Usuario::query()
             ->whereHas('rol', fn ($rol) => $rol->where('codigo', '!=', 'PACIENTE'))
             ->findOrFail($valor));
+
+        // Forzar HTTPS en producción o cuando la URL configurada empiece con https
+        if (str_starts_with(config('app.url'), 'https://') || app()->environment('production')) {
+            URL::forceScheme('https');
+        }
 
         // Los enlaces de paginación usan el estilo de Bootstrap 5.
         Paginator::useBootstrapFive();

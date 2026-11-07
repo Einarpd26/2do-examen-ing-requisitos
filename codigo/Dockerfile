@@ -19,13 +19,10 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 RUN composer install --optimize-autoloader --no-dev --no-interaction --no-scripts
 
-# Install JS dependencies and build assets
-COPY package.json ./
-RUN npm install
-
+# Copy everything first, then install JS deps and build assets
 COPY . .
 
-RUN npm run build
+RUN npm install && npm run build
 
 # Storage permissions
 RUN chown -R www-data:www-data storage bootstrap/cache \
