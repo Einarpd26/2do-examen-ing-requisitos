@@ -20,6 +20,7 @@ return [
         ['etiqueta' => 'Horarios de atención', 'permiso' => 'horarios:gestionar', 'ruta' => 'horarios.index'],
         ['etiqueta' => 'Registrar cita', 'permiso' => 'citas:gestionar', 'ruta' => 'citas.nueva'],
         ['etiqueta' => 'Reservar cita', 'permiso' => 'citas:gestionar_propias', 'ruta' => 'mis-citas.nueva'],
+        ['etiqueta' => 'Agenda', 'permiso' => 'agenda:consultar', 'ruta' => 'agenda.index'],
         ['etiqueta' => 'Mi historial', 'permiso' => 'historial:consultar', 'ruta' => 'historial.propio', 'rol' => 'PACIENTE'],
         ['etiqueta' => 'Pacientes', 'permiso' => 'pacientes:gestionar', 'ruta' => 'pacientes.index'],
         ['etiqueta' => 'Mi perfil', 'permiso' => 'perfil:gestionar', 'ruta' => 'perfil.mostrar'],

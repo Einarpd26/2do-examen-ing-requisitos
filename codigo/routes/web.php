@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccesoController;
 use App\Http\Controllers\AccesoPacienteController;
+use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\CambioPasswordController;
 use App\Http\Controllers\CitaController;
 use App\Http\Controllers\EspecialidadController;
@@ -121,6 +122,10 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
             Route::patch('/estado', [EspecialidadController::class, 'estado'])->name('estado');
         });
     });
+
+    // CU-13: agenda médica (agenda:consultar). La Recepcionista elige al médico; el Médico ve la suya.
+    Route::get('/agenda', [AgendaController::class, 'index'])
+        ->middleware('can:agenda:consultar')->name('agenda.index');
 
     // CU-14: historial de citas (historial:consultar). La Recepcionista lo ve de cualquier paciente
     // (además exige pacientes:consultar); el Paciente solo el suyo, en /mi-historial.
