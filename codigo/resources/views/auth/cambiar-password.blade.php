@@ -21,32 +21,41 @@
 
                         <div class="mb-3">
                             <label for="password_actual" class="form-label">Contraseña actual</label>
-                            <input type="password" id="password_actual" name="password_actual" required
-                                   autocomplete="current-password"
-                                   class="form-control @error('password_actual') is-invalid @enderror">
-                            <div class="invalid-feedback">
-                                @error('password_actual') {{ $message }} @else Ingrese su contraseña actual. @enderror
+                            <div class="input-group has-validation">
+                                <input type="password" id="password_actual" name="password_actual" required
+                                       autocomplete="current-password"
+                                       class="form-control @error('password_actual') is-invalid @enderror">
+                                <x-boton-ojo para="password_actual" />
+                                <div class="invalid-feedback">
+                                    @error('password_actual') {{ $message }} @else Ingrese su contraseña actual. @enderror
+                                </div>
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label for="password" class="form-label">Nueva contraseña</label>
-                            <input type="password" id="password" name="password" required minlength="8"
-                                   autocomplete="new-password" aria-describedby="ayuda-password"
-                                   class="form-control @error('password') is-invalid @enderror">
+                            <div class="input-group has-validation">
+                                <input type="password" id="password" name="password" required minlength="8"
+                                       autocomplete="new-password" aria-describedby="ayuda-password"
+                                       class="form-control @error('password') is-invalid @enderror">
+                                <x-boton-ojo para="password" />
+                                <div class="invalid-feedback" data-mensaje-por-defecto="La nueva contraseña no cumple los requisitos.">
+                                    @error('password') {{ $message }} @else La nueva contraseña no cumple los requisitos. @enderror
+                                </div>
+                            </div>
                             <div id="ayuda-password" class="form-text">
                                 Al menos 8 caracteres, con mayúsculas, minúsculas y un número.
-                            </div>
-                            <div class="invalid-feedback" data-mensaje-por-defecto="La nueva contraseña no cumple los requisitos.">
-                                @error('password') {{ $message }} @else La nueva contraseña no cumple los requisitos. @enderror
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label for="password_confirmation" class="form-label">Confirmar nueva contraseña</label>
-                            <input type="password" id="password_confirmation" name="password_confirmation" required
-                                   autocomplete="new-password" class="form-control">
-                            <div class="invalid-feedback">Las contraseñas no coinciden.</div>
+                            <div class="input-group has-validation">
+                                <input type="password" id="password_confirmation" name="password_confirmation" required
+                                       autocomplete="new-password" class="form-control">
+                                <x-boton-ojo para="password_confirmation" />
+                                <div class="invalid-feedback">Las contraseñas no coinciden.</div>
+                            </div>
                         </div>
 
                         <button type="submit" class="btn btn-clinica w-100">Guardar contraseña</button>
@@ -56,3 +65,7 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/mostrar-contrasena.js') }}"></script>
+@endpush
