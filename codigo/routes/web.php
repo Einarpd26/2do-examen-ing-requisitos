@@ -14,6 +14,7 @@ use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\PerfilController;
 use App\Http\Controllers\RegistroController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
@@ -143,6 +144,10 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
     // CU-12: el Médico marca como atendidas las citas de su agenda (citas:atender).
     Route::patch('/agenda/{cita}/atender', [AsistenciaController::class, 'medico'])
         ->where(['cita' => '[0-9]+'])->middleware('can:citas:atender')->name('agenda.atender');
+
+    // CU-15: reportes administrativos (reportes:consultar, solo el Administrador).
+    Route::get('/reportes', [ReporteController::class, 'index'])
+        ->middleware('can:reportes:consultar')->name('reportes.index');
 
     // CU-13: agenda médica (agenda:consultar). La Recepcionista elige al médico; el Médico ve la suya.
     Route::get('/agenda', [AgendaController::class, 'index'])

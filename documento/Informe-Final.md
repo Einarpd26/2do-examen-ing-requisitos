@@ -95,7 +95,7 @@ El sistema es una aplicación web accesible desde un navegador (PHP, PostgreSQL,
 | Ciclo    | Requisitos                                                                                                                                        | Estado    |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios · RF14 Cuenta y perfil del paciente                      | En curso  |
-| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | En curso: CU-09 a CU-14 implementados |
+| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | En curso: CU-09 a CU-15 implementados |
 
 ---
 
@@ -474,7 +474,7 @@ flowchart LR
 
 ### 4.6 Especificación de casos de uso
 
-Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09 a CU-14). Los demás del Ciclo #2 (CU-15 a CU-18) se agregan en la segunda presentación.
+Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09 a CU-15). Los demás del Ciclo #2 (CU-16 a CU-18) se agregan en la segunda presentación.
 
 #### CU-01 Iniciar y cerrar sesión
 
@@ -820,6 +820,29 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 2b. Las citas canceladas aparecen con su estado, para conservar la trazabilidad (RN10).
 - 2c. La fecha no tiene el formato AAAA-MM-DD o no existe: se muestra la agenda de hoy con un aviso. Un estado desconocido o un parámetro manipulado se ignora.
 - \*. El Médico solo ve su agenda: si pide el identificador de otro médico en la dirección, se ignora (RN12). Una cuenta de médico sin ficha de médico recibe «no encontrado».
+
+#### CU-15 Generar reportes
+
+|                   |                                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Actores**       | Administrador                                                                                                                  |
+| **Requisito**     | RF13                                                                                                                           |
+| **Precondición**  | El Administrador inició sesión.                                                                                                |
+| **Postcondición** | El sistema muestra el reporte pedido con sus totales, sin modificar ningún dato.                                               |
+
+**Flujo principal**
+
+1. El Administrador abre «Reportes». El sistema muestra el reporte de citas del mes en curso, hasta hoy.
+2. Elige el rango de fechas y, si quiere, un médico, una especialidad y un estado, y pulsa «Generar».
+3. El sistema muestra el total de citas y la cantidad por estado (programadas, confirmadas, atendidas, canceladas e inasistencias), el total por médico y por especialidad, y el detalle de las citas en orden cronológico, de 25 en 25.
+4. Elige la pestaña «Pacientes registrados» y el sistema muestra los pacientes registrados en el rango, con los totales de registrados, verificados y activos.
+
+**Flujos alternos**
+
+- 2a. Con un mismo día y un médico, el reporte de citas equivale a la agenda diaria de ese médico; con un solo estado equivale al reporte de citas por estado, y con una sola fecha, a las citas programadas para esa fecha.
+- 3a. No hay citas con esos filtros: el sistema lo indica con un aviso y los totales quedan en cero.
+- 2b. Una fecha no es válida, o la inicial es posterior a la final: se usa el período por defecto con un aviso. Si solo se indica una fecha, la otra la acompaña. Los filtros desconocidos o manipulados se ignoran.
+- \*. Solo el Administrador consulta los reportes (RN12). La exportación a CSV o PDF es un opcional abierto (sección 4.1) y no se implementó.
 
 #### CU-14 Consultar historial de citas
 
@@ -2060,7 +2083,7 @@ La plantilla base `resources/views/layouts/base.blade.php` dibuja la barra de na
 
 ### 7.3 Implementación de la arquitectura de subsistemas
 
-Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y los CU-09 a CU-14 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
+Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y los CU-09 a CU-15 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
 
 Todos los servicios de este ciclo usan `BitacoraService` (RNF13) y `ReglaDeNegocioException` (sección 7.2); no se repite en cada tabla.
 
@@ -2425,6 +2448,25 @@ Reglas aplicadas:
 ```
 
 
+#### CU-15 Generar reportes
+
+| Elemento    | Archivo                                                              |
+| ----------- | -------------------------------------------------------------------- |
+| Controlador | `app/Http/Controllers/ReporteController.php`                         |
+| Servicio    | `app/Services/ReporteService.php`                                    |
+| Vista       | `resources/views/reportes/index.blade.php`                           |
+| Menú        | `config/menu.php` (opción «Reportes», permiso `reportes:consultar`)  |
+| Pruebas     | `tests/Feature/Reportes/ReporteTest.php`                             |
+
+Reglas aplicadas:
+
+- Una sola ruta `GET /reportes` con el permiso `reportes:consultar`, que solo concede el rol Administrador (RN12, RNF19). La Recepcionista, el Médico y el Paciente reciben 403.
+- `ReporteService` arma todas las consultas con el rango de fechas inclusivo (período por defecto: del primer día del mes a hoy, hora de La Paz) y los filtros opcionales de médico, especialidad y estado. Los totales por estado, por médico y por especialidad salen de consultas agrupadas en la base de datos, no de contar filas en memoria.
+- El detalle de citas va en orden cronológico y paginado de 25 en 25; incluye las canceladas y las inasistencias para no perder trazabilidad (RN10).
+- El reporte de pacientes cuenta los registrados en el rango por su fecha de alta, con los totales de verificados y activos.
+- Los parámetros inválidos no producen error: una fecha inexistente o un rango al revés vuelve al período por defecto con un aviso, y un estado desconocido, un identificador fuera de rango o un arreglo se ignoran.
+- Los reportes no modifican datos. Las columnas de las consultas se califican con la tabla `citas` porque los totales se unen con `medicos`, `personas` y `especialidades`.
+
 #### CU-10 Reprogramar cita
 
 | Elemento                | Archivo                                                                                                    |
@@ -2624,7 +2666,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 | Ciclo | Pruebas                                                                                 | Estado                                                               |
 | ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | En curso: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10; el resto, pendiente |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | En curso: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, y los reportes con CU-15; el resto, pendiente |
 
 ### 8.2 Casos de prueba
 
@@ -2699,10 +2741,10 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 417         |
-| Pruebas aprobadas  | 417         |
+| Pruebas ejecutadas | 433         |
+| Pruebas aprobadas  | 433         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 2866        |
+| Aserciones         | 2932        |
 | Duración           | 21 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
@@ -3030,7 +3072,7 @@ Lo construido responde a los objetivos específicos que tocan a este ciclo:
 - **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
 - **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada que usará el cálculo de disponibilidad del Ciclo #2.
 - **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con los CU-09 a CU-14 son 417 (sección 8 y Anexo C).
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con los CU-09 a CU-15 son 433 (sección 8 y Anexo C).
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -3111,13 +3153,14 @@ Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogram
 | CU-12       | `PATCH /citas/{cita}/asistencia` (Recepcionista, `citas:gestionar`); `PATCH /agenda/{cita}/atender` (Médico, `citas:atender`); `PATCH /mis-citas/{cita}/confirmar` (Paciente, `citas:gestionar_propias`) |
 | CU-13       | `GET /agenda` (Recepcionista y Médico, `agenda:consultar`) |
 | CU-14       | `GET /pacientes/{paciente}/historial` (Recepcionista, `historial:consultar` y `pacientes:consultar`); `GET /mi-historial` (Paciente, `historial:consultar`) |
+| CU-15       | `GET /reportes` (Administrador, `reportes:consultar`) |
 | Comunes     | `GET /inicio`, `GET /` (redirige a `/inicio`)                                                                                                                                                                                                                                                            |
 
-Son 66 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
+Son 67 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **417 pruebas, 417 aprobadas, 2866 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **433 pruebas, 433 aprobadas, 2932 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -3131,6 +3174,7 @@ Resultado de `php artisan test`: **417 pruebas, 417 aprobadas, 2866 aserciones**
 | `Feature\Citas\AgendaTest`                           | 11      | CU-13                                         |
 | `Feature\Citas\AsistenciaTest`                       | 18      | CU-12                                         |
 | `Feature\Citas\ReprogramarCitaTest`                  | 22      | CU-10                                         |
+| `Feature\Reportes\ReporteTest`                       | 16      | CU-15                                         |
 | `Feature\Acceso\LoginTest`                         | 26      | CU-01                                         |
 | `Feature\Pacientes\PacienteTest`                   | 20      | CU-04                                         |
 | `Feature\Pacientes\AccesoPacienteTest`             | 20      | CU-04 y CU-19                                 |
