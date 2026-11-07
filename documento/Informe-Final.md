@@ -650,7 +650,7 @@ Se especifican los casos de uso del Ciclo #1 y todos los del Ciclo #2 (CU-09 a C
 
 **Flujo principal**
 
-1. El Administrador abre el listado de especialidades. Por defecto ve las **activas**; con las pestañas Activas, Inactivas y Todas, cada una con su cantidad, puede ver también las dadas de baja.
+1. El Administrador abre el listado de especialidades. Por defecto ve las **activas**; con las pestañas Activas, Inactivas y Todas, cada una con su cantidad, puede ver también las dadas de baja. Puede buscar por parte del nombre, sin distinguir mayúsculas; sin una pestaña elegida, la búsqueda incluye a las inactivas.
 2. Registra o modifica el nombre, la descripción (opcional) y la duración de la cita en minutos (por ejemplo, 30; entre 5 y 240).
 3. El sistema valida los datos y comprueba que el nombre normalizado no exista. El nombre se guarda sin espacios al inicio ni al final y con un solo espacio entre palabras, y no se distinguen mayúsculas.
 4. El sistema guarda los cambios y los registra en la bitácora.
@@ -2582,7 +2582,7 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 | Credenciales temporales              | Recepcionista, Administrador | CU-03, CU-04 | Contraseña mostrada una sola vez, con vencimiento y botones «Copiar contraseña» e «Imprimir»                                                                       |
 | Lista y formulario de usuarios       | Administrador                | CU-03        | Alta del personal, rol, vínculo con médico, activar o desactivar, renovar contraseña                                                                |
 | Lista y formulario de médicos        | Administrador                | CU-05        | Búsqueda; pestañas Activos, Inactivos y Todos con su contador; datos, registro profesional, especialidades, estado                                  |
-| Lista y formulario de especialidades | Administrador                | CU-06        | Pestañas Activas, Inactivas y Todas con su contador; nombre, descripción, duración de la cita, estado                                               |
+| Lista y formulario de especialidades | Administrador                | CU-06        | Búsqueda por nombre; pestañas Activas, Inactivas y Todas con su contador; nombre, descripción, duración de la cita, estado                          |
 | Horarios de atención                 | Administrador                | CU-07        | Lista de médicos activos con el resumen de su semana; por médico, la semana y el formulario de bloques: día, hora inicial, hora final y consultorio (de la lista de activos) |
 | Lista y formulario de consultorios   | Administrador                | CU-20        | Pestañas Activos, Inactivos y Todos con su contador; nombre, cantidad de bloques que lo usan, estado |
 
@@ -3617,7 +3617,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 | Ciclo | Pruebas                                                                                 | Estado                                                               |
 | ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18 y CU-20, más RN18 en CU-07 (CP-42 a CP-101) | Ejecutadas (secciones 8.2 y 8.3). Detalle: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18 y CU-20, más RN18 en CU-07 (CP-42 a CP-103) | Ejecutadas (secciones 8.2 y 8.3). Detalle: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
 
 ### 8.2 Casos de prueba
 
@@ -3743,6 +3743,8 @@ Los resultados obtenidos salen de la ejecución de la suite del 07/11/2026 (secc
 | CP-99 | CU-07 | Usos del consultorio que sí se permiten (RN18) | Bloques pegados, el mismo horario otro día, sin consultorio o en otro consultorio, y el propio bloque al modificarlo | `HorarioTest::permite_el_mismo_consultorio_en_bloques_pegados_otro_dia_o_sin_consultorio`, `un_bloque_no_choca_con_su_propio_consultorio_al_modificarlo` | Aprobada |
 | CP-100 | CU-07 | La base hace cumplir RN18 | Una solicitud simultánea se informa como regla de negocio; una inserción directa la rechaza la restricción de exclusión; no se acepta un consultorio de otra sucursal ni uno desactivado | `HorarioTest::una_solicitud_simultanea_por_el_mismo_consultorio_se_informa_como_regla_de_negocio`, `la_base_rechaza_el_consultorio_ocupado_aunque_se_salte_la_aplicacion`, `la_base_rechaza_un_consultorio_de_otra_sucursal`, `no_se_puede_guardar_un_bloque_con_un_consultorio_desactivado` | Aprobada |
 | CP-101 | CU-07 | Selector de consultorio | Ofrece «Sin consultorio» y solo los activos; sin consultorios avisa y enlaza a la gestión | `HorarioTest::el_formulario_ofrece_solo_los_consultorios_activos`, `sin_consultorios_el_formulario_avisa_y_enlaza_a_la_gestion` | Aprobada |
+| CP-102 | CU-06 | Buscar especialidades (PM-07) | Encuentra por parte del nombre sin distinguir mayúsculas; sin pestaña elegida incluye las inactivas y lo avisa; respeta la pestaña y sus contadores; sin coincidencias lo dice y los comodines no rompen la búsqueda | `EspecialidadTest::busca_por_parte_del_nombre_sin_distinguir_mayusculas_e_incluye_las_inactivas`, `la_busqueda_respeta_la_pestana_elegida_y_sus_contadores`, `sin_coincidencias_lo_avisa_y_los_comodines_no_rompen_la_busqueda` | Aprobada |
+| CP-103 | CU-01 | Páginas con sesión fuera de la caché del navegador (PM-78) | Las respuestas con sesión, también las de error, llevan `Cache-Control: no-store, private`; las públicas no | `CacheDeSesionTest::las_paginas_con_sesion_no_se_guardan_en_la_cache_del_navegador`, `tambien_las_paginas_del_personal_y_las_de_error`, `las_paginas_publicas_no_se_marcan` | Aprobada |
 
 ### 8.3 Evidencias
 
@@ -3752,11 +3754,11 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 519         |
-| Pruebas aprobadas  | 519         |
+| Pruebas ejecutadas | 525         |
+| Pruebas aprobadas  | 525         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 3294        |
-| Duración           | 29 segundos |
+| Aserciones         | 3316        |
+| Duración           | 33 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
 
@@ -3804,7 +3806,7 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 
 **Ejecutadas el 24/10/2026:** PM-02, PM-44, PM-56, PM-57 y PM-76, que corresponden a las pruebas 1, 2, 9 y 10 del enunciado. Se ejecutaron en el navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y se comprobó en la base de datos que los rechazos no dejaron registros.
 
-**Ejecutadas el 07/11/2026:** las 82 restantes del Ciclo #1 (PM-01 a PM-87), con la base recién cargada con `db:seed`, `DemoSeeder` y `DemoCitasSeeder`, en un navegador sobre el servidor de desarrollo. Una herramienta de automatización escribió los datos y pulsó los botones; las confirmaciones del navegador se aceptaron por script y las contraseñas temporales se leyeron de la pantalla sin mostrarlas. Resultado: 80 aprobadas y 2 fallidas (PM-07 y PM-78). Excepciones al flujo de la pantalla, indicadas en cada fila: PM-79 abrió la segunda sesión con un cliente HTTP, PM-81 venció la contraseña en la base de datos y PM-85 midió con un marco de 390 px.
+**Ejecutadas el 07/11/2026:** las 82 restantes del Ciclo #1 (PM-01 a PM-87), con la base recién cargada con `db:seed`, `DemoSeeder` y `DemoCitasSeeder`, en un navegador sobre el servidor de desarrollo. Una herramienta de automatización escribió los datos y pulsó los botones; las confirmaciones del navegador se aceptaron por script y las contraseñas temporales se leyeron de la pantalla sin mostrarlas. Resultado: 80 aprobadas y 2 fallidas (PM-07 y PM-78); los dos defectos se corrigieron ese mismo día y, al repetirlas, ambas se aprobaron. Excepciones al flujo de la pantalla, indicadas en cada fila: PM-79 abrió la segunda sesión con un cliente HTTP, PM-81 venció la contraseña en la base de datos y PM-85 midió con un marco de 390 px.
 
 **Ejecutadas en el Ciclo #2 (06/11/2026, 23:51 hora de La Paz, y 07/11/2026 para las de validación en el cliente):** PM-88 a PM-108, el recorrido de CU-09 a CU-18 con una persona de cada rol. Se ejecutaron en un navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y con los datos de demostración. Se prepararon dos cosas directamente en la base de datos, porque dependen del reloj: un bloque de atención del sábado (para reservar una cita para «mañana» y ver el recordatorio), y una cita de hoy a las 22:00 que ya había comenzado (para poder marcarla como atendida y escribir su nota). Las capturas están en la sección 8.3.5 (figuras 21 a 36).
 
@@ -3843,7 +3845,7 @@ Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo
 | PM-04 | Editar el nombre y la duración de una especialidad. | Los cambios se ven en el listado. | «Especialidad actualizada.» El listado muestra «Cardiología clínica» con 40 min. | Aprobada |
 | PM-05 | Desactivar una especialidad. | Pasa a Inactivas, la fila se ve atenuada y ya no está en Activas. | Pasó a Inactivas (Activas 1, Inactivas 1); la fila se ve con el texto atenuado y ya no figura en Activas. | Aprobada |
 | PM-06 | Reactivar la especialidad. | Vuelve a Activas. | «Especialidad reactivada. Ya aparece en la pestaña Activas.» | Aprobada |
-| PM-07 | Buscar por parte del nombre una especialidad inactiva. | La búsqueda la encuentra y avisa que incluye a las inactivas. | La pantalla de especialidades no tiene buscador: solo pestañas Activas, Inactivas y Todas. | Falló |
+| PM-07 | Buscar por parte del nombre una especialidad inactiva. | La búsqueda la encuentra y avisa que incluye a las inactivas. | Primera ejecución: falló, porque la pantalla no tenía buscador. Se agregó y, al repetirla, buscar «ODONTO» encontró la especialidad inactiva «Odontologia» junto a la activa, con el aviso «La búsqueda incluye a las especialidades inactivas.» y los contadores de cada pestaña. | Aprobada |
 | PM-08 | Crear «Odontologia» y «Odontología» como especialidades distintas. | Limitación conocida: el sistema las acepta como dos. Se registra como observación, no como fallo. | Observación (limitación conocida): aceptó «Odontologia» y «Odontología» como dos especialidades. | Aprobada |
 
 **CU-05 Gestionar médicos** (rol: Administrador)
@@ -3963,7 +3965,7 @@ Usuarios de prueba: Administrador `demo.admin@clinica.test`, Recepcionista `demo
 | PM-75 | Entrar con una contraseña temporal. | Lo lleva a cambiar la contraseña y bloquea el resto de las páginas hasta hacerlo. | Al entrar con una contraseña temporal fue llevada a «Cambiar contraseña», y cualquier otra página (por ejemplo /pacientes) la devolvía ahí. | Aprobada |
 | PM-76 | Abrir /usuarios sin sesión.                                                         | Redirige al login.                                                                         | El sistema redirigió al formulario de inicio de sesión y no mostró la lista de usuarios. | Aprobada               |
 | PM-77 | Con el rol Paciente, abrir /usuarios. | Error 403. | Con el rol Paciente, /usuarios mostró «403 Acceso no permitido». | Aprobada |
-| PM-78 | Cerrar sesión y usar el botón Atrás del navegador. | No muestra páginas privadas: pide iniciar sesión. | Tras cerrar sesión, el botón Atrás mostró «Mi perfil» con los datos de la paciente desde la caché del navegador. El servidor sí cerró la sesión (una solicitud nueva a /perfil redirige al login), pero la página privada queda visible. | Falló |
+| PM-78 | Cerrar sesión y usar el botón Atrás del navegador. | No muestra páginas privadas: pide iniciar sesión. | Primera ejecución: falló; el botón Atrás mostraba «Mi perfil» con los datos de la paciente desde la caché del navegador. Se corrigió enviando `Cache-Control: no-store` en las páginas con sesión y, al repetirla, Atrás mostró el inicio de sesión, sin datos. | Aprobada |
 | PM-79 | Desactivar una cuenta con su sesión abierta en otra ventana y recargar esa ventana. | Cierra la sesión en la siguiente solicitud. | Con la sesión del paciente abierta en otro cliente, la Recepcionista lo desactivó; la siguiente solicitud de esa sesión redirigió al inicio de sesión. La segunda sesión se abrió con un cliente HTTP (curl), porque el navegador automatizado comparte una sola sesión. | Aprobada |
 
 **CU-19 Renovar contraseña temporal** (rol: Recepcionista y Administrador)
@@ -4226,7 +4228,7 @@ Lo construido responde a los objetivos específicos del enunciado:
 - **Citas sin conflictos de horario:** el servidor calcula la disponibilidad, vuelve a comprobarla dentro de una transacción y las restricciones de exclusión de PostgreSQL rechazan la cita superpuesta del médico y del paciente aunque dos solicitudes compitan (RN07, RN13, RN17). La reprogramación usa las mismas reglas.
 - **Control de estados:** una cita pasa de programada a confirmada, atendida, con inasistencia o cancelada solo por transiciones válidas, nunca se elimina y el Paciente cancela o reprograma con 24 horas de anticipación (RN10, RN15).
 - **Consultas y reportes:** agenda por médico y fecha, historial por paciente y reportes de citas y de pacientes con rango de fechas, filtros y totales, cada uno limitado a los roles autorizados (RN12).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 fueron 481 y, tras agregar CU-20, son 519 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 fueron 481 y, tras agregar CU-20 y corregir los defectos de las pruebas manuales, son 525 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -4237,7 +4239,6 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 - **Persona compartida entre fichas.** Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico). Sus datos personales viven en una única fila de `personas`, de modo que al editar la ficha del paciente (CU-04) la Recepcionista también modifica el correo con el que el médico entra al sistema. CU-03 y CU-05 evitan este efecto porque reutilizan la persona sin modificar sus datos. Se acepta por ser un caso poco frecuente; evitarlo exigiría bloquear los datos personales en CU-04 cuando la persona tiene una cuenta con otro rol.
 - **Citas atendidas o canceladas.** No existe un procedimiento autorizado para corregir una cita atendida o reabrir una cancelada: el sistema las rechaza (RF08, RF10, RN10). El enunciado deja esa política a cargo del sistema y aquí se eligió la más estricta.
 - **Pruebas manuales del Ciclo #2.** Se ejecutó un recorrido por rol de CU-09 a CU-18 (PM-88 a PM-108), pero el ancho de 390 px se revisó con un viewport emulado en el navegador y no con un teléfono físico. Las seis pantallas de las figuras 37 a 42 y unas 40 pantallas más de los cuatro roles se midieron sin desborde horizontal; las tablas se muestran como tarjetas en celular. Quedan sin medir en ese ancho la reprogramación del Paciente y las pantallas de error, y las figuras 37 a 42 no se volvieron a capturar después del cambio a tarjetas.
-- **Fallos de las pruebas manuales del 07/11/2026.** PM-07: la pantalla de especialidades no tiene buscador, aunque la prueba lo supone. PM-78: después de cerrar sesión, el botón Atrás del navegador vuelve a mostrar la última página privada desde su caché, con sus datos; el servidor sí cerró la sesión. Se corrige enviando `Cache-Control: no-store` en las páginas con sesión.
 - **Nombres de especialidad con tildes.** La unicidad ignora mayúsculas y espacios, pero no las tildes: «Odontologia» y «Odontología» se aceptan como dos especialidades distintas. Resolverlo requiere la extensión `unaccent` de PostgreSQL. Lo mismo vale para los nombres de consultorio.
 - **La cita no guarda el consultorio.** Lo hereda del bloque en el que cae (ADR-002). Si después se cambia el consultorio de ese bloque, las citas pasadas del bloque se ven con el consultorio nuevo. Si hiciera falta conservarlo, la cita tendría que guardar su propio consultorio.
 - **El consultorio se reserva por bloque completo.** Las horas sin citas de un médico no se pueden prestar a otro médico. Es lo habitual en consultas externas y mantiene la prioridad del médico titular (ADR-002, decisión 7).
@@ -4325,7 +4326,7 @@ Son 72 rutas en total, según `php artisan route:list --except-vendor`. Solo el 
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **519 pruebas, 519 aprobadas, 3294 aserciones**, en unos 29 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **525 pruebas, 525 aprobadas, 3316 aserciones**, en unos 33 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -4333,7 +4334,7 @@ Resultado de `php artisan test`: **519 pruebas, 519 aprobadas, 3294 aserciones**
 | `Feature\Medicos\MedicoTest`                       | 40      | CU-05                                         |
 | `Feature\Horarios\HorarioTest`                     | 45      | CU-07 y RN18                                  |
 | `Feature\Consultorios\ConsultorioTest`             | 18      | CU-20                                         |
-| `Feature\Especialidades\EspecialidadTest`          | 33      | CU-06                                         |
+| `Feature\Especialidades\EspecialidadTest`          | 36      | CU-06                                         |
 | `Feature\Citas\CitaTest`                           | 37      | CU-09                                         |
 | `Feature\Citas\CancelarCitaTest`                    | 20      | CU-11                                         |
 | `Feature\Citas\HistorialTest`                        | 16      | CU-14                                         |
@@ -4355,6 +4356,7 @@ Resultado de `php artisan test`: **519 pruebas, 519 aprobadas, 3294 aserciones**
 | `Feature\Consola\DemoSeederTest`                   | 5       | Datos de demostración (solo en entorno local) |
 | `Feature\Consola\DemoCitasSeederTest`              | 2       | Citas y notas de demostración (solo en entorno local) |
 | `Feature\Acceso\PaginasDeErrorTest` | 6 | Páginas de error 403, 404, 419, 429 y 500 en español |
+| `Feature\Acceso\CacheDeSesionTest` | 3 | Páginas con sesión fuera de la caché del navegador (PM-78) |
 | `Unit\CodigoFormateadoTest`                        | 13      | Códigos con formato (`PAC-`, `MED-`, `CM-`)   |
 | `Unit\ContrasenaTemporalServiceTest`               | 5       | Contraseñas temporales (RNF18)                |
 | `Unit\PaletaTest`                                  | 3       | Paleta de colores de la interfaz              |
