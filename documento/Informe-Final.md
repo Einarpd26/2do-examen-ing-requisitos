@@ -3752,11 +3752,11 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 518         |
-| Pruebas aprobadas  | 518         |
+| Pruebas ejecutadas | 519         |
+| Pruebas aprobadas  | 519         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 3290        |
-| Duración           | 30 segundos |
+| Aserciones         | 3294        |
+| Duración           | 29 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
 
@@ -3813,6 +3813,7 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 | Administrador               | `demo.admin@clinica.test`     | `Demo-2026` | Usuarios, médicos, especialidades, consultorios y horarios |
 | Recepcionista               | `demo.recepcion@clinica.test` | `Demo-2026` | Pacientes                                            |
 | Médico                      | `demo.medico@clinica.test`    | `Demo-2026` | Médico con especialidad y horarios cargados          |
+| Médico                      | `demo.medico2@clinica.test`   | `Demo-2026` | Segundo médico, en otro consultorio (para RN18)      |
 | Paciente (ficha verificada) | CI `8000003`                  | `Demo-2026` | Ve su información médica y su contacto de emergencia |
 | Paciente (ficha pendiente)  | CI `8000004`                  | `Demo-2026` | Ve el aviso de verificación pendiente                |
 
@@ -4011,20 +4012,22 @@ Usuarios de prueba: los mismos de CU-01.
 
 **CU-20 Gestionar consultorios y RN18 en CU-07** (rol: Administrador; ADR-002)
 
-Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo-2026`. Antes, registrar un segundo médico (CU-05), porque los datos de demostración traen uno solo.
+Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo-2026`. Los datos de demostración traen dos médicos en consultorios distintos: Andrea Vaca en el Consultorio 1 y Daniel Rojas (`demo.medico2@clinica.test`) en el Consultorio 2, los martes y jueves.
 
-| N.º    | Prueba                                                                                              | Resultado esperado                                                          | Resultado obtenido | Estado                 |
-| ------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------ | ---------------------- |
-| PM-109 | Abrir «Consultorios» desde el menú y registrar «Consultorio 3».                                     | Aparece en la pestaña Activos, con 0 bloques.                               |                    | Pendiente de ejecución |
-| PM-110 | Registrar « consultorio 3 ».                                                                        | Se rechaza por nombre repetido.                                             |                    | Pendiente de ejecución |
-| PM-111 | En «Horarios de atención», agregar al primer médico el bloque Lunes 08:00 a 12:00 en el Consultorio 3. | Se guarda y la semana del médico muestra el consultorio.                 |                    | Pendiente de ejecución |
-| PM-112 | Agregar al segundo médico el bloque Lunes 10:00 a 14:00 en el Consultorio 3.                         | Se rechaza y el mensaje nombra al primer médico y su bloque.                |                    | Pendiente de ejecución |
-| PM-113 | Agregar al segundo médico el bloque Lunes 12:00 a 16:00 en el Consultorio 3.                         | Se acepta: el bloque está pegado, no superpuesto.                           |                    | Pendiente de ejecución |
-| PM-114 | Desactivar el Consultorio 3.                                                                        | Se rechaza e indica cuántos bloques lo usan.                                |                    | Pendiente de ejecución |
-| PM-115 | Registrar y desactivar un consultorio sin bloques; abrir el formulario de horarios y reactivarlo.  | Desactivado no aparece en el selector; al reactivarlo vuelve a aparecer.    |                    | Pendiente de ejecución |
-| PM-116 | Entrar como Recepcionista y abrir `/consultorios`.                                                  | Se muestra la página de acceso denegado (403).                              |                    | Pendiente de ejecución |
+**Ejecutadas el 07/11/2026** en un navegador sobre el servidor de desarrollo, con la base recién cargada con `db:seed`, `DemoSeeder` y `DemoCitasSeeder`, y con una herramienta de automatización que escribió los datos y pulsó los botones. Las confirmaciones del navegador de «Desactivar» y «Reactivar» se aceptaron por script, porque el diálogo bloquea la automatización; el resto del flujo es el de la pantalla.
 
-Total: 116 pruebas manuales (PM-01 a PM-87 del Ciclo #1, PM-88 a PM-108 del Ciclo #2 y PM-109 a PM-116 de CU-20, estas últimas pendientes de ejecución).
+| N.º    | Prueba                                                                                              | Resultado esperado                                                          | Resultado obtenido (07/11/2026) | Estado   |
+| ------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------- | -------- |
+| PM-109 | Abrir «Consultorios» desde el menú y registrar «Consultorio 3».                                     | Aparece en la pestaña Activos, con 0 bloques.                               | «Consultorio registrado.» Activos pasó de 2 a 3, con el Consultorio 3 en 0 bloques. | Aprobada |
+| PM-110 | Registrar « consultorio 3 ».                                                                        | Se rechaza por nombre repetido.                                             | «Ya existe un consultorio con ese nombre.» junto al campo; no se creó otro. | Aprobada |
+| PM-111 | En «Horarios de atención», editar el bloque Lunes 08:00 a 12:00 de Andrea Vaca y elegir el Consultorio 3. | Se guarda y la semana de la médica muestra el consultorio.            | «Horario actualizado.» La semana muestra «Lunes 08:00 – 12:00 Consultorio 3». | Aprobada |
+| PM-112 | Agregar a Daniel Rojas el bloque Lunes 10:00 a 14:00 en el Consultorio 3.                            | Se rechaza y el mensaje nombra a la otra médica y su bloque.                | «Consultorio 3 ya está ocupado ese día por Andrea Vaca Salvatierra: Lunes 08:00–12:00.» El formulario conservó los datos. | Aprobada |
+| PM-113 | Agregar a Daniel Rojas el bloque Lunes 12:00 a 16:00 en el Consultorio 3.                            | Se acepta: el bloque está pegado, no superpuesto.                           | «Horario registrado: Lunes 12:00–16:00.», en el Consultorio 3. | Aprobada |
+| PM-114 | Desactivar el Consultorio 3.                                                                        | Se rechaza e indica cuántos bloques lo usan.                                | «No se puede desactivar el Consultorio 3: lo usan 2 bloques de atención. Asígneles otro consultorio antes.» Sigue activo. | Aprobada |
+| PM-115 | Registrar y desactivar el «Consultorio 4»; abrir el formulario de horarios; reactivarlo y volver a abrirlo. | Desactivado no aparece en el selector; al reactivarlo vuelve a aparecer. | Desactivado, el selector mostró «Sin consultorio, Consultorio 1, 2 y 3»; reactivado, sumó el Consultorio 4. | Aprobada |
+| PM-116 | Entrar como Recepcionista y abrir `/consultorios`.                                                  | Se muestra la página de acceso denegado (403).                              | Página «403 Acceso no permitido»; su menú no ofrece «Consultorios». | Aprobada |
+
+Total: 116 pruebas manuales (PM-01 a PM-87 del Ciclo #1, PM-88 a PM-108 del Ciclo #2 y PM-109 a PM-116 de CU-20).
 
 #### 8.3.5 Capturas de pantalla
 
@@ -4221,7 +4224,7 @@ Lo construido responde a los objetivos específicos del enunciado:
 - **Citas sin conflictos de horario:** el servidor calcula la disponibilidad, vuelve a comprobarla dentro de una transacción y las restricciones de exclusión de PostgreSQL rechazan la cita superpuesta del médico y del paciente aunque dos solicitudes compitan (RN07, RN13, RN17). La reprogramación usa las mismas reglas.
 - **Control de estados:** una cita pasa de programada a confirmada, atendida, con inasistencia o cancelada solo por transiciones válidas, nunca se elimina y el Paciente cancela o reprograma con 24 horas de anticipación (RN10, RN15).
 - **Consultas y reportes:** agenda por médico y fecha, historial por paciente y reportes de citas y de pacientes con rango de fechas, filtros y totales, cada uno limitado a los roles autorizados (RN12).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 fueron 481 y, tras agregar CU-20, son 518 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 fueron 481 y, tras agregar CU-20, son 519 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -4319,7 +4322,7 @@ Son 72 rutas en total, según `php artisan route:list --except-vendor`. Solo el 
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **518 pruebas, 518 aprobadas, 3290 aserciones**, en unos 30 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **519 pruebas, 519 aprobadas, 3294 aserciones**, en unos 29 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -4346,7 +4349,7 @@ Resultado de `php artisan test`: **518 pruebas, 518 aprobadas, 3290 aserciones**
 | `Feature\Perfil\PerfilTest`                        | 13      | CU-08                                         |
 | `Feature\Acceso\CambioPasswordTest`                | 9       | CU-01 y CU-08                                 |
 | `Feature\Consola\RenovarPasswordAdministradorTest` | 8       | Comando `administrador:renovar-password`      |
-| `Feature\Consola\DemoSeederTest`                   | 4       | Datos de demostración (solo en entorno local) |
+| `Feature\Consola\DemoSeederTest`                   | 5       | Datos de demostración (solo en entorno local) |
 | `Feature\Consola\DemoCitasSeederTest`              | 2       | Citas y notas de demostración (solo en entorno local) |
 | `Feature\Acceso\PaginasDeErrorTest` | 6 | Páginas de error 403, 404, 419, 429 y 500 en español |
 | `Unit\CodigoFormateadoTest`                        | 13      | Códigos con formato (`PAC-`, `MED-`, `CM-`)   |

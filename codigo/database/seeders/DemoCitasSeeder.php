@@ -134,6 +134,10 @@ class DemoCitasSeeder extends Seeder
     /** El consultorio de demostración: se crea la primera vez y después se reutiliza (ADR-002). */
     private function consultorio(Sucursal $sucursal): Consultorio
     {
-        return Consultorio::firstOrCreate(['sucursal_id' => $sucursal->id, 'nombre' => 'Consultorio 1']);
+        return Consultorio::query()
+            ->where('sucursal_id', $sucursal->id)
+            ->whereRaw('lower(btrim(nombre)) = ?', ['consultorio 1'])
+            ->first()
+            ?? Consultorio::create(['sucursal_id' => $sucursal->id, 'nombre' => 'Consultorio 1']);
     }
 }

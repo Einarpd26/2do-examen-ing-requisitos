@@ -44,7 +44,16 @@ class DemoSeeder extends Seeder
                 'apellido_materno' => 'Quiroga', 'telefono' => '70010001', 'correo' => 'demo.recepcion@clinica.test',
             ]);
 
-            $medico = $this->medico();
+            // Dos médicos en consultorios y días distintos, para probar RN18 sin cargar datos a mano (ADR-002).
+            $medico = $this->medico([
+                'ci' => '8000002', 'primer_nombre' => 'Andrea', 'apellido_paterno' => 'Vaca',
+                'apellido_materno' => 'Salvatierra', 'telefono' => '70010002', 'correo' => 'demo.medico@clinica.test',
+            ], 'MP-DEMO-1', 'Consultorio 1', [[1, '08:00', '12:00'], [3, '14:00', '18:00']]);
+
+            $segundoMedico = $this->medico([
+                'ci' => '8000006', 'primer_nombre' => 'Daniel', 'apellido_paterno' => 'Rojas',
+                'apellido_materno' => 'Céspedes', 'telefono' => '70010006', 'correo' => 'demo.medico2@clinica.test',
+            ], 'MP-DEMO-2', 'Consultorio 2', [[2, '08:00', '12:00'], [4, '08:00', '12:00']]);
 
             $paciente = $this->paciente([
                 'ci' => '8000003', 'primer_nombre' => 'María', 'segundo_nombre' => 'Fernanda',
@@ -62,27 +71,28 @@ class DemoSeeder extends Seeder
                 'fecha_nacimiento' => '1985-11-02', 'telefono' => '70010004',
             ], [], verificado: false);
 
-            return array_filter([$administrador, $recepcionista, $medico, $paciente, $pendiente]);
+            return array_filter([$administrador, $recepcionista, $medico, $segundoMedico, $paciente, $pendiente]);
         });
 
         $this->command->info('Cuentas de demostración (contraseña: la constante DemoSeeder::CONTRASENA):');
         $this->command->table(['Rol', 'Entra con', 'Ficha'], $creadas ?: [['—', 'Ya existían todas las cuentas de demostración', '—']]);
     }
 
-    /** @return array{0: string, 1: string, 2: string}|null */
-    private function medico(): ?array
+    /**
+     * Médico de Medicina general con cuenta y sus bloques de atención en un consultorio.
+     *
+     * @param  array<string, string>  $datos
+     * @param  list<array{0: int, 1: string, 2: string}>  $bloques  día de la semana, hora inicial y hora final
+     * @return array{0: string, 1: string, 2: string}|null
+     */
+    private function medico(array $datos, string $registro, string $consultorio, array $bloques): ?array
     {
-        $datos = [
-            'ci' => '8000002', 'primer_nombre' => 'Andrea', 'apellido_paterno' => 'Vaca',
-            'apellido_materno' => 'Salvatierra', 'telefono' => '70010002', 'correo' => 'demo.medico@clinica.test',
-        ];
-
         if (Persona::where('ci', $datos['ci'])->exists()) {
             return null;
         }
 
         $persona = Persona::create($datos);
-        $medico = Medico::create(['persona_id' => $persona->id, 'nro_registro_profesional' => 'MP-DEMO-1']);
+        $medico = Medico::create(['persona_id' => $persona->id, 'nro_registro_profesional' => $registro]);
 
         $especialidad = Especialidad::firstOrCreate(
             ['nombre' => 'Medicina general'],
@@ -91,10 +101,11 @@ class DemoSeeder extends Seeder
         $medico->especialidades()->sync([$especialidad->id]);
 
         $sucursal = Sucursal::firstOrFail();
-        foreach ([[1, '08:00', '12:00'], [3, '14:00', '18:00']] as [$dia, $inicio, $fin]) {
+        $sala = $this->consultorio($sucursal, $consultorio);
+        foreach ($bloques as [$dia, $inicio, $fin]) {
             HorarioAtencion::create([
                 'medico_id' => $medico->id, 'sucursal_id' => $sucursal->id, 'dia_semana' => $dia,
-                'hora_inicio' => $inicio, 'hora_fin' => $fin, 'consultorio_id' => $this->consultorio($sucursal)->id,
+                'hora_inicio' => $inicio, 'hora_fin' => $fin, 'consultorio_id' => $sala->id,
             ]);
         }
 
@@ -143,9 +154,16 @@ class DemoSeeder extends Seeder
         ]);
     }
 
-    /** El consultorio de demostración: se crea la primera vez y después se reutiliza (ADR-002). */
-    private function consultorio(Sucursal $sucursal): Consultorio
+    /**
+     * Consultorio de demostración: se crea la primera vez y después se reutiliza (ADR-002). Se busca
+     * sin distinguir mayúsculas ni espacios, como el índice único, para no chocar con uno ya cargado a mano.
+     */
+    private function consultorio(Sucursal $sucursal, string $nombre): Consultorio
     {
-        return Consultorio::firstOrCreate(['sucursal_id' => $sucursal->id, 'nombre' => 'Consultorio 1']);
+        return Consultorio::query()
+            ->where('sucursal_id', $sucursal->id)
+            ->whereRaw('lower(btrim(nombre)) = ?', [mb_strtolower($nombre)])
+            ->first()
+            ?? Consultorio::create(['sucursal_id' => $sucursal->id, 'nombre' => $nombre]);
     }
 }

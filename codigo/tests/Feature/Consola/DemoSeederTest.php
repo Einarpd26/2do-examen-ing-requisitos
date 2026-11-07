@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Consola;
 
+use App\Models\Consultorio;
+use App\Models\HorarioAtencion;
 use App\Models\Medico;
 use App\Models\Paciente;
 use App\Models\Persona;
+use App\Models\Sucursal;
 use App\Models\Usuario;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,10 +36,10 @@ class DemoSeederTest extends TestCase
         $this->artisan('db:seed', ['--class' => DemoSeeder::class])->assertSuccessful();
 
         $roles = Usuario::with('rol')->get()->pluck('rol.codigo')->sort()->values()->all();
-        $this->assertSame(['ADMINISTRADOR', 'MEDICO', 'PACIENTE', 'PACIENTE', 'RECEPCIONISTA'], $roles);
+        $this->assertSame(['ADMINISTRADOR', 'MEDICO', 'MEDICO', 'PACIENTE', 'PACIENTE', 'RECEPCIONISTA'], $roles);
 
-        $this->assertSame(1, Medico::count());
-        $this->assertSame(2, Medico::firstOrFail()->horarios()->count());
+        $this->assertSame(2, Medico::count());
+        $this->assertSame([2, 2], Medico::orderBy('id')->withCount('horarios')->pluck('horarios_count')->all());
         $this->assertSame([true, false], Paciente::orderBy('id')->pluck('verificado')->all());
     }
 
@@ -62,9 +65,24 @@ class DemoSeederTest extends TestCase
         $this->artisan('db:seed', ['--class' => DemoSeeder::class])->assertSuccessful();
         $this->artisan('db:seed', ['--class' => DemoSeeder::class])->assertSuccessful();
 
-        $this->assertSame(4, Usuario::count(), 'administrador, médico y dos pacientes; la recepcionista se omite porque su CI ya existía');
+        $this->assertSame(5, Usuario::count(), 'administrador, dos médicos y dos pacientes; la recepcionista se omite porque su CI ya existía');
+        $this->assertSame(2, Consultorio::count(), 'los consultorios se reutilizan al volver a correrlo');
         $this->assertSame('Existente', Persona::where('ci', '8000001')->firstOrFail()->primer_nombre);
         $this->assertNull(Persona::where('ci', '8000001')->firstOrFail()->usuario, 'no se le crea cuenta a una persona que ya existía');
         $this->assertSame(1, Persona::where('ci', '8000002')->count());
+    }
+
+    public function test_cada_medico_atiende_en_su_propio_consultorio_y_reutiliza_uno_ya_cargado(): void
+    {
+        $this->app['env'] = 'local';
+        // Un consultorio cargado a mano con otras mayúsculas: el seeder lo reutiliza en vez de fallar.
+        Consultorio::create(['sucursal_id' => Sucursal::firstOrFail()->id, 'nombre' => 'consultorio 2']);
+
+        $this->artisan('db:seed', ['--class' => DemoSeeder::class])->assertSuccessful();
+
+        $this->assertSame(2, Consultorio::count());
+        $porMedico = HorarioAtencion::with('consultorio')->get()->groupBy('medico_id')
+            ->map(fn ($bloques) => $bloques->pluck('consultorio.nombre')->unique()->values()->all())->values()->all();
+        $this->assertSame([['Consultorio 1'], ['consultorio 2']], $porMedico);
     }
 }
