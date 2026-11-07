@@ -1,14 +1,18 @@
 # Clínica Vida Salud: sistema web de gestión de citas médicas
 
-Segundo examen parcial de Ingeniería de Requisitos. Aplicación en **Laravel 13** (PHP 8.4.1 o superior), **PostgreSQL 16**, plantillas Blade y Bootstrap 5. El informe con el análisis y el diseño está en `../documento/Informe-Final.md`.
+Segundo examen parcial de Ingeniería de Requisitos. Aplicación en **Laravel 13** (PHP 8.3 o superior), **PostgreSQL 16**, plantillas Blade y Bootstrap 5. El informe con el análisis y el diseño está en `../documento/Informe-Final.md`.
 
 ## Requisitos
 
-- PHP 8.4.1 o superior con la extensión `pdo_pgsql`
+- PHP 8.3 o superior con la extensión `pdo_pgsql` (compruébelo con `php -m | grep pdo_pgsql`)
 - Composer
-- Docker (para PostgreSQL)
+- Docker con Docker Compose (solo para PostgreSQL; la aplicación corre directamente en su máquina)
 
-## Puesta en marcha
+No hace falta Node ni npm: Bootstrap ya viene incluido en `public/vendor/bootstrap/`.
+
+## Puesta en marcha (solo la primera vez)
+
+Ejecute todo desde esta carpeta (`codigo/`).
 
 ```bash
 cp .env.example .env
@@ -23,9 +27,48 @@ php artisan db:seed                   # crea el administrador inicial
 php artisan serve                     # http://localhost:8000
 ```
 
-La base de datos escucha en el puerto **5433** (y no en el 5432 habitual) para no chocar con otro PostgreSQL del equipo. Verifique que el `.env` tenga `DB_PORT=5433`; las pruebas ya lo usan en `phpunit.xml`.
+La base de datos escucha en el puerto **5433** (y no en el 5432 habitual) para no chocar con otro PostgreSQL del equipo. Verifique que el `.env` tenga `DB_PORT=5433`; las pruebas ya lo usan en `phpunit.xml`. Si su contenedor `clinica_db` se creó con una versión anterior que usaba el 5432, ejecute de nuevo `docker compose up -d`: lo recrea con el puerto correcto y conserva los datos (el volumen no se borra).
 
 `db:seed` muestra **una sola vez** la contraseña temporal del administrador, que vence a las 72 horas y se debe cambiar en el primer ingreso. El correo y el CI del administrador se cambian con `ADMIN_CORREO` y `ADMIN_CI` en `.env` antes de cargar los datos.
+
+Cuando termine `php artisan serve`, abra <http://localhost:8000> en el navegador. Para entrar necesita una cuenta: use la del administrador que muestra `db:seed` o cargue las de demostración (siguiente sección).
+
+## Retomar el trabajo (cada vez que prenda la máquina)
+
+```bash
+docker compose up -d     # levanta PostgreSQL (si ya corre, no hace nada)
+php artisan serve        # servidor de desarrollo; se detiene con Ctrl+C
+```
+
+Si se agregaron migraciones nuevas (por ejemplo, tras un `git pull`), corra además `composer install` y `php artisan migrate`. Para apagar la base: `docker compose stop` (conserva los datos) o `docker compose down` (quita el contenedor, pero también conserva los datos; solo `down -v` los borra).
+
+### Ver la base de datos (pgAdmin)
+
+`docker compose up -d` también levanta **pgAdmin**, una interfaz web para explorar tablas y ejecutar SQL (el equivalente de phpMyAdmin para PostgreSQL; phpMyAdmin no sirve aquí porque solo soporta MySQL). Ábrala en <http://localhost:5050>; no pide inicio de sesión y solo es accesible desde su máquina.
+
+La primera vez registre el servidor: clic derecho en *Servers* → *Register* → *Server*.
+
+| Pestaña | Campo | Valor |
+|---|---|---|
+| General | Name | `clinica` (el que quiera) |
+| Connection | Host name/address | `db` (**no** `127.0.0.1`: pgAdmin corre dentro de Docker) |
+| Connection | Port | `5432` (el puerto interno; el `5433` es solo para su máquina) |
+| Connection | Maintenance database | `clinica_vida_salud` |
+| Connection | Username / Password | `clinica` / `clinica_dev` |
+
+Las tablas están en *Databases → clinica_vida_salud → Schemas → public → Tables*. Para consultar, clic derecho en la base → *Query Tool*. Si prefiere un cliente de escritorio (DBeaver, DataGrip, etc.), conéctese a `127.0.0.1:5433` con las mismas credenciales.
+
+Estas credenciales son solo de desarrollo local; no use este compose en un servidor.
+
+### Problemas frecuentes
+
+| Síntoma | Causa y solución |
+|---|---|
+| `could not find driver` | Falta la extensión PHP `pdo_pgsql`; instálela (por ejemplo `php8.x-pgsql` en Ubuntu). |
+| `Connection refused` a la base | PostgreSQL no está levantado (`docker compose up -d`) o `DB_PORT` del `.env` no coincide con el puerto publicado (`docker ps`). |
+| `No application encryption key` | Falta `php artisan key:generate`. |
+| `Address already in use` en el 8000 | Otro proceso usa el puerto; use `php artisan serve --port=8001`. |
+| Las pruebas no encuentran `clinica_test` | Falta el `CREATE DATABASE clinica_test` del paso anterior. |
 
 ## Datos de demostración
 
@@ -82,7 +125,7 @@ php artisan migrate && php artisan db:seed
 
 | Ruta | Contenido |
 |---|---|
-| `database/sql/` | Esquema en SQL puro: `001` (Ciclo #1), `002` (citas y notas, Ciclo #2) y `003` (catálogos iniciales) |
+| `database/sql/` | Esquema en SQL puro: `001` (Ciclo #1), `002` (citas y notas, Ciclo #2) `003` (catálogos iniciales) y `004` (un paciente no puede tener citas superpuestas) |
 | `database/migrations/` | Migraciones que ejecutan esos archivos SQL |
 | `app/Models/` | Modelos Eloquent (las entidades del análisis) |
 | `app/Services/` | Reglas transversales: autenticación, contraseñas temporales, bitácora |
@@ -105,5 +148,17 @@ php artisan migrate && php artisan db:seed
 - **CU-07 gestionar horarios de atención:** bloques por día de la semana para cada médico activo, con consultorio. No admite bloques superpuestos del mismo médico (los pegados sí) ni cambios que dejen fuera de la atención a una cita ya agendada. La sucursal se asigna sola (hay una única).
 - **CU-06 gestionar especialidades:** alta, edición, desactivación y reactivación (nunca se eliminan), con nombre único sin distinguir mayúsculas ni espacios y duración de la cita entre 5 y 240 minutos. El listado muestra por defecto las activas, con pestañas Activas, Inactivas y Todas y su contador.
 - **CU-19 renovar contraseña temporal:** la recepcionista renueva la contraseña del paciente que la olvidó, indicando cómo verificó su identidad (queda en la bitácora). No usa correo electrónico.
+
+**Ciclo #2:** citas, asistencia, consultas y notas clínicas.
+
+- **CU-09 registrar cita:** la registran la recepcionista (a cualquier paciente) y el paciente (a su nombre), eligiendo especialidad, médico y un horario disponible según los bloques de atención. Un médico no puede tener dos citas a la misma hora ni un paciente dos citas superpuestas, aunque sean con médicos distintos (restricción de exclusión en PostgreSQL, `database/sql/004`). Emite un comprobante.
+- **CU-10 reprogramar cita:** cambia fecha y hora con las mismas reglas de disponibilidad; el paciente solo puede hacerlo con al menos 24 horas de anticipación.
+- **CU-11 cancelar cita:** exige un motivo y conserva la cita en el historial; la cancelada libera el horario. El paciente solo puede cancelar con al menos 24 horas de anticipación.
+- **CU-12 controlar asistencia:** el paciente confirma su cita, la recepción registra la confirmación o la inasistencia y el médico marca la cita como atendida, con transiciones de estado validadas.
+- **CU-13 consultar agenda médica:** el médico ve su propia agenda y la recepción la de cualquier médico, filtrando por fecha y estado. El médico ve la ficha del paciente en solo lectura.
+- **CU-14 consultar historial de citas:** la recepción consulta el de cualquier paciente y el paciente el suyo (`/mi-historial`).
+- **CU-15 generar reportes:** reportes administrativos de citas y de pacientes con rango de fechas, filtros y totales.
+- **CU-16 y CU-17 notas clínicas:** el médico registra la nota de una cita atendida; el paciente consulta las suyas en `/mis-notas` y el personal autorizado las de un paciente.
+- **CU-18 recordatorio de citas:** al iniciar sesión, el paciente ve un aviso con sus próximas citas (por defecto, dentro de 2 días; se ajusta en `config/clinica.php`). Solo muestra fecha, hora y médico.
 
 Las fechas se muestran en hora de Bolivia (`America/La_Paz`), tanto en la aplicación como en la conexión a PostgreSQL.
