@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\ReglaDeNegocioException;
+use App\Http\Requests\CancelarCitaRequest;
 use App\Http\Requests\CitaRequest;
 use App\Models\Cita;
 use App\Models\Especialidad;
@@ -14,7 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * CU-09: registrar cita. Lo usan dos roles con las mismas reglas:
+ * CU-09: registrar cita y CU-11: cancelarla. Lo usan dos roles con las mismas reglas:
  * - la Recepcionista (citas:gestionar), en /citas, elige al paciente;
  * - el Paciente (citas:gestionar_propias), en /mis-citas, siempre agenda para sí mismo.
  * El formulario avanza por pasos con parámetros GET (paciente, especialidad, médico y fecha)
@@ -105,6 +106,21 @@ class CitaController extends Controller
         $cita->load('paciente.persona', 'medico.persona', 'especialidad', 'sucursal');
 
         return view('citas.comprobante', ['cita' => $cita, 'propia' => $this->esPropia($request)]);
+    }
+
+    /** CU-11: cancela la cita. El Paciente solo las suyas y con 24 horas de anticipación (RN15). */
+    public function cancelar(CancelarCitaRequest $request, Cita $cita, CitaService $citas): RedirectResponse
+    {
+        $propia = $this->esPropia($request);
+
+        if ($propia) {
+            abort_unless($this->pacienteDeLaCuenta($request)->id === $cita->paciente_id, 404);
+        }
+
+        $citas->cancelar($cita, $request->validated('motivo_cancelacion'), $request->user(), $propia);
+
+        return redirect()->route($propia ? 'mis-citas.comprobante' : 'citas.comprobante', $cita)
+            ->with('exito', "La cita {$cita->codigo} fue cancelada.");
     }
 
     /** Un parámetro de la URL como texto; si llega manipulado como arreglo (?fecha[]=x), se ignora. */

@@ -118,6 +118,58 @@ class CitaService
         });
     }
 
+    /**
+     * CU-11: cancela una cita. Solo se cancelan las programadas o confirmadas (las atendidas y las
+     * inasistencias conservan su registro, RN10). El Paciente debe hacerlo con al menos 24 horas de
+     * anticipación (RN15); la Recepcionista no tiene esa restricción. La cita no se borra: pasa a
+     * CANCELADA con su motivo, deja de ocupar horario (RN09) y queda en el historial.
+     */
+    public function cancelar(Cita $cita, string $motivo, Usuario $actor, bool $comoPaciente): Cita
+    {
+        $motivo = trim($motivo);
+
+        if ($motivo === '') {
+            throw new ReglaDeNegocioException('Indique el motivo de la cancelación.');
+        }
+
+        return DB::transaction(function () use ($cita, $motivo, $actor, $comoPaciente) {
+            // Se bloquea la fila y se lee de nuevo: otra solicitud pudo cancelarla o atenderla antes.
+            $actual = Cita::query()->lockForUpdate()->findOrFail($cita->id);
+
+            if ($actual->estado === 'CANCELADA') {
+                throw new ReglaDeNegocioException('La cita ya está cancelada.');
+            }
+
+            if (! in_array($actual->estado, ['PROGRAMADA', 'CONFIRMADA'], true)) {
+                throw new ReglaDeNegocioException('Solo se pueden cancelar las citas programadas o confirmadas.');
+            }
+
+            $inicio = CarbonImmutable::parse($actual->fecha->toDateString().' '.$actual->hora_inicio, config('app.timezone'));
+            $ahora = $this->ahora();
+
+            if ($inicio->lte($ahora)) {
+                throw new ReglaDeNegocioException('La cita ya comenzó o ya pasó: no se puede cancelar.');
+            }
+
+            $horas = (int) config('clinica.citas.horas_min_cancelacion_paciente');
+
+            if ($comoPaciente && $inicio->lt($ahora->addHours($horas))) {
+                throw new ReglaDeNegocioException(
+                    "Solo puede cancelar su cita con al menos {$horas} horas de anticipación. Comuníquese con la clínica."
+                );
+            }
+
+            $actual->update(['estado' => 'CANCELADA', 'motivo_cancelacion' => $motivo]);
+
+            $this->bitacora->registrar(
+                'cita_cancelada', $actor, 'citas', $actual->id,
+                "{$actual->codigo}: cancelada ({$actual->fecha->format('d/m/Y')} {$actual->desde()}–{$actual->hasta()}). Motivo: {$motivo}"
+            );
+
+            return $actual->refresh();
+        });
+    }
+
     /** La fecha debe existir, no ser pasada y no superar el límite de anticipación. */
     private function exigirFecha(string $fecha): CarbonImmutable
     {

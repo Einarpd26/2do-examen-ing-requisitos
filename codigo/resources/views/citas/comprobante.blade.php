@@ -21,7 +21,7 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <p class="mb-3">
-                <span class="badge text-bg-primary">{{ $estados[$cita->estado] ?? $cita->estado }}</span>
+                <span class="badge {{ $cita->estado === 'CANCELADA' ? 'text-bg-secondary' : 'text-bg-primary' }}">{{ $estados[$cita->estado] ?? $cita->estado }}</span>
             </p>
             <dl class="row mb-0">
                 <dt class="col-sm-4">Código</dt><dd class="col-sm-8">{{ $cita->codigo }}</dd>
@@ -35,7 +35,32 @@
                 <dt class="col-sm-4">Sucursal</dt>
                 <dd class="col-sm-8">{{ $cita->sucursal->nombre }} <span class="text-secondary small">{{ $cita->sucursal->direccion }}</span></dd>
                 <dt class="col-sm-4">Motivo</dt><dd class="col-sm-8">{{ $dato($cita->motivo) }}</dd>
+                @if ($cita->estado === 'CANCELADA')
+                    <dt class="col-sm-4">Motivo de la cancelación</dt><dd class="col-sm-8">{{ $dato($cita->motivo_cancelacion) }}</dd>
+                @endif
             </dl>
         </div>
     </div>
+
+    {{-- CU-11: solo se cancelan las citas programadas o confirmadas. --}}
+    @if (in_array($cita->estado, ['PROGRAMADA', 'CONFIRMADA'], true))
+        <div class="card shadow-sm mt-3">
+            <div class="card-body">
+                <h2 class="h6 text-uppercase text-secondary">Cancelar esta cita</h2>
+                @if ($propia)
+                    <p class="small text-secondary">Puede cancelar con al menos {{ config('clinica.citas.horas_min_cancelacion_paciente') }} horas de anticipación.</p>
+                @endif
+                <form method="POST" action="{{ route($propia ? 'mis-citas.cancelar' : 'citas.cancelar', $cita) }}"
+                      onsubmit="return confirm('¿Cancelar la cita {{ $cita->codigo }}? Esta acción no se puede deshacer.');">
+                    @csrf
+                    @method('PATCH')
+                    <label for="motivo_cancelacion" class="form-label">Motivo de la cancelación</label>
+                    <textarea id="motivo_cancelacion" name="motivo_cancelacion" rows="2" maxlength="500" required
+                              class="form-control @error('motivo_cancelacion') is-invalid @enderror">{{ old('motivo_cancelacion') }}</textarea>
+                    @error('motivo_cancelacion')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <button type="submit" class="btn btn-outline-danger btn-sm mt-3">Cancelar cita</button>
+                </form>
+            </div>
+        </div>
+    @endif
 @endsection

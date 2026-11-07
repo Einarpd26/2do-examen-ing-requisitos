@@ -42,13 +42,16 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         Route::put('/', [PerfilController::class, 'actualizar'])->name('actualizar');
     });
 
-    // CU-09: registrar cita. La Recepcionista (citas:gestionar) agenda para cualquier paciente;
+    // CU-09: registrar cita y CU-11: cancelarla. La Recepcionista (citas:gestionar) agenda para cualquier paciente;
     // el Paciente (citas:gestionar_propias) solo para sí mismo. Mismo controlador, grupos separados.
     Route::prefix('citas')->name('citas.')->middleware('can:citas:gestionar')->group(function () {
         Route::get('/nueva', [CitaController::class, 'nueva'])->name('nueva');
         Route::post('/', [CitaController::class, 'store'])->name('store');
         Route::get('/{cita}', [CitaController::class, 'comprobante'])
             ->where(['cita' => '[0-9]+'])->name('comprobante');
+        // CU-11: cancelar la cita (no se elimina: pasa a CANCELADA).
+        Route::patch('/{cita}/cancelar', [CitaController::class, 'cancelar'])
+            ->where(['cita' => '[0-9]+'])->name('cancelar');
     });
 
     Route::prefix('mis-citas')->name('mis-citas.')->middleware('can:citas:gestionar_propias')->group(function () {
@@ -56,6 +59,9 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         Route::post('/', [CitaController::class, 'store'])->name('store');
         Route::get('/{cita}', [CitaController::class, 'comprobante'])
             ->where(['cita' => '[0-9]+'])->name('comprobante');
+        // CU-11: cancelar la cita (no se elimina: pasa a CANCELADA).
+        Route::patch('/{cita}/cancelar', [CitaController::class, 'cancelar'])
+            ->where(['cita' => '[0-9]+'])->name('cancelar');
     });
 
     // CU-03: gestionar usuarios y roles del personal (solo el Administrador, con usuarios:gestionar).

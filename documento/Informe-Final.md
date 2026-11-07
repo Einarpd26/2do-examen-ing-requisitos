@@ -95,7 +95,7 @@ El sistema es una aplicación web accesible desde un navegador (PHP, PostgreSQL,
 | Ciclo    | Requisitos                                                                                                                                        | Estado    |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios · RF14 Cuenta y perfil del paciente                      | En curso  |
-| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | En curso: CU-09 implementado |
+| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | En curso: CU-09 y CU-11 implementados |
 
 ---
 
@@ -474,7 +474,7 @@ flowchart LR
 
 ### 4.6 Especificación de casos de uso
 
-Se especifican los casos de uso del Ciclo #1 y el primero del Ciclo #2 (CU-09). Los demás del Ciclo #2 (CU-10 a CU-18) se agregan en la segunda presentación.
+Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09 y CU-11). Los demás del Ciclo #2 (CU-10, CU-12 a CU-18) se agregan en la segunda presentación.
 
 #### CU-01 Iniciar y cerrar sesión
 
@@ -718,7 +718,32 @@ Se especifican los casos de uso del Ciclo #1 y el primero del Ciclo #2 (CU-09). 
 - 6d. Datos inválidos (modalidad distinta de presencial o virtual, motivo de más de 500 caracteres, fecha u hora con formato incorrecto): se señalan los campos a corregir.
 - \*. Las citas canceladas no ocupan disponibilidad (RN09). La hora final nunca se toma del formulario (RN08).
 
-**Fuera del alcance:** reprogramar y cancelar la cita (CU-10 y CU-11).
+**Fuera del alcance:** reprogramar la cita (CU-10); cancelarla es el CU-11.
+
+#### CU-11 Cancelar cita
+
+|                   |                                                                                                                                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Actores**       | Recepcionista (cualquier cita) y Paciente (solo las suyas)                                                                                                                                            |
+| **Requisito**     | RF09                                                                                                                                                                                                  |
+| **Precondición**  | El actor inició sesión. La cita existe y está «Programada» o «Confirmada», y todavía no comenzó.                                                                                                      |
+| **Postcondición** | La cita pasa a «Cancelada» con su motivo, deja de ocupar horario y se conserva en el historial; la operación consta en la bitácora.                                                                   |
+
+**Flujo principal**
+
+1. El actor abre el comprobante de la cita (la Recepcionista en `/citas/{id}`, el Paciente en `/mis-citas/{id}`) y ve el bloque «Cancelar esta cita».
+2. Escribe el motivo de la cancelación y confirma.
+3. El sistema vuelve a leer la cita dentro de una transacción, comprueba el estado y la anticipación, cambia el estado a «Cancelada», guarda el motivo y registra `cita_cancelada` en la bitácora.
+4. El sistema muestra de nuevo el comprobante con el estado «Cancelada» y el motivo; el horario queda libre para otros pacientes (RN09).
+
+**Flujos alternos**
+
+- 2a. El motivo está vacío o supera los 500 caracteres: se señala el campo y no se cancela nada.
+- 3a. La cita ya estaba cancelada, o está atendida o con inasistencia: se rechaza con un mensaje; esas citas conservan su registro (RN10).
+- 3b. La cita ya comenzó o ya pasó: se rechaza, incluso para la Recepcionista.
+- 3c. El Paciente intenta cancelar con menos de 24 horas de anticipación: se rechaza y se le pide comunicarse con la clínica (RN15). La Recepcionista no tiene esta restricción.
+- 3d. El Paciente intenta cancelar la cita de otro paciente: el sistema responde «no encontrado» (RN12).
+- \*. La cita nunca se elimina: el historial se conserva (RN10).
 
 #### CU-19 Renovar contraseña temporal
 
@@ -1936,7 +1961,7 @@ La plantilla base `resources/views/layouts/base.blade.php` dibuja la barra de na
 
 ### 7.3 Implementación de la arquitectura de subsistemas
 
-Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y el CU-09 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
+Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y el CU-09 y el CU-11 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
 
 Todos los servicios de este ciclo usan `BitacoraService` (RNF13) y `ReglaDeNegocioException` (sección 7.2); no se repite en cada tabla.
 
@@ -2300,6 +2325,27 @@ Reglas aplicadas:
         }
 ```
 
+
+#### CU-11 Cancelar cita
+
+| Elemento                | Archivo                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| Controlador             | `app/Http/Controllers/CitaController.php` (método `cancelar`, compartido con CU-09)           |
+| Solicitud de validación | `app/Http/Requests/CancelarCitaRequest.php`                                                   |
+| Servicio                | `app/Services/CitaService.php` (método `cancelar`)                                            |
+| Vista                   | `resources/views/citas/comprobante.blade.php` (bloque «Cancelar esta cita»)                   |
+| Configuración           | `config/clinica.php` (`citas.horas_min_cancelacion_paciente` = 24)                            |
+| Pruebas                 | `tests/Feature/Citas/CancelarCitaTest.php`                                                    |
+
+Reglas aplicadas:
+
+- Dos rutas `PATCH` con el mismo controlador: `/citas/{cita}/cancelar` (`citas:gestionar`, Recepcionista) y `/mis-citas/{cita}/cancelar` (`citas:gestionar_propias`, Paciente) (RN12, RNF19). El Paciente que intenta cancelar la cita de otro recibe 404.
+- La cita no se elimina: pasa a `CANCELADA` y guarda `motivo_cancelacion` (RN10). Como las restricciones de exclusión de `citas` ignoran las canceladas, el horario queda libre de inmediato (RN09).
+- `CitaService::cancelar` bloquea la fila (`lockForUpdate`) dentro de una transacción y vuelve a leer el estado: solo se cancelan las citas `PROGRAMADA` o `CONFIRMADA` que todavía no comenzaron. Dos solicitudes simultáneas no cancelan dos veces ni dejan dos registros en la bitácora.
+- El Paciente debe cancelar con al menos 24 horas de anticipación, calculadas en hora de La Paz (RN15); la Recepcionista no tiene ese límite. El valor sale de `config/clinica.php`.
+- El motivo es obligatorio y de hasta 500 caracteres; el formulario solo envía `motivo_cancelacion`, de modo que no se puede cambiar el estado ni la fecha desde la solicitud.
+- La cancelación queda en la bitácora como `cita_cancelada`, con el código de la cita y el motivo.
+
 #### CU-19 Renovar contraseña temporal
 
 | Elemento                | Archivo                                                                                                                                                                                                  |
@@ -2371,7 +2417,7 @@ Al escanear el código QR se abre la página del repositorio. La estructura de c
 
 **Objetivo.** Comprobar que el sistema cumple los casos de uso y las reglas de negocio del Ciclo #1 (CU-01 a CU-08 y CU-19), que rechaza los datos y los accesos inválidos, y que la base de datos hace cumplir sus restricciones aunque la aplicación falle.
 
-**Alcance.** Ciclo #1: acceso y roles, usuarios, pacientes, médicos, especialidades, horarios y perfil del paciente. Las pruebas 3 a 8 del enunciado dependen de las citas (CU-09 en adelante) y se ejecutan en el Ciclo #2: las pruebas 3, 4 y 5 ya se ejecutaron con el CU-09 (sección 8.2.1).
+**Alcance.** Ciclo #1: acceso y roles, usuarios, pacientes, médicos, especialidades, horarios y perfil del paciente. Las pruebas 3 a 8 del enunciado dependen de las citas (CU-09 en adelante) y se ejecutan en el Ciclo #2: las pruebas 3, 4 y 5 ya se ejecutaron con el CU-09 y la prueba 6 con el CU-11 (sección 8.2.1).
 
 **Estrategia.** Cada caso de uso se prueba en tres frentes: automatizado, contra la base de datos real y de forma manual.
 
@@ -2402,7 +2448,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 | Ciclo | Pruebas                                                                                 | Estado                                                               |
 | ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | En curso: pruebas 3, 4 y 5 ejecutadas con CU-09; el resto, pendiente |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | En curso: pruebas 3, 4 y 5 ejecutadas con CU-09 y prueba 6 con CU-11; el resto, pendiente |
 
 ### 8.2 Casos de prueba
 
@@ -2417,7 +2463,7 @@ Los resultados obtenidos salen de la ejecución de la suite del 05/11/2026 (secc
 | 3   | Programar una cita en horario disponible             | La cita queda registrada                          | La Recepcionista elige paciente, especialidad, médico y fecha; el formulario lista solo los horarios libres y, al elegir uno, la cita queda guardada como «Programada», con la hora final calculada por el servidor a partir de la duración de la especialidad, la sucursal del bloque de atención y un registro `cita_creada` en la bitácora; luego se muestra el comprobante con el código `CM-`. El Paciente reserva igual, siempre para sí mismo. Pruebas `CitaTest::programa_una_cita_en_un_horario_disponible` y `CitaTest::el_paciente_reserva_para_si_mismo_aunque_envie_otro_paciente`. | Aprobada |
 | 4   | Programar otra cita superpuesta para el mismo médico | El sistema impide el conflicto                    | El sistema rechaza la segunda cita con un mensaje y no la guarda: la cantidad de citas sigue en una. Si dos solicitudes compiten por el mismo horario, la restricción de exclusión de la base de datos acepta una sola y la otra se informa como regla de negocio, sin error técnico; lo mismo ocurre con las citas superpuestas de un mismo paciente con médicos distintos (RN17). Pruebas `CitaTest::impide_otra_cita_superpuesta_para_el_mismo_medico`, `CitaTest::si_otra_solicitud_ocupa_al_medico_antes_de_guardar_la_base_lo_rechaza` y `CitaTest::rn17_un_paciente_no_puede_tener_dos_citas_superpuestas_con_medicos_distintos`. | Aprobada |
 | 5   | Intentar reservar fuera del horario médico           | El sistema rechaza la cita                        | El sistema rechaza las horas anteriores a la apertura, posteriores al cierre o que no caen en la cuadrícula del bloque, y los días en que el médico no atiende; no se guarda ninguna cita. La cuadrícula tampoco ofrece los horarios que terminarían después del bloque. Pruebas `CitaTest::rechaza_reservar_fuera_del_horario_del_medico` y `CitaTest::la_cuadricula_parte_de_cada_bloque_y_cada_horario_termina_dentro_de_su_bloque`.                                               | Aprobada |
-| 6   | Cancelar una cita                                    | Cambia a estado cancelado y conserva el historial | Depende de CU-11                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Ciclo #2 |
+| 6   | Cancelar una cita                                    | Cambia a estado cancelado y conserva el historial | La Recepcionista (o el Paciente, con al menos 24 horas de anticipación) cancela la cita indicando el motivo: la fila no se elimina, pasa a «Cancelada» con su motivo, el horario queda disponible otra vez y consta `cita_cancelada` en la bitácora. No se cancelan las citas atendidas, las inasistencias, las ya canceladas ni las que ya comenzaron. Pruebas `CancelarCitaTest::cancela_una_cita_y_conserva_el_historial`, `el_horario_cancelado_queda_disponible_otra_vez`, `no_cancela_una_cita_atendida_ni_una_inasistencia` y `el_paciente_no_cancela_con_menos_de_24_horas`. | Ciclo #2 |
 | 7   | Consultar el historial de un paciente                | Aparecen sus citas registradas                    | Depende de CU-14                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Ciclo #2 |
 | 8   | Buscar las citas de un médico por fecha              | Se muestran los resultados correctos              | Depende de CU-13                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Ciclo #2 |
 | 9   | Ingresar a una página interna sin iniciar sesión     | El acceso es denegado                             | El sistema redirige al formulario de inicio de sesión sin mostrar la página. Se comprueba en el inicio y en cada módulo de gestión (usuarios, pacientes, médicos, especialidades, horarios y perfil). Prueba `LoginTest::una_pagina_interna_sin_sesion_redirige_al_login` y `sin_sesion_se_redirige_al_login` de cada módulo.                                                                                                                                                         | Aprobada |
@@ -2473,14 +2519,14 @@ Los resultados obtenidos salen de la ejecución de la suite del 05/11/2026 (secc
 
 #### 8.3.1 Resultado de la suite automatizada
 
-Comando: `php artisan test`, ejecutado el 05/11/2026 en el repositorio del proyecto, con PHP 8.4.27 y PHPUnit 12.5.40.
+Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proyecto, con PHP 8.3.6 y PHPUnit 12.5.43.
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 330         |
-| Pruebas aprobadas  | 330         |
+| Pruebas ejecutadas | 350         |
+| Pruebas aprobadas  | 350         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 2549        |
+| Aserciones         | 2624        |
 | Duración           | 21 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
@@ -2808,7 +2854,7 @@ Lo construido responde a los objetivos específicos que tocan a este ciclo:
 - **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
 - **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada que usará el cálculo de disponibilidad del Ciclo #2.
 - **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el CU-09 son 330 (sección 8 y Anexo C).
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el CU-09 y el CU-11 son 350 (sección 8 y Anexo C).
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -2884,13 +2930,14 @@ Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogram
 | CU-07       | `GET /horarios`, `GET/POST /horarios/medico/{medico}`, `GET /horarios/{horario}/editar`, `PUT /horarios/{horario}`, `DELETE /horarios/{horario}`                                                                                                                                                         |
 | CU-08       | `GET/PUT /perfil`                                                                                                                                                                                                                                                                                        |
 | CU-09       | `GET /citas/nueva`, `POST /citas`, `GET /citas/{cita}` (Recepcionista, `citas:gestionar`); `GET /mis-citas/nueva`, `POST /mis-citas`, `GET /mis-citas/{cita}` (Paciente, `citas:gestionar_propias`)                                                                                                      |
+| CU-11       | `PATCH /citas/{cita}/cancelar` (Recepcionista, `citas:gestionar`); `PATCH /mis-citas/{cita}/cancelar` (Paciente, `citas:gestionar_propias`) |
 | Comunes     | `GET /inicio`, `GET /` (redirige a `/inicio`)                                                                                                                                                                                                                                                            |
 
-Son 54 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
+Son 56 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **330 pruebas, 330 aprobadas, 2549 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **350 pruebas, 350 aprobadas, 2624 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -2899,6 +2946,7 @@ Resultado de `php artisan test`: **330 pruebas, 330 aprobadas, 2549 aserciones**
 | `Feature\Horarios\HorarioTest`                     | 34      | CU-07                                         |
 | `Feature\Especialidades\EspecialidadTest`          | 33      | CU-06                                         |
 | `Feature\Citas\CitaTest`                           | 31      | CU-09                                         |
+| `Feature\Citas\CancelarCitaTest`                    | 20      | CU-11                                         |
 | `Feature\Acceso\LoginTest`                         | 26      | CU-01                                         |
 | `Feature\Pacientes\PacienteTest`                   | 20      | CU-04                                         |
 | `Feature\Pacientes\AccesoPacienteTest`             | 20      | CU-04 y CU-19                                 |
