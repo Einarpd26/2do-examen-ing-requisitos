@@ -23,6 +23,7 @@ return [
         ['etiqueta' => 'Reportes', 'permiso' => 'reportes:consultar', 'ruta' => 'reportes.index'],
         ['etiqueta' => 'Agenda', 'permiso' => 'agenda:consultar', 'ruta' => 'agenda.index'],
         ['etiqueta' => 'Mi historial', 'permiso' => 'historial:consultar', 'ruta' => 'historial.propio', 'rol' => 'PACIENTE'],
+        ['etiqueta' => 'Mis notas', 'permiso' => 'notas:consultar', 'ruta' => 'notas.propias', 'rol' => 'PACIENTE'],
         ['etiqueta' => 'Pacientes', 'permiso' => 'pacientes:gestionar', 'ruta' => 'pacientes.index'],
         ['etiqueta' => 'Mi perfil', 'permiso' => 'perfil:gestionar', 'ruta' => 'perfil.mostrar'],
     ],

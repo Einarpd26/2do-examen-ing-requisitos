@@ -99,6 +99,11 @@
                                                 </form>
                                             @endif
                                         @endcan
+                                        {{-- CU-16 y CU-17: nota clínica de una cita atendida y notas del paciente. --}}
+                                        @if ($cita->estado === 'ATENDIDA')
+                                            <a href="{{ route('notas.formulario', $cita) }}" class="btn btn-outline-primary btn-sm">Nota clínica</a>
+                                        @endif
+                                        <a href="{{ route('pacientes.notas', $cita->paciente_id) }}" class="btn btn-outline-secondary btn-sm">Notas del paciente</a>
                                     </td>
                                 @endif
                             </tr>

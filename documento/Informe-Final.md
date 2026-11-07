@@ -95,7 +95,7 @@ El sistema es una aplicación web accesible desde un navegador (PHP, PostgreSQL,
 | Ciclo    | Requisitos                                                                                                                                        | Estado    |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios · RF14 Cuenta y perfil del paciente                      | En curso  |
-| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | En curso: CU-09 a CU-15 implementados |
+| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | En curso: CU-09 a CU-17 implementados |
 
 ---
 
@@ -474,7 +474,7 @@ flowchart LR
 
 ### 4.6 Especificación de casos de uso
 
-Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09 a CU-15). Los demás del Ciclo #2 (CU-16 a CU-18) se agregan en la segunda presentación.
+Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09 a CU-17). Solo falta el CU-18 (recordatorio de citas), que se agrega en la segunda presentación.
 
 #### CU-01 Iniciar y cerrar sesión
 
@@ -866,6 +866,52 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 2b. El paciente está desactivado: la Recepcionista ve su historial completo con un aviso (RN10, RN11).
 - 4a. El estado de la URL no es uno de los cinco conocidos o llega como arreglo (`?estado[]=`): se ignora y se muestran todas las citas.
 - \*. Una cuenta de paciente nunca ve citas de otro paciente: su ruta no recibe el identificador (RN12). Una cuenta sin ficha de paciente recibe «no encontrado».
+
+#### CU-16 Registrar nota clínica
+
+|                   |                                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Actores**       | Médico                                                                                                                                              |
+| **Requisito**     | RF16                                                                                                                                                |
+| **Precondición**  | El Médico inició sesión y la cita es suya y está «Atendida».                                                                                        |
+| **Postcondición** | La cita tiene una nota clínica con quién y cuándo la modificó por última vez; la operación consta en la bitácora.                                   |
+
+**Flujo principal**
+
+1. En su agenda (CU-13), el Médico elige «Nota clínica» en una cita atendida.
+2. El sistema muestra el formulario, vacío o con la nota existente: motivo de consulta, diagnóstico, tratamiento o indicaciones, y observaciones.
+3. El Médico completa al menos un campo y guarda.
+4. El sistema vuelve a leer la cita dentro de una transacción, comprueba que sea del médico y esté atendida, guarda la nota (la crea o sobrescribe la anterior, sin conservar versiones) con el usuario que la modificó y registra `nota_registrada` o `nota_modificada` en la bitácora.
+5. El sistema vuelve a la agenda con un mensaje de confirmación.
+
+**Flujos alternos**
+
+- 1a. La cita está programada, confirmada, cancelada o con inasistencia: se rechaza, porque solo se anotan las consultas realizadas.
+- 1b. La cita es de otro médico: el sistema responde «no encontrado» (RN12). Cada médico edita solo sus notas.
+- 3a. Todos los campos están vacíos o alguno supera los 2000 caracteres: se señalan los campos y no se guarda nada.
+- \*. El autor, la cita y el médico nunca se toman del formulario. Solo el Médico registra notas: la Recepcionista, el Paciente y el Administrador reciben 403.
+
+#### CU-17 Consultar notas clínicas
+
+|                   |                                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Actores**       | Médico, Recepcionista y Paciente                                                                                               |
+| **Requisito**     | RF16                                                                                                                           |
+| **Precondición**  | El actor inició sesión.                                                                                                        |
+| **Postcondición** | El sistema muestra las notas clínicas del paciente en solo lectura, sin modificar ningún dato.                                 |
+
+**Flujo principal**
+
+1. La Recepcionista abre las notas desde la ficha del paciente, el Médico desde «Notas del paciente» en su agenda y el Paciente desde «Mis notas».
+2. El sistema lista las notas del paciente de la cita más reciente a la más antigua: fecha, especialidad, médico, los cuatro campos que tengan contenido y quién y cuándo las modificó por última vez.
+3. Solo el autor ve el botón «Editar» en sus propias notas.
+
+**Flujos alternos**
+
+- 2a. El paciente no tiene notas: el sistema lo indica con un aviso.
+- 2b. El Paciente tiene la ficha pendiente de verificación: no ve sus notas hasta que la Recepcionista la verifique (sección 4.1).
+- 1a. El Médico pide un paciente que no tiene ni tuvo una cita (no cancelada) con él: el sistema responde «no encontrado». Si lo tiene, ve todas sus notas, incluidas las de otros médicos.
+- 1b. El Paciente solo accede a las suyas: su ruta no recibe identificador. Una cuenta sin ficha de paciente recibe «no encontrado». El Administrador recibe 403 (RN12).
 
 #### CU-19 Renovar contraseña temporal
 
@@ -2083,7 +2129,7 @@ La plantilla base `resources/views/layouts/base.blade.php` dibuja la barra de na
 
 ### 7.3 Implementación de la arquitectura de subsistemas
 
-Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y los CU-09 a CU-15 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
+Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y los CU-09 a CU-17 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
 
 Todos los servicios de este ciclo usan `BitacoraService` (RNF13) y `ReglaDeNegocioException` (sección 7.2); no se repite en cada tabla.
 
@@ -2448,6 +2494,26 @@ Reglas aplicadas:
 ```
 
 
+#### CU-16 y CU-17 Notas clínicas
+
+| Elemento                | Archivo                                                                                                         |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Controlador             | `app/Http/Controllers/NotaClinicaController.php`                                                                |
+| Solicitud de validación | `app/Http/Requests/NotaClinicaRequest.php`                                                                      |
+| Servicio                | `app/Services/NotaClinicaService.php`                                                                           |
+| Modelo                  | `app/Models/NotaClinica.php`                                                                                    |
+| Vistas                  | `resources/views/notas/formulario.blade.php` y `resources/views/notas/index.blade.php`; enlaces en la agenda y en la ficha del paciente |
+| Pruebas                 | `tests/Feature/Notas/NotaClinicaTest.php`                                                                       |
+
+Reglas aplicadas:
+
+- Las rutas de escritura (`GET` y `PUT /agenda/{cita}/nota`) exigen `notas:registrar`, que solo concede el rol Médico. Las de lectura exigen `notas:consultar`: `/pacientes/{paciente}/notas` (además `pacientes:consultar`, para la Recepcionista y el Médico) y `/mis-notas` (el Paciente) (RN12, RNF19).
+- `NotaClinicaService::guardar` bloquea la cita (`lockForUpdate`) y comprueba que sea del médico de la sesión y esté atendida. Hay una sola nota por cita (`cita_id` es único): guardar de nuevo la sobrescribe, y `modificado_por` y `updated_at` indican quién y cuándo la modificó, sin versiones. La clave foránea `(cita_id, medico_id)` de la base impide que otro médico escriba la nota.
+- Al menos uno de los cuatro campos debe tener contenido y cada uno admite hasta 2000 caracteres. La cita, el médico y el autor no vienen del formulario.
+- El Médico solo ve las notas de pacientes que tienen o tuvieron una cita no cancelada con él (`NotaClinicaService::atiende`); allí ve también las de otros médicos, pero solo edita las suyas. La Recepcionista y el Paciente las ven en solo lectura.
+- El Paciente con la ficha pendiente de verificación no ve sus notas; la pantalla se lo explica (sección 4.1).
+- Las operaciones quedan en la bitácora como `nota_registrada` y `nota_modificada`.
+
 #### CU-15 Generar reportes
 
 | Elemento    | Archivo                                                              |
@@ -2666,7 +2732,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 | Ciclo | Pruebas                                                                                 | Estado                                                               |
 | ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | En curso: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, y los reportes con CU-15; el resto, pendiente |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | En curso: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15 y las notas clínicas con CU-16 y CU-17; falta el CU-18 |
 
 ### 8.2 Casos de prueba
 
@@ -2741,10 +2807,10 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 433         |
-| Pruebas aprobadas  | 433         |
+| Pruebas ejecutadas | 453         |
+| Pruebas aprobadas  | 453         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 2932        |
+| Aserciones         | 3021        |
 | Duración           | 21 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
@@ -3072,7 +3138,7 @@ Lo construido responde a los objetivos específicos que tocan a este ciclo:
 - **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
 - **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada que usará el cálculo de disponibilidad del Ciclo #2.
 - **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con los CU-09 a CU-15 son 433 (sección 8 y Anexo C).
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con los CU-09 a CU-17 son 453 (sección 8 y Anexo C).
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -3154,13 +3220,15 @@ Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogram
 | CU-13       | `GET /agenda` (Recepcionista y Médico, `agenda:consultar`) |
 | CU-14       | `GET /pacientes/{paciente}/historial` (Recepcionista, `historial:consultar` y `pacientes:consultar`); `GET /mi-historial` (Paciente, `historial:consultar`) |
 | CU-15       | `GET /reportes` (Administrador, `reportes:consultar`) |
+| CU-16       | `GET /agenda/{cita}/nota`, `PUT /agenda/{cita}/nota` (Médico, `notas:registrar`) |
+| CU-17       | `GET /pacientes/{paciente}/notas` (Recepcionista y Médico, `notas:consultar` y `pacientes:consultar`); `GET /mis-notas` (Paciente, `notas:consultar`) |
 | Comunes     | `GET /inicio`, `GET /` (redirige a `/inicio`)                                                                                                                                                                                                                                                            |
 
-Son 67 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
+Son 71 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **433 pruebas, 433 aprobadas, 2932 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **453 pruebas, 453 aprobadas, 3021 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -3175,6 +3243,7 @@ Resultado de `php artisan test`: **433 pruebas, 433 aprobadas, 2932 aserciones**
 | `Feature\Citas\AsistenciaTest`                       | 18      | CU-12                                         |
 | `Feature\Citas\ReprogramarCitaTest`                  | 22      | CU-10                                         |
 | `Feature\Reportes\ReporteTest`                       | 16      | CU-15                                         |
+| `Feature\Notas\NotaClinicaTest`                      | 20      | CU-16 y CU-17                                 |
 | `Feature\Acceso\LoginTest`                         | 26      | CU-01                                         |
 | `Feature\Pacientes\PacienteTest`                   | 20      | CU-04                                         |
 | `Feature\Pacientes\AccesoPacienteTest`             | 20      | CU-04 y CU-19                                 |

@@ -11,6 +11,7 @@ use App\Http\Controllers\HistorialController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MedicoController;
+use App\Http\Controllers\NotaClinicaController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\PerfilController;
 use App\Http\Controllers\RegistroController;
@@ -148,6 +149,20 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
     // CU-15: reportes administrativos (reportes:consultar, solo el Administrador).
     Route::get('/reportes', [ReporteController::class, 'index'])
         ->middleware('can:reportes:consultar')->name('reportes.index');
+
+    // CU-16: el Médico escribe y edita la nota clínica de sus citas atendidas (notas:registrar).
+    Route::prefix('agenda/{cita}/nota')->where(['cita' => '[0-9]+'])->middleware('can:notas:registrar')->group(function () {
+        Route::get('/', [NotaClinicaController::class, 'formulario'])->name('notas.formulario');
+        Route::put('/', [NotaClinicaController::class, 'guardar'])->name('notas.guardar');
+    });
+
+    // CU-17: consultar notas clínicas (notas:consultar). La Recepcionista y el Médico ven las de un
+    // paciente (además exigen pacientes:consultar); el Paciente ve las suyas en /mis-notas.
+    Route::get('/pacientes/{paciente}/notas', [NotaClinicaController::class, 'paciente'])
+        ->where(['paciente' => '[0-9]+'])->middleware(['can:notas:consultar', 'can:pacientes:consultar'])
+        ->name('pacientes.notas');
+    Route::get('/mis-notas', [NotaClinicaController::class, 'propias'])
+        ->middleware('can:notas:consultar')->name('notas.propias');
 
     // CU-13: agenda médica (agenda:consultar). La Recepcionista elige al médico; el Médico ve la suya.
     Route::get('/agenda', [AgendaController::class, 'index'])
