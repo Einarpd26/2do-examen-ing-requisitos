@@ -416,11 +416,27 @@ class MedicoTest extends TestCase
             ->assertDontSee('Cardiología');
     }
 
-    public function test_si_no_hay_especialidades_activas_el_formulario_avisa(): void
+    public function test_si_no_hay_especialidades_activas_se_avisa_y_no_se_muestra_el_formulario(): void
     {
         $this->actingAs($this->administrador())
             ->get(route('medicos.create'))
-            ->assertSee('No hay especialidades activas');
+            ->assertOk()
+            ->assertSee('No hay especialidades activas')
+            ->assertSee(route('especialidades.create'))
+            ->assertDontSee('Número de registro profesional')
+            ->assertDontSee('name="ci"', false);
+    }
+
+    public function test_con_una_especialidad_activa_se_muestra_el_formulario(): void
+    {
+        $this->especialidad('Pediatría');
+
+        $this->actingAs($this->administrador())
+            ->get(route('medicos.create'))
+            ->assertOk()
+            ->assertDontSee('No hay especialidades activas')
+            ->assertSee('Número de registro profesional')
+            ->assertSee('name="ci"', false);
     }
 
     public function test_una_solicitud_simultanea_con_el_mismo_registro_se_informa_como_regla_de_negocio(): void
