@@ -2573,9 +2573,9 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 
 | Pantalla                             | Rol                          | Caso de uso  | Contenido principal                                                                                                                                 |
 | ------------------------------------ | ---------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Inicio de sesión                     | Público                      | CU-01        | CI o correo, contraseña, celular de la clínica para pedir una contraseña nueva                                                                      |
+| Inicio de sesión                     | Público                      | CU-01        | CI o correo, contraseña con botón para mostrarla u ocultarla, celular de la clínica para pedir una contraseña nueva                                 |
 | Registro de paciente                 | Público                      | CU-02        | Primer nombre, apellido paterno, CI, celular, contraseña; segundo nombre, apellido materno y correo opcionales                                      |
-| Cambio de contraseña                 | Todos                        | CU-01, CU-08 | Obligatoria en el primer ingreso con una contraseña temporal                                                                                        |
+| Cambio de contraseña                 | Todos                        | CU-01, CU-08 | Obligatoria en el primer ingreso con una contraseña temporal; los tres campos (actual, nueva y confirmación) tienen botón para mostrar u ocultar     |
 | Mi perfil                            | Paciente                     | CU-08        | Datos personales; información médica y contacto de emergencia en solo lectura si la ficha está verificada; edición de teléfono y contraseña         |
 | Lista de pacientes                   | Recepcionista                | CU-04        | Búsqueda por CI, nombre o apellido; estado de verificación                                                                                          |
 | Formulario de paciente               | Recepcionista                | CU-04        | Datos personales, información médica, contacto de emergencia; acciones: crear o renovar acceso, verificar ficha, desactivar                         |
@@ -2587,6 +2587,18 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 | Lista y formulario de consultorios   | Administrador                | CU-20        | Pestañas Activos, Inactivos y Todos con su contador; nombre, cantidad de bloques que lo usan, estado |
 
 **Criterio para los listados con baja lógica** (aplicado en especialidades, médicos, usuarios y consultorios). Los registros que se desactivan en lugar de eliminarse se listan en pestañas **Activas / Inactivas / Todas**, con la cantidad de cada una y las activas por defecto. El contador evita que lo dado de baja desaparezca sin aviso. Cada fila ofrece solo la acción que corresponde a su estado (Desactivar o Reactivar), y el cambio vuelve a la pestaña desde la que se hizo.
+
+**Criterio para los formularios que dependen de datos previos.** Si falta un dato sin el cual el formulario no puede completarse, la pantalla lo avisa desde el principio y no muestra el formulario, en lugar de dejar que el usuario lo llene y reciba el error al guardar. El aviso dice qué falta y, si el rol puede resolverlo, ofrece el enlace para hacerlo.
+
+| Pantalla           | Falta                                    | Qué se muestra                                                                                                                   |
+| ------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Registrar médico   | Especialidades activas                   | Aviso y botón «Registrar especialidad»; no se muestra el formulario                                                              |
+| Registrar cita     | Especialidades activas                   | Aviso sin formulario: a la Recepcionista le pide acudir al Administrador; al Paciente le da el celular de la clínica             |
+| Registrar cita     | Pacientes activos (solo la Recepcionista) | Aviso con el enlace «Registrar paciente» en lugar del buscador                                                                   |
+| Registrar cita     | Horarios del médico elegido              | Aviso para pedir los horarios al Administrador o elegir otro médico; no se ofrecen fechas                                        |
+| Registrar usuario  | Médicos activos sin cuenta               | La opción de rol «Médico» aparece deshabilitada como «Médico (no hay médicos sin cuenta)»                                        |
+
+**Contraseñas visibles a pedido.** Los campos de contraseña del inicio de sesión y del cambio de contraseña tienen un botón con un ojo que muestra u oculta lo escrito, para revisar la contraseña antes de enviarla. Es el componente `resources/views/components/boton-ojo.blade.php` con `public/js/mostrar-contrasena.js`; sin JavaScript el campo sigue oculto y el formulario funciona igual.
 
 **Menú por rol**
 
@@ -3118,6 +3130,7 @@ Reglas aplicadas:
 
 - El grupo `/medicos` exige `medicos:gestionar` (RN12, RNF19).
 - Un CI no puede tener dos fichas de médico (RN02). El número de registro profesional se guarda en mayúsculas y sin espacios de más, y es único: lo comprueba el Form Request y lo garantiza la columna `UNIQUE` de la base de datos (flujo 3a). El correo se valida sin distinguir mayúsculas.
+- Sin especialidades activas, «Registrar médico» muestra un aviso con el enlace para registrar una y no muestra el formulario (sección 6.4).
 - Hay que elegir al menos una especialidad, y solo activas; si el médico ya tenía una que luego se desactivó, puede conservarla (flujo 3c).
 - No se puede quitar una especialidad con la que el médico ya tiene citas; el servicio lo comprueba antes de guardar, nombra la especialidad en el mensaje y no aplica ningún cambio (flujo 3d). La clave foránea de la base de datos es la segunda defensa.
 - El médico nunca se elimina: se desactiva (RN04, RN11). Al desactivarlo, su cuenta de médico también se desactiva; al reactivarlo la cuenta no se reactiva sola, sino que lo decide el Administrador en CU-03.
@@ -3286,6 +3299,7 @@ Reglas aplicadas:
 - Dos grupos de rutas con el mismo controlador: `/citas` exige `citas:gestionar` (Recepcionista) y `/mis-citas` exige `citas:gestionar_propias` (Paciente) (RN12, RNF19). Cada rol solo entra al suyo; las pruebas lo comprueban con los cuatro roles.
 - El Paciente siempre agenda para el paciente de su sesión: el campo `paciente_id` solo se pide y se lee en `/citas`; en `/mis-citas` se ignora. Una cuenta de paciente sin ficha recibe 404. El comprobante lo ve la Recepcionista (cualquiera) o el Paciente dueño de la cita; para otro paciente responde 404.
 - Un Paciente con la ficha pendiente de verificación puede reservar (sección 1.4.1).
+- Si no hay especialidades activas, pacientes activos (en `/citas`) o horarios del médico elegido, la pantalla lo avisa antes de pedir los datos siguientes (sección 6.4).
 - El formulario avanza por pasos con parámetros GET (paciente, especialidad, médico y fecha) y funciona sin JavaScript; `public/js/citas.js` solo envía el paso al elegir una opción.
 - `CitaService` calcula la cuadrícula de horarios (flujo 4) y, al guardar, vuelve a comprobar dentro de una transacción la fecha (no pasada y hasta el límite de `config/clinica.php`, en hora de La Paz), que las partes estén activas, que el médico ejerza la especialidad, que no sea el propio paciente (RN16) y que el horario esté libre (RN03 a RN07, RN09, RN13, RN17).
 - La hora final se calcula en el servidor con la duración de la especialidad y la sucursal sale del bloque de atención; ninguna de las dos viene del formulario (RN08).
