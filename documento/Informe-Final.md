@@ -3259,6 +3259,8 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 
 **Ejecutadas hasta ahora (24/10/2026):** PM-02, PM-44, PM-56, PM-57 y PM-76, que corresponden a las pruebas 1, 2, 9 y 10 del enunciado. Se ejecutaron en el navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y se comprobó en la base de datos que los rechazos no dejaron registros. Las demás figuran como «Pendiente de ejecución».
 
+**Ejecutadas en el Ciclo #2 (06/11/2026, 23:51 hora de La Paz):** PM-88 a PM-103, el recorrido de CU-09 a CU-18 con una persona de cada rol. Se ejecutaron en un navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y con los datos de demostración. Se prepararon tres cosas directamente en la base de datos, porque dependen del reloj: un bloque de atención del sábado (para reservar una cita para «mañana» y ver el recordatorio), y una cita de hoy a las 22:00 que ya había comenzado (para poder marcarla como atendida y escribir su nota). Las capturas están en la sección 8.3.5 (figuras 21 a 36).
+
 **Cuentas para probar**
 
 | Rol                         | Usuario                       | Contraseña  | Observación                                          |
@@ -3438,6 +3440,25 @@ Usuarios de prueba: los mismos de CU-01.
 | PM-86 | Provocar un error de validación en cualquier formulario.              | Los datos escritos se conservan y el mensaje está en español.          |                    | Pendiente de ejecución |
 | PM-87 | Mirar una hora guardada, como un horario o un ingreso en la bitácora. | Está en hora de La Paz.                                                |                    | Pendiente de ejecución |
 
+| N.º | CU | Rol | Prueba | Resultado esperado | Resultado obtenido (06/11/2026) | Estado |
+| --- | -- | --- | ------ | ------------------ | ------------------------------- | ------ |
+| PM-88 | CU-09 | Recepcionista | Registrar una cita para el lunes 09/11 con la especialidad y el médico de demostración. | La pantalla ofrece solo los horarios libres, y al elegir uno la cita queda registrada. | Ofreció 12 horarios de 20 minutos, de 08:00 a 11:40. Al elegir 08:00 mostró «Cita registrada con el código CM-000002» y el comprobante con estado Programada (figuras 21 y 22). | Aprobada |
+| PM-89 | CU-12 | Recepcionista | Confirmar la asistencia de la cita desde el comprobante. | La cita pasa a Confirmada. | Mostró «La cita CM-000002 quedó en estado confirmada». | Aprobada |
+| PM-90 | CU-10 | Recepcionista | Reprogramar la cita al miércoles 11/11 y elegir otro horario. | La cita cambia de fecha y hora y vuelve a Programada. | Mostró «La cita CM-000002 fue reprogramada»: 11/11/2026, 14:40 – 15:00, con el mismo paciente y médico (figuras 23 y 24). | Aprobada |
+| PM-91 | CU-11 | Recepcionista | Registrar otra cita (lunes 09:00) y cancelarla con un motivo. | La cita queda Cancelada, con su motivo, y se conserva. | Mostró «La cita CM-000003 fue cancelada», con el estado Cancelada y el motivo «El paciente viaja esa semana» (figura 25). | Aprobada |
+| PM-92 | CU-13 | Recepcionista | Abrir la agenda del médico el 11/11. | Aparece solo la cita de ese día. | Mostró una fila: 14:40–15:00, CM-000002, paciente, especialidad y estado Programada (figura 26). | Aprobada |
+| PM-93 | CU-14 | Recepcionista | Abrir el historial del paciente. | Aparecen todas sus citas, también la cancelada. | Mostró las tres citas (CM-000002, CM-000003 cancelada con su motivo y CM-000001) con su fecha de registro (figura 27). | Aprobada |
+| PM-94 | CU-09 | Paciente | Reservar una cita para el sábado 07/11 desde «Reservar cita». | La cita queda registrada para sí mismo, sin elegir paciente. | Ofreció 12 horarios y registró la cita CM-000004. | Aprobada |
+| PM-95 | CU-11 | Paciente | Cancelar esa cita, que empieza en menos de 24 horas. | Se rechaza por la regla de 24 horas. | Mostró «Solo puede cancelar su cita con al menos 24 horas de anticipación. Comuníquese con la clínica» y la cita siguió Programada (figura 28). | Aprobada |
+| PM-96 | CU-18 | Paciente | Abrir el inicio después de iniciar sesión. | Aparece el banner con la cita de mañana, sin el motivo. | Mostró «Sus próximas citas: Mañana a las 08:00 con Andrea Vaca Salvatierra» y el enlace «Ver cita» (figura 29). | Aprobada |
+| PM-97 | CU-14 | Paciente | Abrir «Mi historial». | Solo ve sus propias citas. | Mostró sus citas con estado y fecha de registro (figura 30). | Aprobada |
+| PM-98 | CU-12 | Médico | Abrir su agenda del 06/11 y marcar atendida la cita de las 22:00, que ya comenzó. | La cita pasa a Atendida. | Mostró «La cita CM-000001 quedó en estado atendida» y la fila con los botones «Nota clínica» y «Notas del paciente» (figura 31). | Aprobada |
+| PM-99 | CU-16 | Médico | Escribir y guardar la nota clínica de esa cita. | La nota queda guardada. | Mostró «Se guardó la nota clínica de la cita CM-000001» (figura 32). | Aprobada |
+| PM-100 | CU-17 | Médico | Abrir las notas del paciente. | Aparece la nota, con el botón «Editar» y quién y cuándo la modificó. | Mostró motivo de consulta, diagnóstico y tratamiento, el botón «Editar» y «Última modificación: Andrea Vaca Salvatierra» (figura 33). | Aprobada |
+| PM-101 | CU-17 | Paciente | Abrir «Mis notas». | Ve la nota de su cita atendida, en solo lectura. | Mostró la misma nota, sin botón «Editar» (figura 34). | Aprobada |
+| PM-102 | CU-15 | Administrador | Generar el reporte de citas de noviembre. | Muestra el total, los totales por estado, por médico y por especialidad, y el detalle. | Mostró «Total de citas: 4» (Programada 2, Atendida 1, Cancelada 1), 4 citas del médico, 4 de la especialidad y las cuatro filas del detalle (figura 35). | Aprobada |
+| PM-103 | CU-15 | Administrador | Abrir la pestaña «Pacientes registrados» de octubre y noviembre. | Muestra los pacientes registrados con sus totales. | Mostró «Registrados: 2, Verificados: 1, Activos: 2» (figura 36). | Aprobada |
+
 Total: 87 pruebas manuales.
 
 #### 8.3.5 Capturas de pantalla
@@ -3526,6 +3547,72 @@ Capturas del sistema en funcionamiento, tomadas el 24/10/2026 con las sesiones d
 
 **Adaptación a pantallas angostas.** Se midió el ancho de las pantallas con 390 px de ancho y ninguna desborda horizontalmente. Con la sesión del Administrador: inicio, usuarios (lista, alta y edición), médicos (lista, alta y edición), especialidades (lista y alta), horarios (índice y semana de un médico) y cambio de contraseña. Con la sesión del Paciente: inicio, perfil y cambio de contraseña. El login y el registro, que son públicos, tampoco desbordan. En la medición se encontraron y corrigieron dos defectos: el texto oculto de las cabeceras de las tablas ensanchaba la página en las listas de usuarios, médicos y especialidades, y el título de cada pantalla quedaba pegado a su botón de acción. Las pantallas de la Recepcionista no se midieron en este ancho.
 
+Las figuras 21 a 36 son del Ciclo #2. Se tomaron el 06/11/2026 sobre el servidor de desarrollo, con las sesiones de la Recepcionista, el Paciente, el Médico y el Administrador, y los datos de demostración.
+
+**Figura 21.** Registrar una cita: horarios disponibles del médico el lunes 09/11 para la Recepcionista (CU-09).
+
+![Registrar una cita: horarios disponibles del médico el lunes 09/11 para la Recepcionista](img/capturas/21-cita-nueva-horarios.jpg)
+
+**Figura 22.** Comprobante de la cita registrada, con el código, el horario y la sucursal (CU-09).
+
+![Comprobante de la cita registrada, con el código, el horario y la sucursal](img/capturas/22-cita-comprobante.jpg)
+
+**Figura 23.** Reprogramar la cita: la cita actual y los horarios libres de la nueva fecha (CU-10).
+
+![Reprogramar la cita: la cita actual y los horarios libres de la nueva fecha](img/capturas/23-cita-reprogramar.jpg)
+
+**Figura 24.** Comprobante de la cita reprogramada para el 11/11/2026 (CU-10).
+
+![Comprobante de la cita reprogramada para el 11/11/2026](img/capturas/24-cita-reprogramada.jpg)
+
+**Figura 25.** Cita cancelada con su motivo, que se conserva en el historial (CU-11).
+
+![Cita cancelada con su motivo, que se conserva en el historial](img/capturas/25-cita-cancelada.jpg)
+
+**Figura 26.** Agenda del médico del 11/11 vista por la Recepcionista, con el selector de médico, fecha y estado (CU-13).
+
+![Agenda del médico del 11/11 vista por la Recepcionista, con el selector de médico, fecha y estado](img/capturas/26-agenda-recepcion.jpg)
+
+**Figura 27.** Historial de citas del paciente, con la cita cancelada y su fecha de registro (CU-14).
+
+![Historial de citas del paciente, con la cita cancelada y su fecha de registro](img/capturas/27-historial-paciente.jpg)
+
+**Figura 28.** El Paciente intenta cancelar una cita que empieza en menos de 24 horas y el sistema lo rechaza (CU-11, RN15).
+
+![El Paciente intenta cancelar una cita que empieza en menos de 24 horas y el sistema lo rechaza](img/capturas/28-paciente-cancelar-24h.jpg)
+
+**Figura 29.** Inicio del Paciente con el recordatorio de su cita de mañana, sin el motivo (CU-18).
+
+![Inicio del Paciente con el recordatorio de su cita de mañana, sin el motivo](img/capturas/29-recordatorio-paciente.jpg)
+
+**Figura 30.** «Mi historial» del Paciente, solo con sus citas (CU-14).
+
+![«Mi historial» del Paciente, solo con sus citas](img/capturas/30-mi-historial.jpg)
+
+**Figura 31.** Agenda del Médico con los botones «Marcar atendida», «Nota clínica» y «Notas del paciente» (CU-12, CU-13).
+
+![Agenda del Médico con los botones «Marcar atendida», «Nota clínica» y «Notas del paciente»](img/capturas/31-agenda-medico.jpg)
+
+**Figura 32.** Formulario de la nota clínica de una cita atendida (CU-16).
+
+![Formulario de la nota clínica de una cita atendida](img/capturas/32-nota-formulario.jpg)
+
+**Figura 33.** Notas clínicas del paciente vistas por el Médico, con «Editar» en la suya y quién la modificó (CU-17).
+
+![Notas clínicas del paciente vistas por el Médico, con «Editar» en la suya y quién la modificó](img/capturas/33-notas-paciente-medico.jpg)
+
+**Figura 34.** «Mis notas clínicas» del Paciente, en solo lectura (CU-17).
+
+![«Mis notas clínicas» del Paciente, en solo lectura](img/capturas/34-mis-notas.jpg)
+
+**Figura 35.** Reporte de citas de noviembre, con los totales por estado, médico y especialidad y el detalle (CU-15).
+
+![Reporte de citas de noviembre, con los totales por estado, médico y especialidad y el detalle](img/capturas/35-reportes-citas.jpg)
+
+**Figura 36.** Reporte de pacientes registrados, con sus totales (CU-15).
+
+![Reporte de pacientes registrados, con sus totales](img/capturas/36-reportes-pacientes.jpg)
+
 ---
 
 ## Conclusión
@@ -3551,7 +3638,7 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 
 - **Persona compartida entre fichas.** Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico). Sus datos personales viven en una única fila de `personas`, de modo que al editar la ficha del paciente (CU-04) la Recepcionista también modifica el correo con el que el médico entra al sistema. CU-03 y CU-05 evitan este efecto porque reutilizan la persona sin modificar sus datos. Se acepta por ser un caso poco frecuente; evitarlo exigiría bloquear los datos personales en CU-04 cuando la persona tiene una cuenta con otro rol.
 - **Citas atendidas o canceladas.** No existe un procedimiento autorizado para corregir una cita atendida o reabrir una cancelada: el sistema las rechaza (RF08, RF10, RN10). El enunciado deja esa política a cargo del sistema y aquí se eligió la más estricta.
-- **Pruebas manuales del Ciclo #2.** La lista de verificación manual y las capturas de pantalla de las pantallas del Ciclo #2 se completan en la sección 8.3; la evidencia automatizada de los CU-09 a CU-18 está completa (CP-42 a CP-85).
+- **Pruebas manuales del Ciclo #2.** Se ejecutó un recorrido por rol de CU-09 a CU-18 (PM-88 a PM-103), pero no se repitió en un teléfono ni se midieron las pantallas nuevas en un ancho de 390 px, como se hizo con el Ciclo #1.
 - **Nombres de especialidad con tildes.** La unicidad ignora mayúsculas y espacios, pero no las tildes: «Odontologia» y «Odontología» se aceptan como dos especialidades distintas. Resolverlo requiere la extensión `unaccent` de PostgreSQL.
 
 ## Recomendación
