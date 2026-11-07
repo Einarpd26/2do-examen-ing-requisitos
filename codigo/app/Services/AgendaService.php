@@ -8,8 +8,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 /**
- * CU-13: agenda de un médico para una fecha (RF11). Lista las citas del día en orden de hora,
- * incluidas las canceladas, y permite filtrar por estado.
+ * CU-13: agenda de un médico, o de todos los médicos, para una fecha (RF11). Lista las citas del día
+ * en orden de hora, incluidas las canceladas, y permite filtrar por estado.
  */
 class AgendaService
 {
@@ -26,13 +26,14 @@ class AgendaService
     }
 
     /** @return Collection<int, Cita> */
-    public function del(Medico $medico, CarbonImmutable $fecha, ?string $estado = null): Collection
+    public function del(?Medico $medico, CarbonImmutable $fecha, ?string $estado = null): Collection
     {
         return Cita::query()
-            ->where('medico_id', $medico->id)
+            // Sin médico (solo la Recepcionista), se listan las citas de todos los médicos ese día.
+            ->when($medico !== null, fn ($consulta) => $consulta->where('medico_id', $medico->id))
             ->whereDate('fecha', $fecha->toDateString())
             ->when($estado !== null, fn ($consulta) => $consulta->where('estado', $estado))
-            ->with('paciente.persona', 'especialidad')
+            ->with('paciente.persona', 'especialidad', 'medico.persona')
             ->orderBy('hora_inicio')
             ->orderBy('id')
             ->get();

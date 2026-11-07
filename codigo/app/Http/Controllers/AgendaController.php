@@ -11,8 +11,9 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * CU-13: agenda médica (RF11). Exige agenda:consultar. La Recepcionista elige al médico, la fecha
- * y el estado; el Médico ve siempre su propia agenda y nunca la de otro (RN12).
+ * CU-13: agenda médica (RF11). Exige agenda:consultar. La Recepcionista elige la fecha y el estado
+ * y, si quiere, un médico (sin médico ve las citas de todos); el Médico ve siempre su propia agenda
+ * y nunca la de otro (RN12).
  */
 class AgendaController extends Controller
 {
@@ -41,7 +42,8 @@ class AgendaController extends Controller
         $estado = $request->query('estado');
         $estado = is_string($estado) && array_key_exists($estado, $estados) ? $estado : null;
 
-        $citas = $medico === null ? collect() : $agenda->del($medico, $fecha, $estado);
+        // La Recepcionista puede no elegir médico: ve las citas de todos para esa fecha (enunciado 3.2).
+        $citas = $agenda->del($medico, $fecha, $estado);
 
         return view('agenda.index', [
             'acciones' => $citas->mapWithKeys(fn ($cita) => [$cita->id => $asistencia->posibles($cita)])->all(),

@@ -810,13 +810,13 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 
 **Flujo principal**
 
-1. La Recepcionista abre «Agenda», elige al médico, la fecha (hoy por defecto) y, si quiere, un estado. El Médico abre «Agenda» y ve la suya.
+1. La Recepcionista abre «Agenda», elige la fecha (hoy por defecto) y, si quiere, un médico y un estado. El Médico abre «Agenda» y ve la suya.
 2. El sistema lista las citas de ese médico en esa fecha, en orden de hora, con la hora, el código, el paciente, la especialidad, el estado y el motivo breve.
 3. En su propia agenda, el Médico abre la «Ficha del paciente» de una cita no cancelada. El sistema muestra, en solo lectura, los datos básicos (CI, fecha de nacimiento con la edad, sexo y teléfono), la información médica, el contacto de emergencia y las citas del paciente con ese médico, con un enlace a sus notas clínicas (CU-17).
 
 **Flujos alternos**
 
-- 1a. La Recepcionista no eligió médico: el sistema le pide elegir uno.
+- 1a. La Recepcionista no eligió médico: el sistema muestra las citas de todos los médicos en esa fecha, con una columna que indica el médico de cada una (así consulta las citas por fecha y estado, como pide el enunciado en 3.2).
 - 2a. No hay citas en esa fecha (o con ese estado): el sistema lo indica con un aviso.
 - 2b. Las citas canceladas aparecen con su estado, para conservar la trazabilidad (RN10).
 - 2c. La fecha no tiene el formato AAAA-MM-DD o no existe: se muestra la agenda de hoy con un aviso. Un estado desconocido o un parámetro manipulado se ignora.
@@ -1613,16 +1613,16 @@ sequenceDiagram
     participant S as AgendaService
     participant D as Base de datos
 
-    U->>V: elige médico (solo Recepcionista), fecha y estado
+    U->>V: elige fecha, estado y, si quiere, médico (solo Recepcionista)
     V->>C: GET /agenda (parámetros)
     alt la cuenta es de Médico
         C->>C: usar el médico de la sesión e ignorar el parámetro medico
     else
-        C->>C: tomar el médico pedido, o pedir elegir uno
+        C->>C: tomar el médico pedido, o ninguno para ver las citas de todos
     end
     C->>S: fechaValida(fecha), si no es válida usar hoy con un aviso
-    C->>S: del(médico, fecha, estado)
-    S->>D: citas del médico ese día, por hora, con paciente y especialidad
+    C->>S: del(médico o todos, fecha, estado)
+    S->>D: citas de ese día, por hora, con paciente, especialidad y médico
     S-->>C: citas (incluye canceladas)
     C-->>U: tabla con hora, código, paciente, especialidad, estado y motivo
     opt el Médico abre la «Ficha del paciente» de una cita no cancelada
@@ -2976,7 +2976,7 @@ Reglas aplicadas:
 Reglas aplicadas:
 
 - Una sola ruta `GET /agenda` con el permiso `agenda:consultar`, que conceden los roles Recepcionista y Médico (RN12, RNF19). El Paciente y el Administrador reciben 403.
-- La Recepcionista elige al médico con el parámetro `medico`. Para el rol Médico ese parámetro se ignora: la agenda siempre es la del médico de la sesión, y una cuenta de médico sin ficha recibe 404.
+- La Recepcionista puede elegir al médico con el parámetro `medico`; si no lo elige, `AgendaService::del` lista las citas de todos los médicos de esa fecha y la vista agrega la columna «Médico» (enunciado 3.2: consultar citas por fecha y estado). Para el rol Médico ese parámetro se ignora: la agenda siempre es la del médico de la sesión, y una cuenta de médico sin ficha recibe 404.
 - `AgendaService` devuelve las citas del médico en la fecha, ordenadas por hora, con el filtro opcional de estado. Incluye las canceladas (RN10). Los médicos desactivados conservan su agenda (RN11).
 - La fecha se valida con el formato AAAA-MM-DD; si no es válida se usa la de hoy (hora de La Paz) con un aviso. El estado solo acepta los cinco conocidos y los parámetros que llegan como arreglo se ignoran.
 - El motivo breve se muestra porque ambos roles que pueden abrir la agenda tienen el permiso `agenda:consultar`.
@@ -3105,7 +3105,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 | Ciclo | Pruebas                                                                                 | Estado                                                               |
 | ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18 (CP-42 a CP-90)                | Ejecutadas (secciones 8.2 y 8.3). Detalle: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18 (CP-42 a CP-91)                | Ejecutadas (secciones 8.2 y 8.3). Detalle: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
 
 ### 8.2 Casos de prueba
 
@@ -3196,7 +3196,7 @@ Los resultados obtenidos salen de la ejecución de la suite del 05/11/2026 (secc
 | CP-64 | CU-12 | El Paciente confirma su asistencia | Solo la propia cita; no puede marcar atendida ni inasistencia | `AsistenciaTest::el_paciente_confirma_su_propia_cita`, `el_paciente_no_confirma_la_cita_de_otro`, `el_paciente_no_puede_marcar_atendida_ni_inasistencia` | Aprobada |
 | CP-65 | CU-12 | Permisos, acción inventada y botones de la pantalla | Cada rol usa solo sus rutas; una acción desconocida se rechaza; las pantallas muestran solo las acciones que corresponden | `AsistenciaTest::cada_rol_solo_usa_sus_rutas`, `una_accion_inventada_se_rechaza`, `el_comprobante_ofrece_solo_las_acciones_que_corresponden` | Aprobada |
 | CP-66 | CU-13 | Consultar la agenda de un médico por fecha | Aparecen solo sus citas de ese día, por hora, con código, paciente, especialidad, estado y motivo; las canceladas figuran con su estado | `AgendaTest::muestra_las_citas_del_medico_en_la_fecha_pedida`, `las_canceladas_aparecen_en_la_agenda_con_su_estado`, `una_fecha_sin_citas_muestra_un_aviso` | Aprobada |
-| CP-67 | CU-13 | Filtros y parámetros manipulados | Filtra por estado; sin médico pide elegir uno; una fecha inválida usa hoy con un aviso y los demás parámetros se ignoran sin error | `AgendaTest::filtra_por_estado`, `sin_medico_pide_elegir_uno`, `los_parametros_manipulados_se_ignoran_sin_error` | Aprobada |
+| CP-67 | CU-13 | Filtros y parámetros manipulados | Filtra por estado; una fecha inválida usa hoy con un aviso y los demás parámetros se ignoran sin error | `AgendaTest::filtra_por_estado`, `los_parametros_manipulados_se_ignoran_sin_error` | Aprobada |
 | CP-68 | CU-13 | El Médico solo ve su propia agenda | Aunque pida otro médico en la URL; una cuenta de médico sin ficha recibe 404; el Paciente y el Administrador reciben 403 | `AgendaTest::el_medico_ve_su_propia_agenda_y_no_la_de_otro`, `una_cuenta_de_medico_sin_ficha_recibe_404`, `el_paciente_y_el_administrador_no_consultan_la_agenda` | Aprobada |
 | CP-69 | CU-14 | Consultar el historial de un paciente | Aparecen todas sus citas (pasadas, futuras y canceladas) de la más reciente a la más antigua, con fecha de registro y motivo de la cancelación; solo las de ese paciente | `HistorialTest::la_recepcionista_ve_las_citas_registradas_del_paciente`, `solo_aparecen_las_citas_de_ese_paciente`, `la_cita_cancelada_sigue_en_el_historial` | Aprobada |
 | CP-70 | CU-14 | Filtro por estado, paginación y paciente desactivado | Filtra por estado e ignora valores desconocidos; pagina de 15 en 15; el historial de un paciente desactivado se conserva | `HistorialTest::filtra_por_estado`, `un_estado_desconocido_o_manipulado_se_ignora`, `pagina_el_historial_de_15_en_15`, `el_historial_de_un_paciente_desactivado_se_conserva` | Aprobada |
@@ -3220,6 +3220,7 @@ Los resultados obtenidos salen de la ejecución de la suite del 05/11/2026 (secc
 | CP-88 | CU-13 | Ficha pendiente de verificación | Oculta la información médica y el contacto de emergencia con un aviso y conserva los datos básicos | `FichaMedicoTest::con_la_ficha_pendiente_oculta_la_informacion_medica_y_el_contacto_de_emergencia` | Aprobada |
 | CP-89 | CU-13 | Pacientes que el Médico no atiende, y otros roles | Un paciente sin cita, con cita solo cancelada o de otro médico responde 404; Paciente y Administrador reciben 403; la Recepcionista, 404; sin sesión se redirige al inicio de sesión | `FichaMedicoTest::el_medico_no_abre_la_ficha_de_un_paciente_que_no_atiende`, `los_demas_roles_no_usan_esta_ficha`, `sin_sesion_redirige_al_login_y_un_paciente_inexistente_da_404` | Aprobada |
 | CP-90 | CU-13 | Botones de la agenda del Médico | La ficha y las notas del paciente se ofrecen solo en citas no canceladas, sin enlaces que terminen en 404 | `FichaMedicoTest::la_agenda_ofrece_la_ficha_solo_en_citas_no_canceladas` | Aprobada |
+| CP-91 | CU-13 | La Recepcionista consulta las citas de una fecha sin elegir médico | Ve las citas de todos los médicos de ese día, ordenadas por hora y con el médico de cada una; puede filtrar por estado y, con un médico elegido, solo las suyas | `AgendaTest::la_recepcionista_sin_elegir_medico_ve_las_citas_de_todos_en_la_fecha`, `sin_medico_tambien_filtra_por_estado_y_avisa_si_no_hay_citas`, `con_un_medico_elegido_solo_muestra_las_de_ese_medico_sin_la_columna_medico` | Aprobada |
 
 ### 8.3 Evidencias
 
@@ -3229,10 +3230,10 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 471         |
-| Pruebas aprobadas  | 471         |
+| Pruebas ejecutadas | 473         |
+| Pruebas aprobadas  | 473         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 3093        |
+| Aserciones         | 3105        |
 | Duración           | 21 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
@@ -3650,7 +3651,7 @@ Lo construido responde a los objetivos específicos del enunciado:
 - **Citas sin conflictos de horario:** el servidor calcula la disponibilidad, vuelve a comprobarla dentro de una transacción y las restricciones de exclusión de PostgreSQL rechazan la cita superpuesta del médico y del paciente aunque dos solicitudes compitan (RN07, RN13, RN17). La reprogramación usa las mismas reglas.
 - **Control de estados:** una cita pasa de programada a confirmada, atendida, con inasistencia o cancelada solo por transiciones válidas, nunca se elimina y el Paciente cancela o reprograma con 24 horas de anticipación (RN10, RN15).
 - **Consultas y reportes:** agenda por médico y fecha, historial por paciente y reportes de citas y de pacientes con rango de fechas, filtros y totales, cada uno limitado a los roles autorizados (RN12).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 son 471 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 son 473 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -3744,7 +3745,7 @@ Son 72 rutas en total, según `php artisan route:list --except-vendor`. Solo el 
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **471 pruebas, 471 aprobadas, 3093 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **473 pruebas, 473 aprobadas, 3105 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -3755,7 +3756,7 @@ Resultado de `php artisan test`: **471 pruebas, 471 aprobadas, 3093 aserciones**
 | `Feature\Citas\CitaTest`                           | 31      | CU-09                                         |
 | `Feature\Citas\CancelarCitaTest`                    | 20      | CU-11                                         |
 | `Feature\Citas\HistorialTest`                        | 16      | CU-14                                         |
-| `Feature\Citas\AgendaTest`                           | 11      | CU-13                                         |
+| `Feature\Citas\AgendaTest`                           | 13      | CU-13                                         |
 | `Feature\Citas\AsistenciaTest`                       | 18      | CU-12                                         |
 | `Feature\Citas\ReprogramarCitaTest`                  | 22      | CU-10                                         |
 | `Feature\Reportes\ReporteTest`                       | 16      | CU-15                                         |
