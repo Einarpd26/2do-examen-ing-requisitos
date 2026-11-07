@@ -3675,7 +3675,7 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 
 **Para una versión posterior**
 
-- **Despliegue real.** Servir la aplicación con Apache o Nginx y PHP, con HTTPS, y programar copias de seguridad de la base de datos. El sistema guarda datos personales y médicos, de modo que el despliegue debe revisarse con ese criterio.
+- **Despliegue real.** Servir la aplicación con Apache o Nginx y PHP, con HTTPS, y programar copias de seguridad de la base de datos. El sistema guarda datos personales y médicos, de modo que el despliegue debe revisarse con ese criterio. En particular, el `.env` debe llevar `APP_ENV=production` y `APP_DEBUG=false`: con la depuración activa, un error mostraría detalles internos al usuario, y el enunciado exige no mostrarlos (sección 7). El `README.md` explica los pasos y cómo comprobarlos.
 - **Recuperación de contraseña por cuenta propia.** Exige un servicio de correo y verificar el correo del paciente, que hoy es opcional y no se verifica (sección 4.1).
 - **Recordatorios por SMS o correo y lista de espera,** descartados del alcance actual.
 - **Exportar los reportes a CSV o PDF,** opcional en el enunciado y no implementado.
