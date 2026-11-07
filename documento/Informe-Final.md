@@ -153,12 +153,12 @@ El sistema es una aplicación web accesible desde un navegador (PHP, PostgreSQL,
 | Ciclo    | Requisitos                                                                                                                                        | Estado    |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios · RF14 Cuenta y perfil del paciente                      | Completo: CU-01 a CU-08 y CU-19 implementados |
-| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | Completo: CU-09 a CU-18 implementados |
+| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas · RF17 Consultorios | Completo: CU-09 a CU-18 y CU-20 implementados |
 
 
 #### 1.4.1 Requisitos funcionales
 
-RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4 del enunciado (perfil del paciente). Además, RF06, RF08, RF09 y RF12 se extienden para que el Paciente opere sobre **sus propias** citas.
+RF01 a RF13 provienen del enunciado. **RF14 a RF17 son derivados:** RF14 a RF16 del punto 3.4 del enunciado (perfil del paciente) y RF17 de la revisión del flujo de horarios, documentada en el ADR-002. Además, RF06, RF08, RF09 y RF12 se extienden para que el Paciente opere sobre **sus propias** citas.
 
 | Código | Requisito                                                                                                                                                                                              | Origen          | Ciclo |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- | ----- |
@@ -178,6 +178,7 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 | RF13   | Reportes                                                                                                                                                                                               | Enunciado       | 2     |
 | RF15   | Recordatorios de próximas consultas (aviso dentro del sistema)                                                                                                                                         | Derivado de 3.4 | 2     |
 | RF16   | Historial médico: notas clínicas por cita atendida                                                                                                                                                     | Derivado de 3.4 | 2     |
+| RF17   | Gestión de consultorios: dos médicos no pueden usar el mismo consultorio a la misma hora                                                                                                               | Derivado (ADR-002) | 2  |
 
 **Decisiones de alcance** (tomadas para este proyecto, donde el enunciado no es explícito):
 
@@ -194,13 +195,14 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 - **Cuenta del Paciente (enunciado 3.4):** la contraseña se cambia desde «Cambiar contraseña». Las «notificaciones» se resuelven con el aviso dentro del sistema de RF15, porque el sistema no envía correo ni SMS. Las «preferencias de privacidad» no se implementaron como opciones que el Paciente configure: la privacidad la garantiza el control de acceso por rol (RN12, RNF16), donde el Paciente solo ve sus propios datos.
 - **Teléfono del Paciente:** es obligatorio en el registro propio, porque es el medio de contacto de la clínica. Cuando lo registra la Recepcionista es opcional (el enunciado marca como opcionales solo el correo y la dirección, pero un paciente puede no tener teléfono propio).
 - **Consulta de médicos y horarios por la Recepcionista (enunciado 3.2):** la Recepcionista consulta los médicos y sus horarios disponibles al registrar una cita (por especialidad, médico y fecha) y en la agenda. El listado, el alta y la modificación de médicos son del Administrador.
-- **Activar o desactivar registros (enunciado 3.1):** el Administrador activa o desactiva usuarios, médicos y especialidades; los pacientes los activa o desactiva la Recepcionista, que es quien los administra.
+- **Activar o desactivar registros (enunciado 3.1):** el Administrador activa o desactiva usuarios, médicos, especialidades y consultorios; los pacientes los activa o desactiva la Recepcionista, que es quien los administra.
 - **RF15 Recordatorios:** aviso dentro del sistema, sin correo. Al iniciar sesión, el Paciente ve un banner con sus próximas citas (los siguientes 2 días).
 - **RF16 Historial médico:** el Médico registra una nota clínica por cada cita atendida con motivo de consulta, diagnóstico, tratamiento o indicaciones, y observaciones. Cada Médico edita solo sus propias notas; al editarla se sobrescribe y se guarda quién y cuándo la modificó por última vez, sin conservar versiones. Ven las notas: el Médico, el Paciente y la Recepcionista, todas en solo lectura salvo el autor.
 - **Acceso del Médico:** solo a los pacientes que tienen o tuvieron cita con él; ve sus datos básicos, información médica, contacto de emergencia y las notas clínicas, incluidas las de otros médicos.
 - **Modalidad:** la cita tiene un campo `modalidad` (presencial o virtual).
 - **Reserva de citas (CU-09):** la Recepcionista y el Paciente comparten las mismas reglas. Un Paciente con la ficha pendiente de verificación **puede reservar**; la verificación solo condiciona la información médica y las notas clínicas. Un paciente no puede tener citas superpuestas, ni siquiera con médicos distintos (RN17). Los horarios disponibles salen de una cuadrícula fija: dentro de cada bloque de atención del médico, desde su hora inicial y de a la duración de la especialidad; se quitan los que chocan con una cita no cancelada del médico o del paciente, los que ya pasaron y los que terminarían después del bloque. Pueden quedar huecos sin usar. Se puede reservar desde hoy hasta 60 días adelante, para todos los roles; el límite es un único valor de configuración (`config/clinica.php`). "Hoy" y "ahora" se miden en la hora de La Paz.
-- **Sucursal:** la base de datos incluye la tabla `sucursales` con una sola sucursal cargada y `sucursal_id` en horarios de atención y citas, para poder escalar. No hay pantalla de gestión de sucursales. El `consultorio` se registra en el horario de atención. No hay filtro por ubicación.
+- **Sucursal:** la base de datos incluye la tabla `sucursales` con una sola sucursal cargada y `sucursal_id` en horarios de atención y citas, para poder escalar. No hay pantalla de gestión de sucursales. No hay filtro por ubicación.
+- **Consultorios (RF17, ADR-002):** el enunciado no los menciona; se agregaron al revisar el flujo de horarios. En un principio el consultorio era un texto libre y opcional del bloque de atención, lo que permitía que dos médicos usaran la misma sala a la misma hora y que «Consultorio 3» y «consultorio 3» contaran como salas distintas. Ahora es una entidad propia, que gestiona el Administrador (CU-20), y el bloque lo elige de una lista; sigue siendo opcional. El consultorio se reserva durante todo el bloque, tenga citas o no, y la cita lo hereda del bloque en el que cae (RN18).
 
 **Opcionales abiertos** (el enunciado los marca como opcionales; se implementan solo si el tiempo del Ciclo #2 lo permite):
 
@@ -454,6 +456,7 @@ Se aplican independientemente de lo que el usuario escriba en los formularios.
 | RN15   | El Paciente solo podrá cancelar o reprogramar una cita con al menos 24 horas de anticipación; la Recepcionista no tiene esta restricción (Ciclo #2). |
 | RN16   | Un médico no puede atenderse a sí mismo: la persona del médico y la del paciente de una cita deben ser distintas (Ciclo #2).                         |
 | RN17   | Un paciente no puede tener dos citas superpuestas, ni siquiera con médicos distintos; la base de datos también lo impide (Ciclo #2).                 |
+| RN18   | Dos médicos no pueden tener bloques de atención superpuestos en el mismo consultorio el mismo día; la base de datos también lo impide (ADR-002).      |
 
 ---
 
@@ -465,7 +468,7 @@ Los actores salen de los cuatro roles del enunciado. Los casos de uso salen de l
 
 | Actor             | Descripción                                                                                                                                                                                                            | Origen        |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| **Administrador** | Configura y supervisa el sistema: usuarios, roles, médicos, especialidades, horarios y reportes; renueva contraseñas temporales.                                                                                       | Enunciado 3.1 |
+| **Administrador** | Configura y supervisa el sistema: usuarios, roles, médicos, especialidades, consultorios, horarios y reportes; renueva contraseñas temporales.                                                                         | Enunciado 3.1 |
 | **Recepcionista** | Gestiona pacientes (incluida su información médica y contacto de emergencia), crea cuentas de paciente con contraseña temporal, verifica fichas, renueva contraseñas temporales, gestiona citas y registra asistencia. | Enunciado 3.2 |
 | **Médico**        | Consulta su agenda, marca citas atendidas y registra sus notas clínicas.                                                                                                                                               | Enunciado 3.3 |
 | **Paciente**      | Tiene cuenta propia y entra con su CI; ve su perfil e información médica en solo lectura (una vez verificada su ficha), edita su teléfono y contraseña, y gestiona sus propias citas.                                  | Enunciado 3.4 |
@@ -493,10 +496,11 @@ Los actores salen de los cuatro roles del enunciado. Los casos de uso salen de l
 | CU-17 Consultar notas clínicas       | RF16       | Media     | 2     | Depende de CU-16.                                                                                                                        |
 | CU-18 Ver recordatorio de citas      | RF15       | Baja      | 2     | Banner al iniciar sesión; depende de CU-09.                                                                                              |
 | CU-19 Renovar contraseña temporal    | RF01, RF14 | Alta      | 1     | Recupera el acceso sin servidor de correo; es la vía de quien olvidó su contraseña.                                                      |
+| CU-20 Gestionar consultorios         | RF17       | Media     | 2     | Evita la doble reserva de una sala (RN18); lo usa CU-07. Se agregó al revisar el flujo de horarios (ADR-002).                            |
 
 ### 4.3 Detallar un caso de uso
 
-Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09 a CU-18), es decir, todos los del Ciclo #2.
+Se especifican los casos de uso del Ciclo #1 y todos los del Ciclo #2 (CU-09 a CU-18 y CU-20).
 
 #### CU-01 Iniciar y cerrar sesión
 
@@ -671,8 +675,8 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 **Flujo principal**
 
 1. El Administrador abre «Horarios de atención», que lista a los médicos activos con el resumen de su semana (los que no tienen horarios se señalan), y elige uno para ver su semana.
-2. Registra día, hora inicial, hora final y consultorio. La duración de la cita no se define aquí: la determina la especialidad con la que se reserva (CU-06). La sucursal es la única registrada, por lo que se asigna automáticamente.
-3. El sistema valida que la hora final sea posterior a la inicial y que no se superponga con otro horario del médico.
+2. Registra día, hora inicial, hora final y, de forma opcional, el consultorio, que elige de la lista de consultorios activos (CU-20). La duración de la cita no se define aquí: la determina la especialidad con la que se reserva (CU-06). La sucursal es la única registrada, por lo que se asigna automáticamente.
+3. El sistema valida que la hora final sea posterior a la inicial, que no se superponga con otro horario del médico y que el consultorio elegido no esté ocupado por otro médico a esa hora (RN18).
 4. El sistema guarda el horario y lo registra en la bitácora.
 5. El Administrador puede modificar o eliminar un bloque de la semana.
 
@@ -681,6 +685,8 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 3a. La hora final no es posterior a la inicial, o falta el día, una hora o tiene un formato inválido: se rechaza con un mensaje.
 - 3b. El bloque se superpone con otro del mismo médico el mismo día: se rechaza y el mensaje nombra el bloque en conflicto. Dos bloques pegados (uno termina a las 12:00 y el otro empieza a las 12:00) no se superponen. Lo garantiza también la base de datos.
 - 3c. El médico está desactivado: no se puede registrar, modificar ni eliminar su horario hasta reactivarlo (CU-05).
+- 3d. El consultorio elegido lo ocupa otro médico en un bloque superpuesto del mismo día: se rechaza y el mensaje nombra al médico y el bloque en conflicto. El consultorio se reserva durante todo el bloque, aunque ese médico no tenga citas; los bloques pegados no se superponen y un bloque sin consultorio no choca con nadie. Lo garantiza también la base de datos.
+- 3e. El consultorio elegido no existe o está desactivado: se rechaza.
 - 5a. Modificar o eliminar un bloque dejaría fuera de la atención a una cita futura ya agendada (programada o confirmada): se rechaza, el mensaje indica cuáles y se pide reprogramarlas o cancelarlas antes.
 - 5b. No impiden el cambio las citas canceladas, las de fechas anteriores a hoy, las de otro médico, las que ya estaban fuera del horario antes del cambio ni las que cubre otro bloque.
 
@@ -993,6 +999,30 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 
 **Fuera del alcance:** la recuperación por cuenta propia del paciente mediante un enlace enviado por correo.
 
+#### CU-20 Gestionar consultorios
+
+|                   |                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| **Actores**       | Administrador                                                                        |
+| **Requisito**     | RF17                                                                                 |
+| **Precondición**  | El Administrador inició sesión.                                                      |
+| **Postcondición** | El consultorio queda registrado, renombrado o activado/desactivado.                  |
+
+**Flujo principal**
+
+1. El Administrador abre «Consultorios». Por defecto ve los **activos**; con las pestañas Activos, Inactivos y Todos, cada una con su cantidad, puede ver también los dados de baja. Cada fila muestra cuántos bloques de atención usan el consultorio.
+2. Registra o renombra un consultorio indicando su nombre (por ejemplo, «Consultorio 3»).
+3. El sistema valida el nombre y comprueba que no exista otro igual en la sucursal. El nombre se guarda sin espacios al inicio ni al final y con un solo espacio entre palabras, y no se distinguen mayúsculas. La sucursal es la única registrada, por lo que se asigna automáticamente.
+4. El sistema guarda los cambios y los registra en la bitácora.
+5. El Administrador puede desactivar o reactivar el consultorio; nunca se elimina.
+
+**Flujos alternos**
+
+- 3a. Nombre vacío, de más de 50 caracteres o repetido (por ejemplo, «Consultorio 3» y « consultorio 3 »): se rechaza. Lo garantiza también la base de datos, con un índice único sobre la sucursal y el nombre normalizado.
+- 5a. Lo usan bloques de atención: no se desactiva, y el mensaje dice cuántos bloques lo usan para que se les asigne otro consultorio antes (CU-07).
+- 5b. Un consultorio desactivado no se ofrece al registrar ni al modificar horarios.
+- \*. Renombrar un consultorio no afecta a sus bloques: lo referencian por su identificador, así que muestran el nombre nuevo.
+
 ### 4.4 Priorizar casos de uso por ciclo
 
 **Criterio:** el Ciclo #1 entrega la base (acceso y datos maestros) y el Ciclo #2 el núcleo de citas, que necesita esa base estable.
@@ -1000,7 +1030,7 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 | Ciclo | Casos de uso | Entrega |
 | ----- | ------------ | ------- |
 | 1 | CU-01 a CU-08 y CU-19 | Presentación 1 (24/10/2026): acceso, usuarios y datos maestros |
-| 2 | CU-09 a CU-18 | Presentación 2 (07/11/2026): citas, agenda, historial, reportes, notas y recordatorio |
+| 2 | CU-09 a CU-18 y CU-20 | Presentación 2 (07/11/2026): citas, agenda, historial, reportes, notas y recordatorio; CU-20 se agregó al revisar el flujo de horarios (ADR-002) |
 
 ### 4.5 Estructurar el modelo de casos de uso
 
@@ -1037,9 +1067,10 @@ flowchart LR
         CU16(CU-16 Registrar nota clínica)
         CU17(CU-17 Consultar notas clínicas)
         CU18(CU-18 Ver recordatorio de citas)
+        CU20(CU-20 Gestionar consultorios)
     end
 
-    Admin --- CU01 & CU03 & CU05 & CU06 & CU07 & CU15 & CU19
+    Admin --- CU01 & CU03 & CU05 & CU06 & CU07 & CU15 & CU19 & CU20
     Recep --- CU01 & CU04 & CU19 & CU09 & CU10 & CU11 & CU12 & CU13 & CU14 & CU17
     Medico --- CU01 & CU12 & CU13 & CU16 & CU17
     Pac --- CU01 & CU02 & CU08 & CU09 & CU10 & CU11 & CU12 & CU14 & CU17 & CU18
@@ -1060,6 +1091,7 @@ Cada operación exige un permiso con formato `recurso:accion`. Los permisos se a
 | `medicos:gestionar`        |       ✓       |               |        |          |
 | `especialidades:gestionar` |       ✓       |               |        |          |
 | `horarios:gestionar`       |       ✓       |               |        |          |
+| `consultorios:gestionar`   |       ✓       |               |        |          |
 | `perfil:gestionar`         |               |               |        |    ✓     |
 | `citas:gestionar`          |               |       ✓       |        |          |
 | `citas:gestionar_propias`  |               |               |        |    ✓     |
@@ -1070,7 +1102,7 @@ Cada operación exige un permiso con formato `recurso:accion`. Los permisos se a
 | `notas:consultar`          |               |       ✓       |   ✓    |    ✓     |
 | `recordatorios:consultar`  |               |               |        |    ✓     |
 | `reportes:consultar`       |       ✓       |               |        |          |
-| **Total**                  |       6       |       9       |   5    |    5     |
+| **Total**                  |       7       |       9       |   5    |    5     |
 
 **Alcance dentro del permiso.** El permiso dice qué acción se puede hacer, no sobre qué datos. La aplicación acota el alcance: el Paciente solo ve lo propio (`citas:gestionar_propias`, `historial:consultar`, `notas:consultar`). La ficha verificada condiciona únicamente su información médica y sus notas clínicas: con la ficha pendiente puede reservar citas, pero no ve esos datos hasta que la Recepcionista la verifique; el Médico solo ve a los pacientes que tienen o tuvieron cita con él y edita solo sus notas.
 
@@ -1362,7 +1394,11 @@ classDiagram
         diaSemana
         horaInicio
         horaFin
-        consultorio
+    }
+    class Consultorio {
+        <<entity>>
+        nombre
+        estado
     }
     class Cita {
         <<entity>>
@@ -1417,6 +1453,8 @@ classDiagram
     Medico "*" -- "*" Especialidad : ejerce
     Medico "1" -- "*" HorarioAtencion : atiende en
     Sucursal "1" -- "*" HorarioAtencion : ubica
+    Sucursal "1" -- "*" Consultorio : tiene
+    Consultorio "0..1" -- "*" HorarioAtencion : se atiende en
     Cita "1" -- "0..1" NotaClinica : genera
     Usuario "0..1" -- "*" NotaClinica : modificó
     Medico "1" -- "*" NotaClinica : autor
@@ -1432,7 +1470,7 @@ classDiagram
 | CU-04 Gestionar pacientes            | ListaPacientes, FormPaciente           | ControlPaciente       | Persona, Paciente, Usuario, Bitacora     |
 | CU-05 Gestionar médicos              | ListaMedicos, FormMedico               | ControlMedico         | Persona, Medico, Especialidad            |
 | CU-06 Gestionar especialidades       | ListaEspecialidades, FormEspecialidad  | ControlEspecialidad   | Especialidad                             |
-| CU-07 Gestionar horarios de atención | ListaHorarios, FormHorario             | ControlHorario        | HorarioAtencion, Medico, Sucursal        |
+| CU-07 Gestionar horarios de atención | ListaHorarios, FormHorario             | ControlHorario        | HorarioAtencion, Medico, Sucursal, Consultorio |
 | CU-08 Gestionar mi perfil            | VistaPerfil                            | ControlPerfil         | Persona, Paciente, Usuario               |
 | CU-19 Renovar contraseña temporal    | FichaPaciente, ComprobanteCredenciales | ControlAccesoPaciente | Persona, Paciente, Usuario, Bitacora     |
 
@@ -1450,6 +1488,7 @@ classDiagram
 | CU-16 Registrar nota clínica       | FormNota                             | ControlNota        | Cita, NotaClinica, Bitacora                                 |
 | CU-17 Consultar notas clínicas     | VistaNotas                           | ControlNota        | NotaClinica, Cita, Paciente                                 |
 | CU-18 Ver recordatorio de citas    | BannerRecordatorio                   | ControlRecordatorio | Cita, Paciente                                             |
+| CU-20 Gestionar consultorios       | ListaConsultorios, FormConsultorio   | ControlConsultorio | Consultorio, Sucursal, HorarioAtencion, Bitacora            |
 
 #### 5.3.2 Diagrama de estados de la cita
 
@@ -1490,7 +1529,7 @@ flowchart TB
     NC["Atención clínica<br/>CU-16, CU-17"]
     CI["Citas<br/>CU-09, CU-10, CU-11, CU-12, CU-18"]
     PA["Pacientes<br/>CU-02, CU-04, CU-19"]
-    MH["Médicos y horarios<br/>CU-05, CU-06, CU-07"]
+    MH["Médicos y horarios<br/>CU-05, CU-06, CU-07, CU-20"]
     IA["Identidad y acceso<br/>CU-01, CU-03, CU-08"]
 
     CR -.-> CI
@@ -1507,7 +1546,7 @@ flowchart TB
 | --- | --- | --- | --- |
 | Identidad y acceso | Persona, Usuario, Rol, Permiso, Bitacora | Autenticacion, ContrasenaTemporal, Usuario, Bitacora | CU-01, CU-03, CU-08 |
 | Pacientes | Paciente | Paciente, RegistroPaciente | CU-02, CU-04, CU-19 |
-| Médicos y horarios | Medico, Especialidad, Sucursal, HorarioAtencion | Medico, Especialidad, Horario | CU-05, CU-06, CU-07 |
+| Médicos y horarios | Medico, Especialidad, Sucursal, HorarioAtencion, Consultorio | Medico, Especialidad, Horario, Consultorio | CU-05, CU-06, CU-07, CU-20 |
 | Citas | Cita | Cita, Asistencia, Recordatorio | CU-09, CU-10, CU-11, CU-12, CU-18 |
 | Atención clínica | NotaClinica | NotaClinica | CU-16, CU-17 |
 | Consultas y reportes | (ninguna propia; lee las de los demás) | Agenda, Historial, Reporte | CU-13, CU-14, CU-15 |
@@ -1520,7 +1559,7 @@ flowchart TB
 - **Atención clínica** depende de las citas, porque una nota solo existe sobre una cita atendida.
 - **Consultas y reportes** solo lee; por eso queda en lo más alto de las dependencias y nada depende de él.
 
-**Lectura del diagrama.** Las flechas apuntan siempre hacia la base (de consultas hacia identidad), así que no hay dependencias circulares entre los paquetes y cada uno puede probarse con los de abajo. Esto es el orden en que se construyó el sistema: el Ciclo #1 entregó los paquetes de Identidad y acceso, Pacientes y Médicos y horarios; el Ciclo #2, los de Citas, Atención clínica y Consultas y reportes.
+**Lectura del diagrama.** Las flechas apuntan siempre hacia la base (de consultas hacia identidad), así que no hay dependencias circulares entre los paquetes y cada uno puede probarse con los de abajo. Esto es el orden en que se construyó el sistema: el Ciclo #1 entregó los paquetes de Identidad y acceso, Pacientes y Médicos y horarios; el Ciclo #2, los de Citas, Atención clínica y Consultas y reportes. Los consultorios (CU-20, ADR-002) se sumaron después al paquete de Médicos y horarios, porque cambian junto con los horarios de atención.
 
 **Tres lecturas hacia arriba.** A nivel de análisis son consultas de solo lectura y no cambian la estructura: `UsuarioService` consulta la ficha del Médico para crear o reactivar una cuenta de médico solo si el médico está activo (CU-03), y `MedicoService` consulta las citas del médico antes de quitarle una especialidad con la que ya tiene citas (CU-05), y `HorarioService` consulta las citas del médico para impedir cambios de horario que las dejen fuera de la atención (CU-07). En el diseño no se modelan como dependencias estructurales.
 
@@ -1606,7 +1645,7 @@ Los archivos de Bootstrap se sirven desde `public/`, sin depender de una conexi�
 
 ### 6.2 Diseño de casos de uso (diagramas de secuencia)
 
-Se diseñan CU-01, CU-02, CU-04 y CU-19 del Ciclo #1 y todos los casos del Ciclo #2 (CU-09 a CU-18). Los demás casos del Ciclo #1 siguen el mismo patrón de controlador, Form Request, servicio y modelo.
+Se diseñan CU-01, CU-02, CU-04 y CU-19 del Ciclo #1, todos los casos del Ciclo #2 (CU-09 a CU-18) y el registro de un bloque de CU-07 con consultorio, que incorpora RN18 (ADR-002). Los demás casos siguen el mismo patrón de controlador, Form Request, servicio y modelo; CU-20 es igual a CU-06.
 
 **CU-01 Iniciar sesión**
 
@@ -2085,6 +2124,41 @@ sequenceDiagram
 ```
 
 
+**CU-07 Registrar un bloque con consultorio (RN18, ADR-002)**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor A as Administrador
+    participant F as FormHorario (Blade)
+    participant C as HorarioController
+    participant V as HorarioRequest
+    participant S as HorarioService
+    participant H as HorarioAtencion
+    participant D as PostgreSQL
+    participant B as BitacoraService
+
+    A->>F: elige día, horas y un consultorio de la lista
+    F->>C: POST /horarios/medico/{id}
+    C->>V: validar datos, bloque del médico y consultorio
+    alt otro médico tiene un bloque superpuesto en ese consultorio ese día
+        V-->>F: rechazar y nombrar al médico y el bloque en conflicto
+    else consultorio libre
+        C->>S: registrar(médico, datos, actor)
+        S->>S: transacción: el consultorio sigue activo (bloqueo compartido)
+        S->>H: crear el bloque
+        H->>D: INSERT en horarios_atencion
+        alt otra solicitud tomó el consultorio entre la validación y el guardado
+            D-->>S: violación de horarios_consultorio_sin_superposicion (23P01)
+            S-->>F: el mismo rechazo, como regla de negocio
+        else
+            S->>B: registrar horario_creado
+            S-->>C: bloque registrado
+            C-->>F: volver a la semana del médico con el mensaje de éxito
+        end
+    end
+```
+
 ### 6.3 Diseño de datos
 
 #### 6.3.1 Modelo lógico
@@ -2106,6 +2180,8 @@ erDiagram
     ESPECIALIDADES ||--o{ MEDICO_ESPECIALIDAD : "agrupa"
     MEDICOS ||--o{ HORARIOS_ATENCION : "atiende en"
     SUCURSALES ||--o{ HORARIOS_ATENCION : "ubica"
+    SUCURSALES ||--o{ CONSULTORIOS : "tiene"
+    CONSULTORIOS |o--o{ HORARIOS_ATENCION : "se atiende en"
     CITAS ||--o| NOTAS_CLINICAS : "genera"
     MEDICOS ||--o{ NOTAS_CLINICAS : "escribe"
 
@@ -2160,9 +2236,16 @@ erDiagram
         bigint id PK
         bigint medico_id FK
         bigint sucursal_id FK
+        bigint consultorio_id FK "opcional"
         smallint dia_semana
         time hora_inicio
         time hora_fin
+    }
+    CONSULTORIOS {
+        bigint id PK
+        bigint sucursal_id FK
+        string nombre UK "por sucursal"
+        boolean estado
     }
     CITAS {
         bigint id PK
@@ -2192,6 +2275,7 @@ erDiagram
 - Los datos del personal administrativo (Administrador, Recepcionista) viven en `personas` y `usuarios`, sin ficha.
 - El correo es obligatorio para el personal y para el Paciente es opcional; esa regla la valida la aplicación, porque depende del rol.
 - Una restricción de exclusión impide horarios de atención superpuestos del mismo médico en el mismo día (CU-07) y citas superpuestas del mismo médico (RNF17) o del mismo paciente, aunque sean con médicos distintos; las citas canceladas no cuentan.
+- Los consultorios son una tabla propia (ADR-002). El bloque de atención guarda `consultorio_id`, que es opcional, y otra restricción de exclusión impide que dos bloques usen el mismo consultorio el mismo día en horas superpuestas (RN18); un bloque sin consultorio no choca con nadie. La cita no guarda el consultorio: lo hereda del bloque en el que cae, y como un médico no tiene citas simultáneas y toda cita cae en un bloque suyo (RN05), dos citas nunca coinciden en la misma sala. Una clave foránea compuesta `(consultorio_id, sucursal_id)` impide asignar un consultorio de otra sucursal.
 - Una clave foránea compuesta exige que el médico de una cita ejerza la especialidad elegida, y otra ata la nota clínica al médico de su cita. Consecuencia: no se puede quitar una especialidad a un médico que tiene citas con ella.
 - El código de paciente, médico y cita es el `id`, identificador único (RF02, RF03, RF06); el formato `PAC-000001` se arma al mostrarlo y no se guarda. Pueden quedar saltos en la numeración, porque el `id` no se revierte si el alta falla. La matrícula del médico (`nro_registro_profesional`) es un dato distinto: la emite una entidad externa y se guarda aparte, única y obligatoria.
 - La bitácora es de solo escritura: un disparador impide modificar, borrar o vaciar sus filas. Su campo `detalle` guarda el contexto de la acción, por ejemplo cómo se verificó la identidad al renovar una contraseña (CU-19).
@@ -2200,7 +2284,7 @@ erDiagram
 
 #### 6.3.2 Modelo físico (DDL PostgreSQL)
 
-El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #1) y `002_citas_y_notas.sql` y `004_citas_sin_superposicion_paciente.sql` (Ciclo #2), que las migraciones de Laravel ejecutan; `003_catalogos_iniciales.sql` carga los datos de referencia (sucursal, roles y permisos, ver 4.7). Se verificó en PostgreSQL 16: los `CHECK` de formato, la restricción contra horarios y citas superpuestas (del médico y del paciente), las claves foráneas compuestas, el control de acceso y la bitácora de solo escritura rechazan lo inválido, y `migrate:rollback` deja la base limpia. Las tablas propias del framework (`migrations`) no se listan.
+El script es el contenido de `codigo/database/sql/001_esquema_base.sql` (Ciclo #1) y `002_citas_y_notas.sql`, `004_citas_sin_superposicion_paciente.sql` y `005_consultorios.sql` (Ciclo #2), que las migraciones de Laravel ejecutan; `005` reemplaza la columna de texto `horarios_atencion.consultorio` de `001` por la tabla `consultorios` (ADR-002); `003_catalogos_iniciales.sql` carga los datos de referencia (sucursal, roles y permisos, ver 4.7). Se verificó en PostgreSQL 16: los `CHECK` de formato, la restricción contra horarios y citas superpuestas (del médico y del paciente), las claves foráneas compuestas, el control de acceso y la bitácora de solo escritura rechazan lo inválido, y `migrate:rollback` deja la base limpia. Las tablas propias del framework (`migrations`) no se listan.
 
 ```sql
 -- Ciclo #1: identidad, acceso, datos maestros y bitácora.
@@ -2432,13 +2516,60 @@ CREATE INDEX notas_clinicas_medico_idx ON notas_clinicas (medico_id);
 ALTER TABLE citas
     ADD CONSTRAINT citas_paciente_sin_superposicion
     EXCLUDE USING gist (paciente_id WITH =, periodo WITH &&) WHERE (estado <> 'CANCELADA');
+
+-- Consultorios como entidad propia (ADR-002, CU-20, RN18).
+-- Un consultorio pertenece a una sucursal y se asigna, de forma opcional, a los bloques de atención.
+-- Dos médicos no pueden tener bloques superpuestos en el mismo consultorio el mismo día de la semana:
+-- el consultorio se reserva durante todo el bloque, tenga citas o no (ADR-002, decisión 7).
+-- Las citas no se tocan: heredan el consultorio del bloque en el que caen.
+
+CREATE TABLE consultorios (
+    id          BIGSERIAL PRIMARY KEY,
+    sucursal_id BIGINT    NOT NULL REFERENCES sucursales (id) ON DELETE RESTRICT,
+    nombre      TEXT      NOT NULL CHECK (btrim(nombre) <> ''),
+    estado      BOOLEAN   NOT NULL DEFAULT TRUE,
+    -- Destino de la clave foránea compuesta de horarios_atencion (mismo consultorio y misma sucursal).
+    UNIQUE (id, sucursal_id)
+);
+-- Nombre único por sucursal, sin distinguir mayúsculas ni espacios en los extremos.
+CREATE UNIQUE INDEX consultorios_nombre_uq ON consultorios (sucursal_id, lower(btrim(nombre)));
+
+-- El sistema está en desarrollo y solo tiene datos de prueba: el texto libre se descarta y los
+-- bloques quedan sin consultorio, que es opcional (ADR-002, decisión 6).
+ALTER TABLE horarios_atencion DROP COLUMN consultorio;
+ALTER TABLE horarios_atencion ADD COLUMN consultorio_id BIGINT;
+
+-- Clave foránea compuesta: un bloque no puede usar un consultorio de otra sucursal.
+-- Con consultorio_id nulo no se comprueba (MATCH SIMPLE), porque el consultorio es opcional.
+ALTER TABLE horarios_atencion
+    ADD CONSTRAINT horarios_atencion_consultorio_fk
+    FOREIGN KEY (consultorio_id, sucursal_id) REFERENCES consultorios (id, sucursal_id) ON DELETE RESTRICT;
+
+-- RN18: un consultorio no puede tener dos bloques superpuestos el mismo día. Un bloque sin
+-- consultorio no choca con nadie, porque NULL nunca es igual a NULL. Los bloques pegados
+-- (uno termina cuando empieza el otro) no se superponen: el rango es semiabierto.
+ALTER TABLE horarios_atencion
+    ADD CONSTRAINT horarios_consultorio_sin_superposicion
+    EXCLUDE USING gist (consultorio_id WITH =, dia_semana WITH =, rango WITH &&);
+
+INSERT INTO permisos (codigo, descripcion) VALUES
+    ('consultorios:gestionar', 'Registrar, modificar, activar o desactivar consultorios');
+
+-- LEFT JOIN a propósito, como en 003: un código mal escrito hace fallar la inserción.
+INSERT INTO rol_permisos (rol_id, permiso_id)
+SELECT r.id, p.id
+FROM (VALUES
+    ('ADMINISTRADOR', 'consultorios:gestionar')
+) AS m (rol, permiso)
+LEFT JOIN roles r ON r.codigo = m.rol
+LEFT JOIN permisos p ON p.codigo = m.permiso;
 ```
 
 ### 6.4 Diseño de interfaces
 
 Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones dependen del rol, formularios con validación en cliente y mensajes de error junto a cada campo. El verde de la clínica (`#0b6e6e`) es el color primario de toda la interfaz: botones, barra superior, pestañas, insignias, enlaces y el halo de los campos al enfocarlos.
 
-**Pantallas del Ciclo #1**
+**Pantallas del Ciclo #1 y de consultorios (CU-20)**
 
 | Pantalla                             | Rol                          | Caso de uso  | Contenido principal                                                                                                                                 |
 | ------------------------------------ | ---------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -2452,15 +2583,16 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 | Lista y formulario de usuarios       | Administrador                | CU-03        | Alta del personal, rol, vínculo con médico, activar o desactivar, renovar contraseña                                                                |
 | Lista y formulario de médicos        | Administrador                | CU-05        | Búsqueda; pestañas Activos, Inactivos y Todos con su contador; datos, registro profesional, especialidades, estado                                  |
 | Lista y formulario de especialidades | Administrador                | CU-06        | Pestañas Activas, Inactivas y Todas con su contador; nombre, descripción, duración de la cita, estado                                               |
-| Horarios de atención                 | Administrador                | CU-07        | Lista de médicos activos con el resumen de su semana; por médico, la semana y el formulario de bloques: día, hora inicial, hora final y consultorio |
+| Horarios de atención                 | Administrador                | CU-07        | Lista de médicos activos con el resumen de su semana; por médico, la semana y el formulario de bloques: día, hora inicial, hora final y consultorio (de la lista de activos) |
+| Lista y formulario de consultorios   | Administrador                | CU-20        | Pestañas Activos, Inactivos y Todos con su contador; nombre, cantidad de bloques que lo usan, estado |
 
-**Criterio para los listados con baja lógica** (aplicado hoy en especialidades). Los registros que se desactivan en lugar de eliminarse se listan en pestañas **Activas / Inactivas / Todas**, con la cantidad de cada una y las activas por defecto. El contador evita que lo dado de baja desaparezca sin aviso. Cada fila ofrece solo la acción que corresponde a su estado (Desactivar o Reactivar), y el cambio vuelve a la pestaña desde la que se hizo.
+**Criterio para los listados con baja lógica** (aplicado en especialidades, médicos, usuarios y consultorios). Los registros que se desactivan en lugar de eliminarse se listan en pestañas **Activas / Inactivas / Todas**, con la cantidad de cada una y las activas por defecto. El contador evita que lo dado de baja desaparezca sin aviso. Cada fila ofrece solo la acción que corresponde a su estado (Desactivar o Reactivar), y el cambio vuelve a la pestaña desde la que se hizo.
 
 **Menú por rol**
 
 | Rol           | Opciones                                                              |
 | ------------- | --------------------------------------------------------------------- |
-| Administrador | Usuarios · Médicos · Especialidades · Horarios de atención · Reportes |
+| Administrador | Usuarios · Médicos · Especialidades · Consultorios · Horarios de atención · Reportes |
 | Recepcionista | Registrar cita · Agenda · Pacientes                                   |
 | Médico        | Agenda (desde cada cita: nota clínica y ficha del paciente)           |
 | Paciente      | Reservar cita · Mi historial · Mis notas · Mi perfil                  |
@@ -2654,7 +2786,7 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
     }
 ```
 
-**Base de datos.** El esquema está escrito en SQL puro en `database/sql/` (`001_esquema_base.sql`, `002_citas_y_notas.sql`, `003_catalogos_iniciales.sql` y `004_citas_sin_superposicion_paciente.sql`); las migraciones de `database/migrations/` solo ejecutan esos archivos. Así las restricciones no dependen de la aplicación: unicidad (CI, correo, registro profesional, nombre de especialidad), formatos con `CHECK`, claves foráneas y la restricción de exclusión de los horarios. Esta es la que impide que un médico tenga dos bloques superpuestos el mismo día:
+**Base de datos.** El esquema está escrito en SQL puro en `database/sql/` (`001_esquema_base.sql`, `002_citas_y_notas.sql`, `003_catalogos_iniciales.sql`, `004_citas_sin_superposicion_paciente.sql` y `005_consultorios.sql`); las migraciones de `database/migrations/` solo ejecutan esos archivos. Así las restricciones no dependen de la aplicación: unicidad (CI, correo, registro profesional, nombre de especialidad y de consultorio), formatos con `CHECK`, claves foráneas y las restricciones de exclusión de los horarios, por médico y por consultorio. Esta es la que impide que un médico tenga dos bloques superpuestos el mismo día:
 
 `database/sql/001_esquema_base.sql`
 
@@ -2676,6 +2808,7 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         ['etiqueta' => 'Usuarios', 'permiso' => 'usuarios:gestionar', 'ruta' => 'usuarios.index'],
         ['etiqueta' => 'Médicos', 'permiso' => 'medicos:gestionar', 'ruta' => 'medicos.index'],
         ['etiqueta' => 'Especialidades', 'permiso' => 'especialidades:gestionar', 'ruta' => 'especialidades.index'],
+        ['etiqueta' => 'Consultorios', 'permiso' => 'consultorios:gestionar', 'ruta' => 'consultorios.index'],
         ['etiqueta' => 'Horarios de atención', 'permiso' => 'horarios:gestionar', 'ruta' => 'horarios.index'],
         ['etiqueta' => 'Registrar cita', 'permiso' => 'citas:gestionar', 'ruta' => 'citas.nueva'],
         ['etiqueta' => 'Reservar cita', 'permiso' => 'citas:gestionar_propias', 'ruta' => 'mis-citas.nueva'],
@@ -3059,8 +3192,9 @@ Reglas aplicadas:
 Reglas aplicadas:
 
 - El grupo `/horarios` exige `horarios:gestionar` (RN12, RNF19). Las rutas de un bloque llevan el médico o el horario en la URL, restringidos a números.
-- Día entre 1 y 7, horas con formato `H:i` y hora final posterior a la inicial (flujo 3a). El consultorio es opcional. La duración de la cita no se define aquí: la determina la especialidad (CU-06).
+- Día entre 1 y 7, horas con formato `H:i` y hora final posterior a la inicial (flujo 3a). El consultorio es opcional y se elige de un selector con los consultorios activos; el Form Request exige que exista y esté activo (flujo 3e). La duración de la cita no se define aquí: la determina la especialidad (CU-06).
 - Un médico no puede tener dos bloques superpuestos el mismo día. El Form Request lo detecta y su mensaje nombra el bloque en conflicto (flujo 3b); como los bloques pegados no se superponen, la consulta compara con `<` y `>` estrictos. La restricción `EXCLUDE` de la base de datos (sección 7.2) cubre las solicitudes simultáneas.
+- RN18: el consultorio elegido no puede estar en un bloque superpuesto de otro médico el mismo día (`consultorioLibre`, flujo 3d). Se reserva durante todo el bloque, aunque ese médico no tenga citas (ADR-002). Si otra solicitud gana la carrera, la restricción `horarios_consultorio_sin_superposicion` de `005_consultorios.sql` rechaza el bloque y el servicio lo informa como regla de negocio, distinguiéndolo por el nombre de la restricción. Dentro de la transacción, el servicio vuelve a comprobar que el consultorio siga activo con un bloqueo compartido, para que no se desactive a la vez.
 - La sucursal se asigna automáticamente con `Sucursal::predeterminada()`, porque solo hay una.
 - No se registra, modifica ni elimina el horario de un médico desactivado (`exigirMedicoActivo`, flujo 3c).
 - Antes de modificar o eliminar un bloque, el servicio calcula las citas futuras programadas o confirmadas que quedarían fuera del horario; si el cambio deja alguna sin cubrir, lo revierte y nombra las citas. Las que ya estaban fuera antes del cambio no cuentan (flujos 5a y 5b). Las citas pertenecen al Ciclo #2: la tabla `citas` existe desde `002_citas_y_notas.sql` y las crea el CU-09.
@@ -3078,6 +3212,25 @@ Reglas aplicadas:
 
             if ($choque !== null) {
                 $fallar("Este horario se superpone con otro del mismo médico: {$choque->descripcion()}.");
+            }
+```
+
+`app/Http/Requests/HorarioRequest.php` (consultorio libre, RN18)
+
+```php
+            $choque = HorarioAtencion::query()
+                ->with('medico.persona')
+                ->where('consultorio_id', (int) $consultorioId)
+                ->where('medico_id', '!=', $medicoId)
+                ->where('dia_semana', (int) $dia)
+                ->where('hora_inicio', '<', $horaFin)
+                ->where('hora_fin', '>', $horaInicio)
+                ->when($ignorarId, fn ($consulta) => $consulta->where('id', '!=', $ignorarId))
+                ->first();
+
+            if ($choque !== null) {
+                $consultorio = Consultorio::find((int) $consultorioId)?->nombre ?? 'El consultorio';
+                $fallar("{$consultorio} ya está ocupado ese día por {$choque->medico->persona->nombre_completo}: {$choque->descripcion()}.");
             }
 ```
 
@@ -3371,6 +3524,46 @@ Reglas aplicadas:
         });
 ```
 
+#### CU-20 Gestionar consultorios
+
+| Elemento                | Archivo                                                                    |
+| ----------------------- | -------------------------------------------------------------------------- |
+| Base de datos           | `database/sql/005_consultorios.sql` y su migración `2026_11_07_000005_crear_consultorios.php` |
+| Modelo                  | `app/Models/Consultorio.php`                                               |
+| Controlador             | `app/Http/Controllers/ConsultorioController.php`                           |
+| Solicitud de validación | `app/Http/Requests/ConsultorioRequest.php`                                 |
+| Servicio                | `app/Services/ConsultorioService.php`                                      |
+| Vistas                  | `resources/views/consultorios/` (`index`, `create`, `edit`, `_formulario`) |
+| Pruebas                 | `tests/Feature/Consultorios/ConsultorioTest.php` y las de RN18 en `tests/Feature/Horarios/HorarioTest.php` |
+| Decisión                | `documento/adr/ADR-002-consultorios-como-entidad.md`                       |
+
+Reglas aplicadas:
+
+- El grupo `/consultorios` exige `consultorios:gestionar`, que solo tiene el Administrador; el permiso lo carga la propia migración `005` (RN12, RNF19).
+- El nombre se normaliza antes de validar, como en especialidades. La unicidad es por sucursal y no distingue mayúsculas: el Form Request la comprueba con `lower(btrim(nombre))` y el índice único `consultorios_nombre_uq` la garantiza ante solicitudes simultáneas (flujo 3a).
+- La sucursal se asigna automáticamente con `Sucursal::predeterminada()`.
+- El consultorio nunca se elimina: se activa o desactiva con `PATCH /consultorios/{id}/estado`. No se desactiva mientras lo use algún bloque de atención (flujo 5a); el servicio bloquea la fila del consultorio mientras lo comprueba, para que un bloque nuevo no lo tome a la vez.
+- La migración descarta el texto libre anterior y deja los bloques sin consultorio, porque el sistema estaba en desarrollo con datos de prueba (ADR-002, decisión 6). Los seeders de demostración crean el «Consultorio 1» y lo asignan por su identificador.
+
+`app/Services/ConsultorioService.php`
+
+```php
+        DB::transaction(function () use ($consultorio, $activo, $actor) {
+            // Bloquea la fila: un bloque nuevo no puede tomar el consultorio mientras se desactiva.
+            $consultorio = Consultorio::query()->lockForUpdate()->findOrFail($consultorio->id);
+
+            if (! $activo) {
+                $bloques = $consultorio->horarios()->count();
+
+                if ($bloques > 0) {
+                    throw new ReglaDeNegocioException(
+                        "No se puede desactivar el {$consultorio->nombre}: lo usan {$bloques} "
+                        .($bloques === 1 ? 'bloque' : 'bloques').' de atención. Asígneles otro consultorio antes.'
+                    );
+                }
+            }
+```
+
 ### 7.4 Repositorio
 
 El código fuente está publicado en GitHub, con la historia de commits atómicos del desarrollo y un `README.md` con las instrucciones para instalar y ejecutar el sistema.
@@ -3391,7 +3584,7 @@ Al escanear el código QR se abre la página del repositorio. La estructura de c
 
 ### 8.1 Plan de pruebas
 
-**Objetivo.** Comprobar que el sistema cumple los casos de uso y las reglas de negocio de los Ciclos #1 y #2 (CU-01 a CU-19), que rechaza los datos y los accesos inválidos, y que la base de datos hace cumplir sus restricciones aunque la aplicación falle.
+**Objetivo.** Comprobar que el sistema cumple los casos de uso y las reglas de negocio de los Ciclos #1 y #2 (CU-01 a CU-20), que rechaza los datos y los accesos inválidos, y que la base de datos hace cumplir sus restricciones aunque la aplicación falle.
 
 **Alcance.** Ciclo #1: acceso y roles, usuarios, pacientes, médicos, especialidades, horarios y perfil del paciente. Ciclo #2: registro, reprogramación y cancelación de citas, control de asistencia, agenda médica, historial, reportes, notas clínicas y recordatorio. Las pruebas 3 a 8 del enunciado dependen de las citas y se ejecutaron con el CU-09 (pruebas 3, 4 y 5), el CU-11 (prueba 6), el CU-14 (prueba 7) y el CU-13 (prueba 8), como muestra la sección 8.2.1.
 
@@ -3415,7 +3608,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 5. **Concurrencia:** una solicitud simultánea que choca con la base se informa como regla de negocio, sin error técnico.
 6. **Auditoría:** la acción queda en la bitácora (RNF13).
 
-**Entorno.** PHP 8.4, Laravel 13, PHPUnit 12.5 y PostgreSQL 16 en un contenedor Docker, con la base `clinica_test` separada de la de desarrollo. La suite del Ciclo #1 y la última corrida completa (07/11/2026) se ejecutaron con PHP 8.4.27 y PHPUnit 12.5.40, las versiones que exige el `composer.lock`; el resultado se detalla en 8.3.1. Cada prueba parte de una base vacía y con los catálogos cargados.
+**Entorno.** PHP 8.4, Laravel 13, PHPUnit 12.5 y PostgreSQL 16 en un contenedor Docker, con la base `clinica_test` separada de la de desarrollo. La suite del Ciclo #1 y la corrida del cierre del Ciclo #2 se ejecutaron con PHP 8.4.27 y PHPUnit 12.5.40; la última corrida completa (07/11/2026, tras agregar CU-20) se ejecutó con PHP 8.5.4 y PHPUnit 12.5.40, ambas dentro de lo que exige el `composer.lock` (PHP 8.4.1 o superior). El resultado se detalla en 8.3.1. Cada prueba parte de una base vacía y con los catálogos cargados.
 
 **Criterio de aprobación.** Un caso se aprueba cuando se obtiene el resultado esperado. El ciclo se da por probado cuando la suite completa pasa sin fallos.
 
@@ -3424,7 +3617,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 | Ciclo | Pruebas                                                                                 | Estado                                                               |
 | ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18 (CP-42 a CP-93)                | Ejecutadas (secciones 8.2 y 8.3). Detalle: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18 y CU-20, más RN18 en CU-07 (CP-42 a CP-101) | Ejecutadas (secciones 8.2 y 8.3). Detalle: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
 
 ### 8.2 Casos de prueba
 
@@ -3542,20 +3735,28 @@ Los resultados obtenidos salen de la ejecución de la suite del 07/11/2026 (secc
 | CP-91 | CU-13 | La Recepcionista consulta las citas de una fecha sin elegir médico | Ve las citas de todos los médicos de ese día, ordenadas por hora y con el médico de cada una; puede filtrar por estado y, con un médico elegido, solo las suyas | `AgendaTest::la_recepcionista_sin_elegir_medico_ve_las_citas_de_todos_en_la_fecha`, `sin_medico_tambien_filtra_por_estado_y_avisa_si_no_hay_citas`, `con_un_medico_elegido_solo_muestra_las_de_ese_medico_sin_la_columna_medico` | Aprobada |
 | CP-92 | CU-11, CU-10, CU-16, CU-15 | Los formularios del Ciclo #2 declaran la validación del cliente | Cancelar pide el motivo y confirma desde el script; reprogramar pide fecha y horario; la nota avisa si todos los campos están vacíos y cuenta caracteres; reportes marca el rango de fechas | `ValidacionClienteTest::cancelar_valida_el_motivo_y_confirma_desde_el_script_no_con_onsubmit`, `reprogramar_pide_la_fecha_y_el_horario_con_mensajes_propios`, `la_nota_clinica_avisa_si_todos_los_campos_estan_vacios_y_cuenta_caracteres`, `reportes_marca_el_rango_de_fechas_y_el_servidor_corrige_el_rango_al_reves` | Aprobada |
 | CP-93 | CU-11 | El servidor rechaza lo que el cliente adelanta | Un motivo de cancelación en blanco se rechaza y la cita no cambia | `ValidacionClienteTest::el_servidor_rechaza_un_motivo_de_cancelacion_en_blanco_aunque_el_cliente_falle` | Aprobada |
+| CP-94 | CU-20 | Solo el Administrador gestiona consultorios | Los demás roles reciben 403 en cada ruta y sin sesión se redirige al inicio de sesión; el menú del Administrador enlaza a la pantalla | `ConsultorioTest::solo_el_administrador_gestiona_consultorios`, `sin_sesion_se_redirige_al_login`, `el_menu_del_administrador_enlaza_a_consultorios` | Aprobada |
+| CP-95 | CU-20 | Registrar y renombrar un consultorio | Se guarda en la única sucursal con el nombre normalizado y queda en la bitácora; al renombrar, la bitácora guarda el antes y el después y los bloques siguen enlazados | `ConsultorioTest::registra_un_consultorio_en_la_unica_sucursal_y_queda_en_la_bitacora`, `el_nombre_se_guarda_sin_espacios_de_mas`, `renombra_el_consultorio_y_la_bitacora_guarda_el_antes_y_el_despues` | Aprobada |
+| CP-96 | CU-20 | Nombre vacío, largo o repetido | Se rechaza sin distinguir mayúsculas ni espacios; una solicitud simultánea se informa como regla de negocio y la base lo garantiza aunque se salte la aplicación | `ConsultorioTest::rechaza_un_nombre_repetido_sin_distinguir_mayusculas_ni_espacios`, `valida_el_nombre`, `al_modificar_puede_conservar_su_nombre_pero_no_tomar_el_de_otro`, `una_solicitud_simultanea_con_el_mismo_nombre_se_informa_como_regla_de_negocio`, `la_base_rechaza_un_nombre_repetido_aunque_se_salte_la_aplicacion` | Aprobada |
+| CP-97 | CU-20 | Desactivar y reactivar | Sin bloques se desactiva y se reactiva, y consta en la bitácora; si lo usan bloques de atención se rechaza con la cantidad; las pestañas muestran cada estado | `ConsultorioTest::desactivar_un_consultorio_sin_bloques_no_lo_elimina_y_se_puede_reactivar`, `no_se_puede_desactivar_un_consultorio_que_usan_bloques_de_atencion`, `por_defecto_muestra_solo_los_activos_y_las_pestañas_cuentan_cada_estado` | Aprobada |
+| CP-98 | CU-07 | Otro médico en el mismo consultorio a la misma hora (RN18) | Se rechaza y el mensaje nombra al médico y el bloque, aunque ese médico no tenga citas; también al modificar un bloque | `HorarioTest::otro_medico_no_puede_usar_el_mismo_consultorio_a_la_misma_hora`, `el_consultorio_se_reserva_todo_el_bloque_aunque_el_medico_no_tenga_citas`, `al_modificar_no_se_puede_pasar_a_un_consultorio_ocupado` | Aprobada |
+| CP-99 | CU-07 | Usos del consultorio que sí se permiten (RN18) | Bloques pegados, el mismo horario otro día, sin consultorio o en otro consultorio, y el propio bloque al modificarlo | `HorarioTest::permite_el_mismo_consultorio_en_bloques_pegados_otro_dia_o_sin_consultorio`, `un_bloque_no_choca_con_su_propio_consultorio_al_modificarlo` | Aprobada |
+| CP-100 | CU-07 | La base hace cumplir RN18 | Una solicitud simultánea se informa como regla de negocio; una inserción directa la rechaza la restricción de exclusión; no se acepta un consultorio de otra sucursal ni uno desactivado | `HorarioTest::una_solicitud_simultanea_por_el_mismo_consultorio_se_informa_como_regla_de_negocio`, `la_base_rechaza_el_consultorio_ocupado_aunque_se_salte_la_aplicacion`, `la_base_rechaza_un_consultorio_de_otra_sucursal`, `no_se_puede_guardar_un_bloque_con_un_consultorio_desactivado` | Aprobada |
+| CP-101 | CU-07 | Selector de consultorio | Ofrece «Sin consultorio» y solo los activos; sin consultorios avisa y enlaza a la gestión | `HorarioTest::el_formulario_ofrece_solo_los_consultorios_activos`, `sin_consultorios_el_formulario_avisa_y_enlaza_a_la_gestion` | Aprobada |
 
 ### 8.3 Evidencias
 
 #### 8.3.1 Resultado de la suite automatizada
 
-Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proyecto, con PHP 8.4.27 y PHPUnit 12.5.40.
+Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proyecto, después de agregar CU-20, con PHP 8.5.4 y PHPUnit 12.5.40.
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 481         |
-| Pruebas aprobadas  | 481         |
+| Pruebas ejecutadas | 518         |
+| Pruebas aprobadas  | 518         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 3147        |
-| Duración           | 43 segundos |
+| Aserciones         | 3290        |
+| Duración           | 30 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
 
@@ -3609,7 +3810,7 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 
 | Rol                         | Usuario                       | Contraseña  | Observación                                          |
 | --------------------------- | ----------------------------- | ----------- | ---------------------------------------------------- |
-| Administrador               | `demo.admin@clinica.test`     | `Demo-2026` | Usuarios, médicos, especialidades y horarios         |
+| Administrador               | `demo.admin@clinica.test`     | `Demo-2026` | Usuarios, médicos, especialidades, consultorios y horarios |
 | Recepcionista               | `demo.recepcion@clinica.test` | `Demo-2026` | Pacientes                                            |
 | Médico                      | `demo.medico@clinica.test`    | `Demo-2026` | Médico con especialidad y horarios cargados          |
 | Paciente (ficha verificada) | CI `8000003`                  | `Demo-2026` | Ve su información médica y su contacto de emergencia |
@@ -3624,7 +3825,7 @@ El personal entra con su correo y los pacientes con su CI, en la misma pantalla 
 - Servidor en `http://127.0.0.1:8000` y la base de datos levantada.
 - Cuentas de demostración, para probar cada rol. Se cargan con `php artisan db:seed --class=DemoSeeder`; el usuario y la contraseña de cada caso de uso están además indicados debajo de su título.
 - Una ventana privada por rol, para que las sesiones no se mezclen.
-- Orden sugerido, para que cada prueba ya tenga sus datos: CU-06, CU-05, CU-07, CU-03, CU-04, CU-02, CU-08, CU-01 y CU-19.
+- Orden sugerido, para que cada prueba ya tenga sus datos: CU-06, CU-05, CU-20, CU-07, CU-03, CU-04, CU-02, CU-08, CU-01 y CU-19.
 - Quedan fuera las pruebas que dependen de las citas (quitar una especialidad con citas o cambiar un horario que deja una cita sin cubrir), que corresponden al Ciclo #2, y la regla de que siempre quede un Administrador activo, que desde la pantalla no se puede provocar y está cubierta por pruebas automáticas.
 
 **CU-06 Gestionar especialidades** (rol: Administrador)
@@ -3808,7 +4009,22 @@ Usuarios de prueba: los mismos de CU-01.
 | PM-107 | CU-10 | Recepcionista | En «Reprogramar cita», elegir una fecha y pulsar el botón sin elegir horario. | No se envía; avisa que hay que elegir un horario. | No se envió y se mostró «Elija un horario disponible»; el aviso desapareció al elegir uno. | Aprobada |
 | PM-108 | CU-15 | Administrador | Poner «Desde» el 20/11 y «Hasta» el 01/11 y pulsar «Generar». | No se envía; avisa que las fechas no son válidas. | No se envió y se marcó el campo «Hasta». Con «Desde» 01/11 y «Hasta» 30/11 el reporte se generó. | Aprobada |
 
-Total: 108 pruebas manuales (PM-01 a PM-87 del Ciclo #1 y PM-88 a PM-108 del Ciclo #2).
+**CU-20 Gestionar consultorios y RN18 en CU-07** (rol: Administrador; ADR-002)
+
+Usuario de prueba: Administrador `demo.admin@clinica.test` · Contraseña: `Demo-2026`. Antes, registrar un segundo médico (CU-05), porque los datos de demostración traen uno solo.
+
+| N.º    | Prueba                                                                                              | Resultado esperado                                                          | Resultado obtenido | Estado                 |
+| ------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------ | ---------------------- |
+| PM-109 | Abrir «Consultorios» desde el menú y registrar «Consultorio 3».                                     | Aparece en la pestaña Activos, con 0 bloques.                               |                    | Pendiente de ejecución |
+| PM-110 | Registrar « consultorio 3 ».                                                                        | Se rechaza por nombre repetido.                                             |                    | Pendiente de ejecución |
+| PM-111 | En «Horarios de atención», agregar al primer médico el bloque Lunes 08:00 a 12:00 en el Consultorio 3. | Se guarda y la semana del médico muestra el consultorio.                 |                    | Pendiente de ejecución |
+| PM-112 | Agregar al segundo médico el bloque Lunes 10:00 a 14:00 en el Consultorio 3.                         | Se rechaza y el mensaje nombra al primer médico y su bloque.                |                    | Pendiente de ejecución |
+| PM-113 | Agregar al segundo médico el bloque Lunes 12:00 a 16:00 en el Consultorio 3.                         | Se acepta: el bloque está pegado, no superpuesto.                           |                    | Pendiente de ejecución |
+| PM-114 | Desactivar el Consultorio 3.                                                                        | Se rechaza e indica cuántos bloques lo usan.                                |                    | Pendiente de ejecución |
+| PM-115 | Registrar y desactivar un consultorio sin bloques; abrir el formulario de horarios y reactivarlo.  | Desactivado no aparece en el selector; al reactivarlo vuelve a aparecer.    |                    | Pendiente de ejecución |
+| PM-116 | Entrar como Recepcionista y abrir `/consultorios`.                                                  | Se muestra la página de acceso denegado (403).                              |                    | Pendiente de ejecución |
+
+Total: 116 pruebas manuales (PM-01 a PM-87 del Ciclo #1, PM-88 a PM-108 del Ciclo #2 y PM-109 a PM-116 de CU-20, estas últimas pendientes de ejecución).
 
 #### 8.3.5 Capturas de pantalla
 
@@ -3994,18 +4210,18 @@ Las figuras 21 a 36 son del Ciclo #2. Se tomaron el 06/11/2026 sobre el servidor
 
 ## Conclusión
 
-Con la Presentación 2 queda terminado el **Ciclo #2** y, con él, el sistema completo: los diecinueve casos de uso. El Ciclo #1 entregó la base de datos con control de acceso por roles y los nueve casos que la sostienen: CU-01 (iniciar y cerrar sesión), CU-02 (registro propio del paciente), CU-03 (usuarios y roles), CU-04 (pacientes), CU-05 (médicos), CU-06 (especialidades), CU-07 (horarios de atención), CU-08 (mi perfil) y CU-19 (renovar contraseña temporal). El Ciclo #2 sumó las citas y todo lo que gira en torno a ellas: CU-09 (registrar), CU-10 (reprogramar), CU-11 (cancelar), CU-12 (controlar asistencia), CU-13 (agenda médica), CU-14 (historial), CU-15 (reportes), CU-16 y CU-17 (notas clínicas) y CU-18 (recordatorio de citas).
+Con la Presentación 2 queda terminado el **Ciclo #2** y, con él, el sistema completo: los veinte casos de uso. El Ciclo #1 entregó la base de datos con control de acceso por roles y los nueve casos que la sostienen: CU-01 (iniciar y cerrar sesión), CU-02 (registro propio del paciente), CU-03 (usuarios y roles), CU-04 (pacientes), CU-05 (médicos), CU-06 (especialidades), CU-07 (horarios de atención), CU-08 (mi perfil) y CU-19 (renovar contraseña temporal). El Ciclo #2 sumó las citas y todo lo que gira en torno a ellas: CU-09 (registrar), CU-10 (reprogramar), CU-11 (cancelar), CU-12 (controlar asistencia), CU-13 (agenda médica), CU-14 (historial), CU-15 (reportes), CU-16 y CU-17 (notas clínicas) y CU-18 (recordatorio de citas). Al revisar el flujo de horarios se agregó CU-20 (consultorios), que no estaba en el enunciado, para que dos médicos no ocupen la misma sala a la misma hora (RN18, ADR-002).
 
 Lo construido responde a los objetivos específicos del enunciado:
 
 - **Base de datos relacional con claves primarias y foráneas:** el esquema en PostgreSQL se implementa con migraciones que ejecutan los archivos de `database/sql/`, con restricciones que hacen cumplir las reglas aunque falle la validación de la aplicación (sección 6.3).
 - **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
-- **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada del cálculo de disponibilidad de las citas.
+- **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, ni del mismo médico ni en el mismo consultorio, que son la entrada del cálculo de disponibilidad de las citas.
 - **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
 - **Citas sin conflictos de horario:** el servidor calcula la disponibilidad, vuelve a comprobarla dentro de una transacción y las restricciones de exclusión de PostgreSQL rechazan la cita superpuesta del médico y del paciente aunque dos solicitudes compitan (RN07, RN13, RN17). La reprogramación usa las mismas reglas.
 - **Control de estados:** una cita pasa de programada a confirmada, atendida, con inasistencia o cancelada solo por transiciones válidas, nunca se elimina y el Paciente cancela o reprograma con 24 horas de anticipación (RN10, RN15).
 - **Consultas y reportes:** agenda por médico y fecha, historial por paciente y reportes de citas y de pacientes con rango de fechas, filtros y totales, cada uno limitado a los roles autorizados (RN12).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 son 481 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 fueron 481 y, tras agregar CU-20, son 518 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -4016,13 +4232,15 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 - **Persona compartida entre fichas.** Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico). Sus datos personales viven en una única fila de `personas`, de modo que al editar la ficha del paciente (CU-04) la Recepcionista también modifica el correo con el que el médico entra al sistema. CU-03 y CU-05 evitan este efecto porque reutilizan la persona sin modificar sus datos. Se acepta por ser un caso poco frecuente; evitarlo exigiría bloquear los datos personales en CU-04 cuando la persona tiene una cuenta con otro rol.
 - **Citas atendidas o canceladas.** No existe un procedimiento autorizado para corregir una cita atendida o reabrir una cancelada: el sistema las rechaza (RF08, RF10, RN10). El enunciado deja esa política a cargo del sistema y aquí se eligió la más estricta.
 - **Pruebas manuales del Ciclo #2.** Se ejecutó un recorrido por rol de CU-09 a CU-18 (PM-88 a PM-108), pero el ancho de 390 px se revisó con un viewport emulado en el navegador y no con un teléfono físico. Las seis pantallas de las figuras 37 a 42 y unas 40 pantallas más de los cuatro roles se midieron sin desborde horizontal; las tablas se muestran como tarjetas en celular. Quedan sin medir en ese ancho la reprogramación del Paciente y las pantallas de error, y las figuras 37 a 42 no se volvieron a capturar después del cambio a tarjetas.
-- **Nombres de especialidad con tildes.** La unicidad ignora mayúsculas y espacios, pero no las tildes: «Odontologia» y «Odontología» se aceptan como dos especialidades distintas. Resolverlo requiere la extensión `unaccent` de PostgreSQL.
+- **Nombres de especialidad con tildes.** La unicidad ignora mayúsculas y espacios, pero no las tildes: «Odontologia» y «Odontología» se aceptan como dos especialidades distintas. Resolverlo requiere la extensión `unaccent` de PostgreSQL. Lo mismo vale para los nombres de consultorio.
+- **La cita no guarda el consultorio.** Lo hereda del bloque en el que cae (ADR-002). Si después se cambia el consultorio de ese bloque, las citas pasadas del bloque se ven con el consultorio nuevo. Si hiciera falta conservarlo, la cita tendría que guardar su propio consultorio.
+- **El consultorio se reserva por bloque completo.** Las horas sin citas de un médico no se pueden prestar a otro médico. Es lo habitual en consultas externas y mantiene la prioridad del médico titular (ADR-002, decisión 7).
 
 ## Recomendación
 
 **Aplicado en el Ciclo #2**
 
-- **Aprovechar la protección de la base de datos.** Se mantuvieron las restricciones de exclusión de PostgreSQL sobre el médico y, desde el CU-09, sobre el paciente (`004_citas_sin_superposicion_paciente.sql`). A ellas se sumó la validación en PHP (RF07), la comprobación final dentro de una transacción y la traducción del rechazo de la base a un mensaje claro, con pruebas de solicitudes que compiten.
+- **Aprovechar la protección de la base de datos.** Se mantuvieron las restricciones de exclusión de PostgreSQL sobre el médico y, desde el CU-09, sobre el paciente (`004_citas_sin_superposicion_paciente.sql`). A ellas se sumó la validación en PHP (RF07), la comprobación final dentro de una transacción y la traducción del rechazo de la base a un mensaje claro, con pruebas de solicitudes que compiten. El mismo patrón se aplicó después a los consultorios (`005_consultorios.sql`, RN18).
 - **Reutilizar los servicios del Ciclo #1.** El cálculo de disponibilidad se apoya en los horarios y en la duración por especialidad, y la reprogramación reutiliza la misma cuadrícula.
 - **Mantener la política de baja lógica.** Cancelar, reprogramar y marcar la asistencia cambian el estado o la fecha de la cita y conservan el historial (RN10, RN11); ninguna operación la elimina.
 - **Probar primero.** Las pruebas 3 a 8 del enunciado se escribieron junto con cada caso de uso.
@@ -4033,7 +4251,8 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 - **Recuperación de contraseña por cuenta propia.** Exige un servicio de correo y verificar el correo del paciente, que hoy es opcional y no se verifica (sección 1.4.1).
 - **Recordatorios por SMS o correo y lista de espera,** descartados del alcance actual.
 - **Exportar los reportes a CSV o PDF,** opcional en el enunciado y no implementado.
-- **Unicidad de especialidades sin distinguir tildes,** con la extensión `unaccent` de PostgreSQL (limitación conocida).
+- **Unicidad de especialidades y consultorios sin distinguir tildes,** con la extensión `unaccent` de PostgreSQL (limitación conocida).
+- **Liberar las horas sin citas de un consultorio** (*block release*): que el médico titular, o una regla del tipo «48 horas antes, si no hay citas», ceda a otro médico el tiempo que no va a usar. Exige guardar el consultorio en cada cita (ADR-002).
 
 ## Bibliografía
 
@@ -4066,7 +4285,7 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 | Ruta                      | Contenido                                                                                                                                                                                                                                  |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `codigo/`                 | Aplicación Laravel: `app/` (controladores, servicios, modelos, solicitudes de validación y _middleware_), `database/` (migraciones, seeders y esquema SQL), `resources/views/` (vistas Blade), `routes/`, `config/`, `public/` y `tests/`. |
-| `codigo/database/sql/`    | Esquema en SQL puro: `001_esquema_base.sql`, `002_citas_y_notas.sql`, `003_catalogos_iniciales.sql` y `004_citas_sin_superposicion_paciente.sql`.                                                                                                                                      |
+| `codigo/database/sql/`    | Esquema en SQL puro: `001_esquema_base.sql`, `002_citas_y_notas.sql`, `003_catalogos_iniciales.sql`, `004_citas_sin_superposicion_paciente.sql` y `005_consultorios.sql`.                                                                                                                                      |
 | `documento/`              | Este informe (`Informe-Final.md`) y las decisiones de arquitectura (`adr/`).                                                                                                                                                               |
 | `diagramas/` y `pruebas/` | Reservadas para material de apoyo.                                                                                                                                                                                                         |
 
@@ -4093,21 +4312,23 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 | CU-16       | `GET /agenda/{cita}/nota`, `PUT /agenda/{cita}/nota` (Médico, `notas:registrar`) |
 | CU-17       | `GET /pacientes/{paciente}/notas` (Recepcionista y Médico, `notas:consultar` y `pacientes:consultar`); `GET /mis-notas` (Paciente, `notas:consultar`) |
 | CU-18       | Sin ruta propia: el aviso se muestra en `GET /inicio` (Paciente, `recordatorios:consultar`) |
+| CU-20       | `GET/POST /consultorios`, `GET /consultorios/nuevo`, `GET /consultorios/{consultorio}/editar`, `PUT /consultorios/{consultorio}`, `PATCH /consultorios/{consultorio}/estado` (Administrador, `consultorios:gestionar`) |
 | Comunes     | `GET /inicio`, `GET /` (redirige a `/inicio`)                                                                                                                                                                                                                                                            |
 
 Son 72 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **481 pruebas, 481 aprobadas, 3147 aserciones**, en unos 43 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **518 pruebas, 518 aprobadas, 3290 aserciones**, en unos 30 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
-| `Feature\Usuarios\UsuarioTest`                     | 50      | CU-03                                         |
-| `Feature\Medicos\MedicoTest`                       | 39      | CU-05                                         |
-| `Feature\Horarios\HorarioTest`                     | 34      | CU-07                                         |
+| `Feature\Usuarios\UsuarioTest`                     | 51      | CU-03                                         |
+| `Feature\Medicos\MedicoTest`                       | 40      | CU-05                                         |
+| `Feature\Horarios\HorarioTest`                     | 45      | CU-07 y RN18                                  |
+| `Feature\Consultorios\ConsultorioTest`             | 18      | CU-20                                         |
 | `Feature\Especialidades\EspecialidadTest`          | 33      | CU-06                                         |
-| `Feature\Citas\CitaTest`                           | 31      | CU-09                                         |
+| `Feature\Citas\CitaTest`                           | 37      | CU-09                                         |
 | `Feature\Citas\CancelarCitaTest`                    | 20      | CU-11                                         |
 | `Feature\Citas\HistorialTest`                        | 16      | CU-14                                         |
 | `Feature\Citas\AgendaTest`                           | 13      | CU-13                                         |
