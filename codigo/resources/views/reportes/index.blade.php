@@ -25,15 +25,17 @@
         @endforeach
     </ul>
 
-    <form method="GET" action="{{ route('reportes.index') }}" class="row g-2 align-items-end mb-4">
+    <form method="GET" action="{{ route('reportes.index') }}" class="row g-2 align-items-end mb-4 needs-validation" novalidate>
         <input type="hidden" name="tipo" value="{{ $tipo }}">
         <div class="col-6 col-md-2">
             <label for="desde" class="form-label">Desde</label>
-            <input type="date" id="desde" name="desde" value="{{ $desde->toDateString() }}" class="form-control">
+            <input type="date" id="desde" name="desde" value="{{ $desde->toDateString() }}" class="form-control" required data-fecha-desde>
+            <div class="invalid-feedback">Elija la fecha inicial.</div>
         </div>
         <div class="col-6 col-md-2">
             <label for="hasta" class="form-label">Hasta</label>
-            <input type="date" id="hasta" name="hasta" value="{{ $hasta->toDateString() }}" class="form-control">
+            <input type="date" id="hasta" name="hasta" value="{{ $hasta->toDateString() }}" class="form-control" required data-fecha-hasta>
+            <div class="invalid-feedback">Revise las fechas: la final es obligatoria y no puede ser anterior a la inicial.</div>
         </div>
         @if ($tipo === 'citas')
             <div class="col-md-3">

@@ -36,18 +36,22 @@
 
     <div class="card shadow-sm">
         <div class="card-body">
-            <form method="POST" action="{{ route('notas.guardar', $cita) }}">
+            <form method="POST" action="{{ route('notas.guardar', $cita) }}" class="needs-validation" novalidate
+                  data-mensaje-textos="Complete al menos un campo de la nota clínica.">
                 @csrf
                 @method('PUT')
 
                 @foreach ($campos as $campo => $etiqueta)
                     <div class="mb-3">
                         <label for="{{ $campo }}" class="form-label">{{ $etiqueta }}</label>
-                        <textarea id="{{ $campo }}" name="{{ $campo }}" rows="3" maxlength="2000"
+                        <textarea id="{{ $campo }}" name="{{ $campo }}" rows="3" maxlength="2000" data-grupo-texto data-contador
                                   class="form-control @error($campo) is-invalid @enderror">{{ old($campo, $nota?->{$campo}) }}</textarea>
+                        <div class="d-flex justify-content-end"><span class="form-text" data-contador-de="{{ $campo }}"></span></div>
                         @error($campo)<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                 @endforeach
+
+                <div class="text-danger small mb-3 d-none" role="alert" data-aviso-textos></div>
 
                 <button type="submit" class="btn btn-clinica">{{ $nota ? 'Guardar cambios' : 'Guardar nota' }}</button>
             </form>

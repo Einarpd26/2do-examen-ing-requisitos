@@ -2280,7 +2280,7 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         $request->session()->regenerate();
 ```
 
-**Form Request.** La validación del servidor está en clases de `app/Http/Requests/` (RNF08); el cliente la refuerza con `public/js/validaciones.js`. Varias solicitudes comparten el trait `NormalizaDatosDePersona`, que deja el CI, el correo y los teléfonos en la forma en que se guardan antes de validarlos.
+**Form Request.** La validación del servidor está en clases de `app/Http/Requests/` (RNF08); el cliente la refuerza con `public/js/validaciones.js`. El script `public/js/validaciones.js` adelanta el aviso en el navegador con marcas `data-*` que cada formulario declara: contraseñas y casillas obligatorias, textos que no pueden quedar en blanco (`data-no-vacio`), al menos un texto de un grupo (`data-grupo-texto`, la nota clínica), al menos una opción (`data-al-menos-uno`, los horarios), rango de fechas (`data-fecha-desde` y `data-fecha-hasta`), contador de caracteres y confirmación antes de una acción que no se deshace (`data-confirmar`). Los formularios llevan `novalidate` para que los mensajes sean los del sistema y no los nativos del navegador; el servidor valida siempre, aunque el script falle. Varias solicitudes comparten el trait `NormalizaDatosDePersona`, que deja el CI, el correo y los teléfonos en la forma en que se guardan antes de validarlos.
 
 `app/Http/Requests/LoginRequest.php`
 
@@ -3105,7 +3105,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 | Ciclo | Pruebas                                                                                 | Estado                                                               |
 | ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18 (CP-42 a CP-91)                | Ejecutadas (secciones 8.2 y 8.3). Detalle: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18 (CP-42 a CP-93)                | Ejecutadas (secciones 8.2 y 8.3). Detalle: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
 
 ### 8.2 Casos de prueba
 
@@ -3221,6 +3221,8 @@ Los resultados obtenidos salen de la ejecución de la suite del 05/11/2026 (secc
 | CP-89 | CU-13 | Pacientes que el Médico no atiende, y otros roles | Un paciente sin cita, con cita solo cancelada o de otro médico responde 404; Paciente y Administrador reciben 403; la Recepcionista, 404; sin sesión se redirige al inicio de sesión | `FichaMedicoTest::el_medico_no_abre_la_ficha_de_un_paciente_que_no_atiende`, `los_demas_roles_no_usan_esta_ficha`, `sin_sesion_redirige_al_login_y_un_paciente_inexistente_da_404` | Aprobada |
 | CP-90 | CU-13 | Botones de la agenda del Médico | La ficha y las notas del paciente se ofrecen solo en citas no canceladas, sin enlaces que terminen en 404 | `FichaMedicoTest::la_agenda_ofrece_la_ficha_solo_en_citas_no_canceladas` | Aprobada |
 | CP-91 | CU-13 | La Recepcionista consulta las citas de una fecha sin elegir médico | Ve las citas de todos los médicos de ese día, ordenadas por hora y con el médico de cada una; puede filtrar por estado y, con un médico elegido, solo las suyas | `AgendaTest::la_recepcionista_sin_elegir_medico_ve_las_citas_de_todos_en_la_fecha`, `sin_medico_tambien_filtra_por_estado_y_avisa_si_no_hay_citas`, `con_un_medico_elegido_solo_muestra_las_de_ese_medico_sin_la_columna_medico` | Aprobada |
+| CP-92 | CU-11, CU-10, CU-16, CU-15 | Los formularios del Ciclo #2 declaran la validación del cliente | Cancelar pide el motivo y confirma desde el script; reprogramar pide fecha y horario; la nota avisa si todos los campos están vacíos y cuenta caracteres; reportes marca el rango de fechas | `ValidacionClienteTest::cancelar_valida_el_motivo_y_confirma_desde_el_script_no_con_onsubmit`, `reprogramar_pide_la_fecha_y_el_horario_con_mensajes_propios`, `la_nota_clinica_avisa_si_todos_los_campos_estan_vacios_y_cuenta_caracteres`, `reportes_marca_el_rango_de_fechas_y_el_servidor_corrige_el_rango_al_reves` | Aprobada |
+| CP-93 | CU-11 | El servidor rechaza lo que el cliente adelanta | Un motivo de cancelación en blanco se rechaza y la cita no cambia | `ValidacionClienteTest::el_servidor_rechaza_un_motivo_de_cancelacion_en_blanco_aunque_el_cliente_falle` | Aprobada |
 
 ### 8.3 Evidencias
 
@@ -3230,10 +3232,10 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 473         |
-| Pruebas aprobadas  | 473         |
+| Pruebas ejecutadas | 478         |
+| Pruebas aprobadas  | 478         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 3105        |
+| Aserciones         | 3131        |
 | Duración           | 21 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
@@ -3282,7 +3284,7 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 
 **Ejecutadas hasta ahora (24/10/2026):** PM-02, PM-44, PM-56, PM-57 y PM-76, que corresponden a las pruebas 1, 2, 9 y 10 del enunciado. Se ejecutaron en el navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y se comprobó en la base de datos que los rechazos no dejaron registros. Las demás figuran como «Pendiente de ejecución».
 
-**Ejecutadas en el Ciclo #2 (06/11/2026, 23:51 hora de La Paz):** PM-88 a PM-103, el recorrido de CU-09 a CU-18 con una persona de cada rol. Se ejecutaron en un navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y con los datos de demostración. Se prepararon tres cosas directamente en la base de datos, porque dependen del reloj: un bloque de atención del sábado (para reservar una cita para «mañana» y ver el recordatorio), y una cita de hoy a las 22:00 que ya había comenzado (para poder marcarla como atendida y escribir su nota). Las capturas están en la sección 8.3.5 (figuras 21 a 36).
+**Ejecutadas en el Ciclo #2 (06/11/2026, 23:51 hora de La Paz, y 07/11/2026 para las de validación en el cliente):** PM-88 a PM-108, el recorrido de CU-09 a CU-18 con una persona de cada rol. Se ejecutaron en un navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y con los datos de demostración. Se prepararon tres cosas directamente en la base de datos, porque dependen del reloj: un bloque de atención del sábado (para reservar una cita para «mañana» y ver el recordatorio), y una cita de hoy a las 22:00 que ya había comenzado (para poder marcarla como atendida y escribir su nota). Las capturas están en la sección 8.3.5 (figuras 21 a 36).
 
 **Cuentas para probar**
 
@@ -3481,6 +3483,11 @@ Usuarios de prueba: los mismos de CU-01.
 | PM-101 | CU-17 | Paciente | Abrir «Mis notas». | Ve la nota de su cita atendida, en solo lectura. | Mostró la misma nota, sin botón «Editar» (figura 34). | Aprobada |
 | PM-102 | CU-15 | Administrador | Generar el reporte de citas de noviembre. | Muestra el total, los totales por estado, por médico y por especialidad, y el detalle. | Mostró «Total de citas: 4» (Programada 2, Atendida 1, Cancelada 1), 4 citas del médico, 4 de la especialidad y las cuatro filas del detalle (figura 35). | Aprobada |
 | PM-103 | CU-15 | Administrador | Abrir la pestaña «Pacientes registrados» de octubre y noviembre. | Muestra los pacientes registrados con sus totales. | Mostró «Registrados: 2, Verificados: 1, Activos: 2» (figura 36). | Aprobada |
+| PM-104 | CU-16 | Médico | Vaciar los cuatro campos de la nota clínica y pulsar «Guardar cambios». | El navegador no envía el formulario y muestra «Complete al menos un campo de la nota clínica». | El formulario no se envió y apareció el aviso en rojo con los cuatro campos marcados. Al escribir en «Diagnóstico» el aviso desapareció y el contador mostró «6 / 2000». | Aprobada |
+| PM-105 | CU-11 | Recepcionista | Escribir solo espacios como motivo de la cancelación y pulsar «Cancelar cita». | No se envía ni pide confirmación; muestra el aviso del motivo. | No se envió, no apareció la ventana de confirmación y se mostró «Indique el motivo de la cancelación». | Aprobada |
+| PM-106 | CU-11 | Recepcionista | Escribir un motivo válido, pulsar «Cancelar cita» y rechazar la confirmación. | Pide confirmación y, al rechazarla, no cancela. | Apareció la confirmación una sola vez y, al rechazarla, la cita siguió Programada. | Aprobada |
+| PM-107 | CU-10 | Recepcionista | En «Reprogramar cita», elegir una fecha y pulsar el botón sin elegir horario. | No se envía; avisa que hay que elegir un horario. | No se envió y se mostró «Elija un horario disponible»; el aviso desapareció al elegir uno. | Aprobada |
+| PM-108 | CU-15 | Administrador | Poner «Desde» el 20/11 y «Hasta» el 01/11 y pulsar «Generar». | No se envía; avisa que las fechas no son válidas. | No se envió y se marcó el campo «Hasta». Con «Desde» 01/11 y «Hasta» 30/11 el reporte se generó. | Aprobada |
 
 Total: 87 pruebas manuales.
 
@@ -3651,7 +3658,7 @@ Lo construido responde a los objetivos específicos del enunciado:
 - **Citas sin conflictos de horario:** el servidor calcula la disponibilidad, vuelve a comprobarla dentro de una transacción y las restricciones de exclusión de PostgreSQL rechazan la cita superpuesta del médico y del paciente aunque dos solicitudes compitan (RN07, RN13, RN17). La reprogramación usa las mismas reglas.
 - **Control de estados:** una cita pasa de programada a confirmada, atendida, con inasistencia o cancelada solo por transiciones válidas, nunca se elimina y el Paciente cancela o reprograma con 24 horas de anticipación (RN10, RN15).
 - **Consultas y reportes:** agenda por médico y fecha, historial por paciente y reportes de citas y de pacientes con rango de fechas, filtros y totales, cada uno limitado a los roles autorizados (RN12).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 son 473 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 son 478 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -3661,7 +3668,7 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 
 - **Persona compartida entre fichas.** Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico). Sus datos personales viven en una única fila de `personas`, de modo que al editar la ficha del paciente (CU-04) la Recepcionista también modifica el correo con el que el médico entra al sistema. CU-03 y CU-05 evitan este efecto porque reutilizan la persona sin modificar sus datos. Se acepta por ser un caso poco frecuente; evitarlo exigiría bloquear los datos personales en CU-04 cuando la persona tiene una cuenta con otro rol.
 - **Citas atendidas o canceladas.** No existe un procedimiento autorizado para corregir una cita atendida o reabrir una cancelada: el sistema las rechaza (RF08, RF10, RN10). El enunciado deja esa política a cargo del sistema y aquí se eligió la más estricta.
-- **Pruebas manuales del Ciclo #2.** Se ejecutó un recorrido por rol de CU-09 a CU-18 (PM-88 a PM-103), pero no se repitió en un teléfono ni se midieron las pantallas nuevas en un ancho de 390 px, como se hizo con el Ciclo #1.
+- **Pruebas manuales del Ciclo #2.** Se ejecutó un recorrido por rol de CU-09 a CU-18 (PM-88 a PM-108), pero no se repitió en un teléfono ni se midieron las pantallas nuevas en un ancho de 390 px, como se hizo con el Ciclo #1.
 - **Nombres de especialidad con tildes.** La unicidad ignora mayúsculas y espacios, pero no las tildes: «Odontologia» y «Odontología» se aceptan como dos especialidades distintas. Resolverlo requiere la extensión `unaccent` de PostgreSQL.
 
 ## Recomendación
@@ -3745,7 +3752,7 @@ Son 72 rutas en total, según `php artisan route:list --except-vendor`. Solo el 
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **473 pruebas, 473 aprobadas, 3105 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **478 pruebas, 478 aprobadas, 3131 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -3765,6 +3772,7 @@ Resultado de `php artisan test`: **473 pruebas, 473 aprobadas, 3105 aserciones**
 | `Feature\Acceso\LoginTest`                         | 26      | CU-01                                         |
 | `Feature\Pacientes\PacienteTest`                   | 20      | CU-04                                         |
 | `Feature\Pacientes\FichaMedicoTest`                 | 8       | CU-13                                         |
+| `Feature\Interfaz\ValidacionClienteTest`             | 5       | CU-10, CU-11, CU-15 y CU-16 (cliente)         |
 | `Feature\Pacientes\AccesoPacienteTest`             | 20      | CU-04 y CU-19                                 |
 | `Feature\Acceso\RegistroTest`                      | 15      | CU-02                                         |
 | `Feature\Perfil\PerfilTest`                        | 13      | CU-08                                         |

@@ -39,11 +39,12 @@
     <div class="card shadow-sm mb-3">
         <div class="card-body">
             <h2 class="h6 text-uppercase text-secondary">1. Nueva fecha</h2>
-            <form method="GET" action="{{ route($propia ? 'mis-citas.reprogramar' : 'citas.reprogramar', $cita) }}" class="row g-2 align-items-end">
+            <form method="GET" action="{{ route($propia ? 'mis-citas.reprogramar' : 'citas.reprogramar', $cita) }}" class="row g-2 align-items-end needs-validation" novalidate>
                 <div class="col-sm-6 col-md-4">
                     <label for="fecha" class="form-label">Fecha</label>
                     <input type="date" id="fecha" name="fecha" value="{{ $fecha }}" class="form-control"
                            min="{{ $primeraFecha }}" max="{{ $ultimaFecha }}" required>
+                    <div class="invalid-feedback">Elija una fecha entre hoy y el {{ \Carbon\Carbon::parse($ultimaFecha)->format('d/m/Y') }}.</div>
                     <div class="form-text">Hasta el {{ \Carbon\Carbon::parse($ultimaFecha)->format('d/m/Y') }}.</div>
                 </div>
                 <div class="col-auto">
@@ -66,12 +67,13 @@
                         No hay horarios disponibles el {{ \Carbon\Carbon::parse($fecha)->format('d/m/Y') }}. Pruebe con otra fecha.
                     </div>
                 @else
-                    <form method="POST" action="{{ route($propia ? 'mis-citas.actualizar' : 'citas.actualizar', $cita) }}">
+                    <form method="POST" action="{{ route($propia ? 'mis-citas.actualizar' : 'citas.actualizar', $cita) }}"
+                          class="needs-validation" novalidate>
                         @csrf
                         @method('PUT')
                         <input type="hidden" name="fecha" value="{{ $fecha }}">
 
-                        <fieldset class="mb-3">
+                        <fieldset class="mb-3" data-al-menos-uno="Elija un horario disponible.">
                             <legend class="form-label fs-6">
                                 Horarios disponibles el {{ \Carbon\Carbon::parse($fecha)->format('d/m/Y') }}
                                 <span class="text-danger" aria-hidden="true">*</span>
@@ -87,6 +89,7 @@
                                     </div>
                                 @endforeach
                             </div>
+                            <div class="invalid-feedback d-none" data-mensaje-grupo></div>
                         </fieldset>
 
                         <button type="submit" class="btn btn-clinica">Reprogramar cita</button>
