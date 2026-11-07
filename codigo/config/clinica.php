@@ -47,4 +47,21 @@ return [
         'bloqueo_minutos' => 15,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Citas
+    |--------------------------------------------------------------------------
+    |
+    | Una cita se puede registrar hasta dias_anticipacion_max días después de hoy
+    | (hora de La Paz), para cualquier rol (CU-09). El Paciente solo puede cancelar con
+    | al menos horas_min_cancelacion_paciente horas de anticipación (RN15, CU-11); la
+    | Recepcionista no tiene esa restricción.
+    |
+    */
+
+    'citas' => [
+        'dias_anticipacion_max' => 60,
+        'horas_min_cancelacion_paciente' => 24,
+    ],
+
 ];

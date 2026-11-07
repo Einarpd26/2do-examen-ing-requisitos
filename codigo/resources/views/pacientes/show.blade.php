@@ -17,6 +17,9 @@
         </h1>
         <div class="d-flex flex-wrap gap-2">
             <a href="{{ route('pacientes.index') }}" class="btn btn-outline-secondary btn-sm">Volver al listado</a>
+            @can('historial:consultar')
+                <a href="{{ route('pacientes.historial', $paciente) }}" class="btn btn-outline-primary btn-sm">Historial de citas</a>
+            @endcan
             <a href="{{ route('pacientes.edit', $paciente) }}" class="btn btn-clinica btn-sm">Editar</a>
             <form method="POST" action="{{ route('pacientes.estado', $paciente) }}"
                   onsubmit="return confirm('{{ $paciente->estado ? 'Se desactivará al paciente y su cuenta. El historial se conserva.' : 'Se reactivará al paciente y su cuenta.' }}')">

@@ -19,10 +19,10 @@ Sections 7 (Implementación), 8 (Pruebas, results/evidence), Conclusión, Recome
 - [x] T3 Section 7.2 written by delegated writer; verified by parent: 26/26 excerpts verbatim (own script), prose spot-checked (tables permisos/rol_permisos, triggers bitacora, transactions in 6 services, menu disabled, accesos:renovar, 14 chars).
 - [x] T4 Section 7.3 written (CU-01..08, 19), same verification.
 - [x] T4b DONE 2026-10-24 (user approved, parent verified against code, not just the writer's claim): 6.1 diagram + table fixed; sequence diagrams CU-01, CU-02, CU-04, CU-19 rewritten (CU-01 and CU-19 also had logic in the controller; CU-01 also had the inactive-account check before the password check, code does it after). Mermaid not rendered (no renderer here) — user should preview. Optional pending code change NOT approved: config/session.php default 120 -> 30. Original drift list: 6.1 middleware list says "rol, cierre por inactividad" (code: auth, cuenta.vigente, can:permiso); 6.1 services list says "Códigos" (code: trait TieneCodigoFormateado); 6.2 CU-02 and CU-04 sequence diagrams put logic in controller (code: RegistroPacienteRequest/Service, PacienteService::crearAcceso).
-- [ ] T5 Section 8: plan de pruebas, casos 1, 2, 9, 10 with obtained results from real tests, evidence (suite output).
+- [x] T5 Section 8: plan de pruebas, casos 1, 2, 9, 10 with obtained results from real tests, evidence (suite output). Verified 2026-11-05: 8.1-8.3 filled for Ciclo #1. Not part of this task: 82 of 87 manual tests in 8.3.4 are still "Pendiente de ejecución".
 - [x] T6 Conclusión, Recomendación, Bibliografía, Anexos (A estructura, B rutas = 48, C pruebas por módulo = 288). Self-corrected: "diecisiete requisitos" → "diez CU (CU-09..18)"; recommendation fixed because EXCLUDE constraints already exist in database/sql/001 and 002.
-- [ ] T7 Doc-vs-code consistency check (RNF03 says Apache/XAMPP; DDL in 6.3.2 vs `database/sql`; RN list) — report drift, fix the report only.
-- [ ] T8 Cover page + 7.4 Repositorio: URL + QR (BLOCKED: needs public repo URL).
+- [x] T7 Doc-vs-code consistency check (RNF03 says Apache/XAMPP; DDL in 6.3.2 vs `database/sql`; RN list) — report drift, fix the report only. Verified 2026-11-05: RNF03 reworded; DDL 001 and 002 identical to 6.3.2; 48 routes match Anexo B. RN01, RN02, RN11, RN12 and RN14 are met by the code; RN03, RN07 and RN09 are enforced by the schema (read, not executed); RN04-RN06, RN08, RN10, RN13, RN15 and RN16 wait for the Ciclo #2 code. No drift in the RN list, no report change needed. Only RN15 and RN16 are labeled "(Ciclo #2)" in 3.5, although others also depend on it.
+- [x] T8 Cover page + 7.4 Repositorio: URL + QR. Verified 2026-11-05: URL and QR in the cover and 7.4, URL in the Word file, repo returns HTTP 200. QR image not decoded: user should scan it once.
 
 ## Acceptance criteria
 - Every section of the exam's DOCUMENTACION index is filled for Ciclo #1.
@@ -38,4 +38,4 @@ Created 2026-10-24. Baseline: suite green (288 tests).
 - RNF03 and 6.1.2 reworded to the real environment (embedded server + Docker Postgres). Comment in 7.1 still mentions Apache/XAMPP (replaced when 7.1 is written).
 
 ## Next step
-T2 (7.1) onward; verify RNF14 first.
+All Ciclo #1 report tasks are closed. Presentación 2 needs the Ciclo #2 code and report sections, which belong to a separate feature document.
