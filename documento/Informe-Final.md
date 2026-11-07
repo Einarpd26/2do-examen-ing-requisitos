@@ -95,7 +95,7 @@ El sistema es una aplicación web accesible desde un navegador (PHP, PostgreSQL,
 | Ciclo    | Requisitos                                                                                                                                        | Estado    |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios · RF14 Cuenta y perfil del paciente                      | En curso  |
-| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | En curso: CU-09, CU-11, CU-13 y CU-14 implementados |
+| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | En curso: CU-09, CU-11, CU-12, CU-13 y CU-14 implementados |
 
 ---
 
@@ -474,7 +474,7 @@ flowchart LR
 
 ### 4.6 Especificación de casos de uso
 
-Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09, CU-11, CU-13 y CU-14). Los demás del Ciclo #2 (CU-10, CU-12, CU-15 a CU-18) se agregan en la segunda presentación.
+Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09, CU-11, CU-12, CU-13 y CU-14). Los demás del Ciclo #2 (CU-10, CU-15 a CU-18) se agregan en la segunda presentación.
 
 #### CU-01 Iniciar y cerrar sesión
 
@@ -744,6 +744,31 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 3c. El Paciente intenta cancelar con menos de 24 horas de anticipación: se rechaza y se le pide comunicarse con la clínica (RN15). La Recepcionista no tiene esta restricción.
 - 3d. El Paciente intenta cancelar la cita de otro paciente: el sistema responde «no encontrado» (RN12).
 - \*. La cita nunca se elimina: el historial se conserva (RN10).
+
+#### CU-12 Controlar asistencia
+
+|                   |                                                                                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Actores**       | Recepcionista (cualquier cita), Médico (citas de su agenda) y Paciente (su propia cita)                                                                                 |
+| **Requisito**     | RF10                                                                                                                                                                    |
+| **Precondición**  | El actor inició sesión. La cita existe y está «Programada» o «Confirmada».                                                                                              |
+| **Postcondición** | La cita queda «Confirmada», «Atendida» o con «Inasistencia» según la acción; la operación consta en la bitácora y el registro se conserva.                              |
+
+**Flujo principal**
+
+1. Antes de la cita, la Recepcionista (o el Paciente, en su propia cita) elige «Confirmar asistencia» en el comprobante y la cita pasa de «Programada» a «Confirmada».
+2. Cuando la cita ya comenzó, la Recepcionista elige en el comprobante «Marcar como atendida» o «Registrar inasistencia»; el Médico marca «Marcar atendida» en su agenda (CU-13).
+3. El sistema vuelve a leer la cita dentro de una transacción, comprueba que la transición sea válida, cambia el estado y registra `cita_confirmada`, `cita_atendida` o `cita_inasistencia` en la bitácora.
+4. El sistema muestra el resultado y deja de ofrecer acciones sobre esa cita.
+
+**Flujos alternos**
+
+- 3a. La cita está cancelada: no puede marcarse como atendida ni cambiar de estado, y no existe un procedimiento para hacerlo (RF10, RN10).
+- 3b. La cita ya está atendida o con inasistencia: conserva su estado (RN10).
+- 3c. La cita todavía no comenzó y se pide registrar asistencia o inasistencia, o ya comenzó y se pide confirmarla: se rechaza con un mensaje.
+- 3d. La cita ya estaba confirmada: se informa y no se cambia nada.
+- 3e. El Médico intenta marcar la cita de otro médico, o el Paciente confirmar la de otro paciente: el sistema responde «no encontrado» (RN12).
+- 3f. La acción pedida no es una de las tres conocidas: se rechaza.
 
 #### CU-13 Consultar agenda médica
 
@@ -2006,7 +2031,7 @@ La plantilla base `resources/views/layouts/base.blade.php` dibuja la barra de na
 
 ### 7.3 Implementación de la arquitectura de subsistemas
 
-Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y el CU-09, el CU-11, el CU-13 y el CU-14 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
+Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y el CU-09, el CU-11, el CU-12, el CU-13 y el CU-14 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
 
 Todos los servicios de este ciclo usan `BitacoraService` (RNF13) y `ReglaDeNegocioException` (sección 7.2); no se repite en cada tabla.
 
@@ -2393,6 +2418,25 @@ Reglas aplicadas:
 
 
 
+
+#### CU-12 Controlar asistencia
+
+| Elemento    | Archivo                                                                                                         |
+| ----------- | --------------------------------------------------------------------------------------------------------------- |
+| Controlador | `app/Http/Controllers/AsistenciaController.php`                                                                 |
+| Servicio    | `app/Services/AsistenciaService.php`                                                                            |
+| Modelo      | `app/Models/Cita.php` (métodos `inicio` y `vigente`)                                                            |
+| Vistas      | botones en `resources/views/citas/comprobante.blade.php` y en `resources/views/agenda/index.blade.php`          |
+| Pruebas     | `tests/Feature/Citas/AsistenciaTest.php`                                                                        |
+
+Reglas aplicadas:
+
+- Tres rutas `PATCH` con permisos distintos (RN12, RNF19): `/citas/{cita}/asistencia` (`citas:gestionar`, Recepcionista: confirmar, atendida o inasistencia), `/agenda/{cita}/atender` (`citas:atender`, Médico: solo atendida y solo las citas de su agenda) y `/mis-citas/{cita}/confirmar` (`citas:gestionar_propias`, Paciente: solo confirmar la propia).
+- `AsistenciaService` aplica el diagrama de estados de 6.1: solo se cambia el estado de una cita «Programada» o «Confirmada». Confirmar exige que la cita no haya comenzado; marcar atendida o inasistencia exige que ya haya comenzado (hora de La Paz). Una cita cancelada no puede marcarse como atendida, y las atendidas y con inasistencia no cambian (RN10).
+- Bloquea la fila (`lockForUpdate`) dentro de una transacción y vuelve a leer el estado, de modo que dos solicitudes simultáneas no aplican dos transiciones ni dejan dos registros en la bitácora.
+- Las vistas solo muestran los botones de las acciones que `AsistenciaService::posibles` considera válidas hoy para esa cita; el servidor vuelve a comprobarlas.
+- Cada transición queda en la bitácora (`cita_confirmada`, `cita_atendida`, `cita_inasistencia`).
+
 #### CU-13 Consultar agenda médica
 
 | Elemento    | Archivo                                                                                         |
@@ -2532,7 +2576,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 | Ciclo | Pruebas                                                                                 | Estado                                                               |
 | ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | En curso: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13; el resto, pendiente |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | En curso: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia con CU-12; el resto, pendiente |
 
 ### 8.2 Casos de prueba
 
@@ -2607,10 +2651,10 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 377         |
-| Pruebas aprobadas  | 377         |
+| Pruebas ejecutadas | 395         |
+| Pruebas aprobadas  | 395         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 2714        |
+| Aserciones         | 2787        |
 | Duración           | 21 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
@@ -2938,7 +2982,7 @@ Lo construido responde a los objetivos específicos que tocan a este ciclo:
 - **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
 - **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada que usará el cálculo de disponibilidad del Ciclo #2.
 - **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el CU-09, el CU-11, el CU-13 y el CU-14 son 377 (sección 8 y Anexo C).
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el CU-09, el CU-11, el CU-12, el CU-13 y el CU-14 son 395 (sección 8 y Anexo C).
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -3015,15 +3059,16 @@ Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogram
 | CU-08       | `GET/PUT /perfil`                                                                                                                                                                                                                                                                                        |
 | CU-09       | `GET /citas/nueva`, `POST /citas`, `GET /citas/{cita}` (Recepcionista, `citas:gestionar`); `GET /mis-citas/nueva`, `POST /mis-citas`, `GET /mis-citas/{cita}` (Paciente, `citas:gestionar_propias`)                                                                                                      |
 | CU-11       | `PATCH /citas/{cita}/cancelar` (Recepcionista, `citas:gestionar`); `PATCH /mis-citas/{cita}/cancelar` (Paciente, `citas:gestionar_propias`) |
+| CU-12       | `PATCH /citas/{cita}/asistencia` (Recepcionista, `citas:gestionar`); `PATCH /agenda/{cita}/atender` (Médico, `citas:atender`); `PATCH /mis-citas/{cita}/confirmar` (Paciente, `citas:gestionar_propias`) |
 | CU-13       | `GET /agenda` (Recepcionista y Médico, `agenda:consultar`) |
 | CU-14       | `GET /pacientes/{paciente}/historial` (Recepcionista, `historial:consultar` y `pacientes:consultar`); `GET /mi-historial` (Paciente, `historial:consultar`) |
 | Comunes     | `GET /inicio`, `GET /` (redirige a `/inicio`)                                                                                                                                                                                                                                                            |
 
-Son 59 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
+Son 62 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **377 pruebas, 377 aprobadas, 2714 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **395 pruebas, 395 aprobadas, 2787 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -3035,6 +3080,7 @@ Resultado de `php artisan test`: **377 pruebas, 377 aprobadas, 2714 aserciones**
 | `Feature\Citas\CancelarCitaTest`                    | 20      | CU-11                                         |
 | `Feature\Citas\HistorialTest`                        | 16      | CU-14                                         |
 | `Feature\Citas\AgendaTest`                           | 11      | CU-13                                         |
+| `Feature\Citas\AsistenciaTest`                       | 18      | CU-12                                         |
 | `Feature\Acceso\LoginTest`                         | 26      | CU-01                                         |
 | `Feature\Pacientes\PacienteTest`                   | 20      | CU-04                                         |
 | `Feature\Pacientes\AccesoPacienteTest`             | 20      | CU-04 y CU-19                                 |

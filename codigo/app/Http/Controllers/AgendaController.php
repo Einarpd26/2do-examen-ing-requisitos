@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Medico;
 use App\Services\AgendaService;
+use App\Services\AsistenciaService;
 use App\Services\HistorialService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -15,7 +16,7 @@ use Illuminate\View\View;
  */
 class AgendaController extends Controller
 {
-    public function index(Request $request, AgendaService $agenda): View
+    public function index(Request $request, AgendaService $agenda, AsistenciaService $asistencia): View
     {
         $propia = $request->user()->rol->codigo === 'MEDICO';
         $estados = HistorialService::ESTADOS;
@@ -40,14 +41,17 @@ class AgendaController extends Controller
         $estado = $request->query('estado');
         $estado = is_string($estado) && array_key_exists($estado, $estados) ? $estado : null;
 
+        $citas = $medico === null ? collect() : $agenda->del($medico, $fecha, $estado);
+
         return view('agenda.index', [
+            'acciones' => $citas->mapWithKeys(fn ($cita) => [$cita->id => $asistencia->posibles($cita)])->all(),
             'propia' => $propia,
             'medico' => $medico,
             'medicos' => $propia ? collect() : $this->medicos(),
             'fecha' => $fecha,
             'estado' => $estado,
             'estados' => $estados,
-            'citas' => $medico === null ? collect() : $agenda->del($medico, $fecha, $estado),
+            'citas' => $citas,
             'aviso' => $aviso,
         ]);
     }

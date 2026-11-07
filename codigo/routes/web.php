@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccesoController;
 use App\Http\Controllers\AccesoPacienteController;
 use App\Http\Controllers\AgendaController;
+use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\CambioPasswordController;
 use App\Http\Controllers\CitaController;
 use App\Http\Controllers\EspecialidadController;
@@ -54,6 +55,9 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         // CU-11: cancelar la cita (no se elimina: pasa a CANCELADA).
         Route::patch('/{cita}/cancelar', [CitaController::class, 'cancelar'])
             ->where(['cita' => '[0-9]+'])->name('cancelar');
+        // CU-12: confirmar, marcar atendida o registrar inasistencia.
+        Route::patch('/{cita}/asistencia', [AsistenciaController::class, 'recepcion'])
+            ->where(['cita' => '[0-9]+'])->name('asistencia');
     });
 
     Route::prefix('mis-citas')->name('mis-citas.')->middleware('can:citas:gestionar_propias')->group(function () {
@@ -64,6 +68,9 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         // CU-11: cancelar la cita (no se elimina: pasa a CANCELADA).
         Route::patch('/{cita}/cancelar', [CitaController::class, 'cancelar'])
             ->where(['cita' => '[0-9]+'])->name('cancelar');
+        // CU-12: el Paciente confirma su propia asistencia.
+        Route::patch('/{cita}/confirmar', [AsistenciaController::class, 'paciente'])
+            ->where(['cita' => '[0-9]+'])->name('confirmar');
     });
 
     // CU-03: gestionar usuarios y roles del personal (solo el Administrador, con usuarios:gestionar).
@@ -122,6 +129,10 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
             Route::patch('/estado', [EspecialidadController::class, 'estado'])->name('estado');
         });
     });
+
+    // CU-12: el Médico marca como atendidas las citas de su agenda (citas:atender).
+    Route::patch('/agenda/{cita}/atender', [AsistenciaController::class, 'medico'])
+        ->where(['cita' => '[0-9]+'])->middleware('can:citas:atender')->name('agenda.atender');
 
     // CU-13: agenda médica (agenda:consultar). La Recepcionista elige al médico; el Médico ve la suya.
     Route::get('/agenda', [AgendaController::class, 'index'])

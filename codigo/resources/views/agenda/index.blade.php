@@ -73,6 +73,9 @@
                             <th>Especialidad</th>
                             <th>Estado</th>
                             <th>Motivo</th>
+                            @if ($propia)
+                                <th></th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -84,6 +87,20 @@
                                 <td>{{ $cita->especialidad->nombre }}</td>
                                 <td><span class="badge {{ $insignia[$cita->estado] ?? 'text-bg-light' }}">{{ $estados[$cita->estado] ?? $cita->estado }}</span></td>
                                 <td>{{ filled($cita->motivo) ? $cita->motivo : '—' }}</td>
+                                @if ($propia)
+                                    <td class="text-end">
+                                        {{-- CU-12: el Médico marca como atendida una cita vigente que ya comenzó. --}}
+                                        @can('citas:atender')
+                                            @if (in_array('atendida', $acciones[$cita->id] ?? [], true))
+                                                <form method="POST" action="{{ route('agenda.atender', $cita) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="btn btn-success btn-sm">Marcar atendida</button>
+                                                </form>
+                                            @endif
+                                        @endcan
+                                    </td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>
