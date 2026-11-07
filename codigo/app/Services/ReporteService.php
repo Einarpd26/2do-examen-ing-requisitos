@@ -81,7 +81,7 @@ class ReporteService
             return $consulta->join('medicos', 'medicos.id', '=', 'citas.medico_id')
                 ->join('personas', 'personas.id', '=', 'medicos.persona_id')
                 ->selectRaw('personas.nombre_completo as nombre, count(*) as total')
-                ->groupBy('personas.nombre_completo')->orderByDesc('total')->orderBy('nombre')->get();
+                ->groupBy('medicos.id', 'personas.nombre_completo')->orderByDesc('total')->orderBy('nombre')->get();
         }
 
         return $consulta->join('especialidades', 'especialidades.id', '=', 'citas.especialidad_id')

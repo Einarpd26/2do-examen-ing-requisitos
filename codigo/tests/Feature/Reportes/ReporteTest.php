@@ -139,9 +139,26 @@ class ReporteTest extends TestCase
     {
         $this->datos();
 
-        $this->actingAs($this->administrador())->get(route('reportes.index'))
-            ->assertSeeInOrder(['Por médico', 'Marta', '2', 'Jorge', '1'])
-            ->assertSeeInOrder(['Por especialidad', 'Pediatría', '2', 'Cardiología', '1']);
+        $html = $this->actingAs($this->administrador())->get(route('reportes.index'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('#Marta[^<]*</td><td class="text-end">2</td>#', $html);
+        $this->assertMatchesRegularExpression('#Jorge[^<]*</td><td class="text-end">1</td>#', $html);
+        $this->assertMatchesRegularExpression('#Pediatría</td><td class="text-end">2</td>#', $html);
+        $this->assertMatchesRegularExpression('#Cardiología</td><td class="text-end">1</td>#', $html);
+    }
+
+    public function test_dos_medicos_con_el_mismo_nombre_no_se_fusionan_en_el_reporte(): void
+    {
+        $homonimo = $this->crearFichaMedico(['primer_nombre' => 'Marta', 'apellido_paterno' => 'Rojas'], [], [$this->pediatria->id]);
+        $paciente = $this->crearPaciente();
+        $this->cita($paciente, '2026-11-03', '08:00', 'ATENDIDA', $this->marta, $this->pediatria);
+        $this->cita($paciente, '2026-11-04', '08:00', 'ATENDIDA', $this->marta, $this->pediatria);
+        $this->cita($paciente, '2026-11-05', '08:00', 'ATENDIDA', $homonimo, $this->pediatria);
+
+        $html = $this->actingAs($this->administrador())->get(route('reportes.index'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('#Marta Rojas[^<]*</td><td class="text-end">2</td>#', $html);
+        $this->assertMatchesRegularExpression('#Marta Rojas[^<]*</td><td class="text-end">1</td>#', $html);
     }
 
     public function test_agenda_diaria_de_un_medico_es_un_reporte_de_un_dia_y_un_medico(): void
