@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\TieneCodigoFormateado;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -37,6 +38,18 @@ class Cita extends Model
     protected function casts(): array
     {
         return ['fecha' => 'date'];
+    }
+
+    /** Momento en que empieza la cita, en la zona horaria de la aplicación (America/La_Paz). */
+    public function inicio(): CarbonImmutable
+    {
+        return CarbonImmutable::parse($this->fecha->toDateString().' '.$this->hora_inicio, config('app.timezone'));
+    }
+
+    /** ¿La cita sigue vigente (programada o confirmada)? Solo esas pueden cambiar de estado. */
+    public function vigente(): bool
+    {
+        return in_array($this->estado, ['PROGRAMADA', 'CONFIRMADA'], true);
     }
 
     /** Hora inicial como HH:MM (la base la devuelve con segundos). */

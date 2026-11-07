@@ -21,7 +21,7 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <p class="mb-3">
-                <span class="badge {{ $cita->estado === 'CANCELADA' ? 'text-bg-secondary' : 'text-bg-primary' }}">{{ $estados[$cita->estado] ?? $cita->estado }}</span>
+                <span class="badge {{ $cita->estado === 'CANCELADA' ? 'text-bg-secondary' : ($cita->estado === 'ATENDIDA' ? 'text-bg-success' : 'text-bg-primary') }}">{{ $estados[$cita->estado] ?? $cita->estado }}</span>
             </p>
             <dl class="row mb-0">
                 <dt class="col-sm-4">Código</dt><dd class="col-sm-8">{{ $cita->codigo }}</dd>
@@ -41,6 +41,43 @@
             </dl>
         </div>
     </div>
+
+    {{-- CU-12: solo se ofrecen las acciones de asistencia que corresponden hoy a la cita. --}}
+    @php($acciones = app(\App\Services\AsistenciaService::class)->posibles($cita))
+    @if ($acciones !== [])
+        <div class="card shadow-sm mt-3">
+            <div class="card-body d-flex flex-wrap align-items-center gap-2">
+                <h2 class="h6 text-uppercase text-secondary mb-0 me-2">Asistencia</h2>
+                @if ($propia)
+                    @if (in_array('confirmar', $acciones, true))
+                        <form method="POST" action="{{ route('mis-citas.confirmar', $cita) }}">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="btn btn-clinica btn-sm">Confirmar mi asistencia</button>
+                        </form>
+                    @endif
+                @else
+                    @foreach (['confirmar' => ['Confirmar asistencia', 'btn-clinica'], 'atendida' => ['Marcar como atendida', 'btn-success'], 'inasistencia' => ['Registrar inasistencia', 'btn-outline-warning']] as $accion => [$etiqueta, $clase])
+                        @if (in_array($accion, $acciones, true))
+                            <form method="POST" action="{{ route('citas.asistencia', $cita) }}">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="accion" value="{{ $accion }}">
+                                <button type="submit" class="btn {{ $clase }} btn-sm">{{ $etiqueta }}</button>
+                            </form>
+                        @endif
+                    @endforeach
+                @endif
+            </div>
+        </div>
+    @endif
+
+    {{-- CU-10: solo se reprograman las citas programadas o confirmadas. --}}
+    @if (in_array($cita->estado, ['PROGRAMADA', 'CONFIRMADA'], true))
+        <div class="mt-3">
+            <a href="{{ route($propia ? 'mis-citas.reprogramar' : 'citas.reprogramar', $cita) }}" class="btn btn-outline-primary btn-sm">Reprogramar cita</a>
+        </div>
+    @endif
 
     {{-- CU-11: solo se cancelan las citas programadas o confirmadas. --}}
     @if (in_array($cita->estado, ['PROGRAMADA', 'CONFIRMADA'], true))

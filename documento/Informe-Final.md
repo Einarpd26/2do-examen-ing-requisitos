@@ -7,7 +7,7 @@
 | **Grupo**        | SC                                                     |
 | **Integrantes**  | Einar Padilla Delgadillo<br>Daniel Acosta Roca         |
 | **Docente**      | Angeliza Garzon Cuellar                                |
-| **Presentación** | 1 — Ciclo #1 (24/10/2026)                              |
+| **Presentación** | 2 — Ciclo #2 (07/11/2026)                              |
 | **Repositorio**  | https://github.com/Einarpd26/2do-examen-ing-requisitos |
 | **Código QR**    | ![Código QR del repositorio](img/qr-repositorio.png)   |
 
@@ -95,7 +95,7 @@ El sistema es una aplicación web accesible desde un navegador (PHP, PostgreSQL,
 | Ciclo    | Requisitos                                                                                                                                        | Estado    |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios · RF14 Cuenta y perfil del paciente                      | En curso  |
-| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | En curso: CU-09, CU-11 y CU-14 implementados |
+| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | Completo: CU-09 a CU-18 implementados |
 
 ---
 
@@ -474,7 +474,7 @@ flowchart LR
 
 ### 4.6 Especificación de casos de uso
 
-Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09, CU-11 y CU-14). Los demás del Ciclo #2 (CU-10, CU-12, CU-13, CU-15 a CU-18) se agregan en la segunda presentación.
+Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09 a CU-18), es decir, todos los del Ciclo #2.
 
 #### CU-01 Iniciar y cerrar sesión
 
@@ -718,7 +718,36 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 6d. Datos inválidos (modalidad distinta de presencial o virtual, motivo de más de 500 caracteres, fecha u hora con formato incorrecto): se señalan los campos a corregir.
 - \*. Las citas canceladas no ocupan disponibilidad (RN09). La hora final nunca se toma del formulario (RN08).
 
-**Fuera del alcance:** reprogramar la cita (CU-10); cancelarla es el CU-11.
+**Fuera del alcance:** reprogramar la cita es el CU-10 y cancelarla, el CU-11.
+
+#### CU-10 Reprogramar cita
+
+|                   |                                                                                                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Actores**       | Recepcionista (cualquier cita) y Paciente (solo las suyas)                                                                                                 |
+| **Requisito**     | RF08                                                                                                                                                       |
+| **Precondición**  | El actor inició sesión. La cita existe, está «Programada» o «Confirmada» y todavía no comenzó.                                                              |
+| **Postcondición** | La cita conserva al paciente, al médico y la especialidad, pero queda en la nueva fecha y hora, «Programada»; el horario anterior queda libre y la operación consta en la bitácora. |
+
+**Flujo principal**
+
+1. El actor abre el comprobante de la cita y elige «Reprogramar cita». El sistema muestra los datos de la cita actual.
+2. Elige la nueva fecha, desde hoy hasta 60 días adelante.
+3. El sistema muestra los horarios disponibles del mismo médico ese día, con las mismas reglas que una cita nueva; la propia cita no cuenta como ocupada.
+4. Elige un horario y confirma.
+5. El sistema vuelve a leer la cita dentro de una transacción, comprueba el estado, la anticipación y todas las reglas del horario, calcula la hora final y la sucursal, guarda el cambio y registra `cita_reprogramada` en la bitácora con el horario anterior y el nuevo.
+6. El sistema muestra el comprobante con los nuevos datos.
+
+**Flujos alternos**
+
+- 1a. La cita está cancelada, atendida o con inasistencia, o ya comenzó: se rechaza con un mensaje; esas citas no se reprograman directamente (RF08, RN10).
+- 1b. El Paciente intenta reprogramar con menos de 24 horas de anticipación respecto de la cita actual: se rechaza y se le pide comunicarse con la clínica (RN15). La Recepcionista no tiene esta restricción.
+- 1c. El Paciente intenta reprogramar la cita de otro paciente: el sistema responde «no encontrado» (RN12).
+- 3a. No hay horarios disponibles ese día: el sistema lo indica y propone otra fecha.
+- 5a. El horario nuevo no está en un bloque de atención del médico, no cae en la cuadrícula o ya pasó (RN05, RN06), o la fecha es pasada o supera el límite de anticipación: se rechaza.
+- 5b. Otra cita no cancelada del médico (RN07) o del paciente (RN17) se superpone con el nuevo horario: se rechaza. Si dos solicitudes compiten por el mismo horario, la base de datos acepta una sola.
+- 5c. El nuevo horario es el mismo que el actual, o el médico o la especialidad están desactivados: se rechaza.
+- \*. Una cita confirmada vuelve a «Programada» al cambiar de horario, porque la nueva fecha debe confirmarse otra vez. Nunca se toma el paciente, el médico, el estado ni la hora final del formulario (RN08).
 
 #### CU-11 Cancelar cita
 
@@ -745,6 +774,76 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 3d. El Paciente intenta cancelar la cita de otro paciente: el sistema responde «no encontrado» (RN12).
 - \*. La cita nunca se elimina: el historial se conserva (RN10).
 
+#### CU-12 Controlar asistencia
+
+|                   |                                                                                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Actores**       | Recepcionista (cualquier cita), Médico (citas de su agenda) y Paciente (su propia cita)                                                                                 |
+| **Requisito**     | RF10                                                                                                                                                                    |
+| **Precondición**  | El actor inició sesión. La cita existe y está «Programada» o «Confirmada».                                                                                              |
+| **Postcondición** | La cita queda «Confirmada», «Atendida» o con «Inasistencia» según la acción; la operación consta en la bitácora y el registro se conserva.                              |
+
+**Flujo principal**
+
+1. Antes de la cita, la Recepcionista (o el Paciente, en su propia cita) elige «Confirmar asistencia» en el comprobante y la cita pasa de «Programada» a «Confirmada».
+2. Cuando la cita ya comenzó, la Recepcionista elige en el comprobante «Marcar como atendida» o «Registrar inasistencia»; el Médico marca «Marcar atendida» en su agenda (CU-13).
+3. El sistema vuelve a leer la cita dentro de una transacción, comprueba que la transición sea válida, cambia el estado y registra `cita_confirmada`, `cita_atendida` o `cita_inasistencia` en la bitácora.
+4. El sistema muestra el resultado y deja de ofrecer acciones sobre esa cita.
+
+**Flujos alternos**
+
+- 3a. La cita está cancelada: no puede marcarse como atendida ni cambiar de estado, y no existe un procedimiento para hacerlo (RF10, RN10).
+- 3b. La cita ya está atendida o con inasistencia: conserva su estado (RN10).
+- 3c. La cita todavía no comenzó y se pide registrar asistencia o inasistencia, o ya comenzó y se pide confirmarla: se rechaza con un mensaje.
+- 3d. La cita ya estaba confirmada: se informa y no se cambia nada.
+- 3e. El Médico intenta marcar la cita de otro médico, o el Paciente confirmar la de otro paciente: el sistema responde «no encontrado» (RN12).
+- 3f. La acción pedida no es una de las tres conocidas: se rechaza.
+
+#### CU-13 Consultar agenda médica
+
+|                   |                                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Actores**       | Recepcionista (cualquier médico) y Médico (solo su propia agenda)                                                       |
+| **Requisito**     | RF11                                                                                                                    |
+| **Precondición**  | El actor inició sesión. El médico existe (activo o desactivado).                                                        |
+| **Postcondición** | El sistema muestra las citas del médico en la fecha pedida, sin modificar ningún dato.                                  |
+
+**Flujo principal**
+
+1. La Recepcionista abre «Agenda», elige al médico, la fecha (hoy por defecto) y, si quiere, un estado. El Médico abre «Agenda» y ve la suya.
+2. El sistema lista las citas de ese médico en esa fecha, en orden de hora, con la hora, el código, el paciente, la especialidad, el estado y el motivo breve.
+
+**Flujos alternos**
+
+- 1a. La Recepcionista no eligió médico: el sistema le pide elegir uno.
+- 2a. No hay citas en esa fecha (o con ese estado): el sistema lo indica con un aviso.
+- 2b. Las citas canceladas aparecen con su estado, para conservar la trazabilidad (RN10).
+- 2c. La fecha no tiene el formato AAAA-MM-DD o no existe: se muestra la agenda de hoy con un aviso. Un estado desconocido o un parámetro manipulado se ignora.
+- \*. El Médico solo ve su agenda: si pide el identificador de otro médico en la dirección, se ignora (RN12). Una cuenta de médico sin ficha de médico recibe «no encontrado».
+
+#### CU-15 Generar reportes
+
+|                   |                                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Actores**       | Administrador                                                                                                                  |
+| **Requisito**     | RF13                                                                                                                           |
+| **Precondición**  | El Administrador inició sesión.                                                                                                |
+| **Postcondición** | El sistema muestra el reporte pedido con sus totales, sin modificar ningún dato.                                               |
+
+**Flujo principal**
+
+1. El Administrador abre «Reportes». El sistema muestra el reporte de citas del mes en curso, hasta hoy.
+2. Elige el rango de fechas y, si quiere, un médico, una especialidad y un estado, y pulsa «Generar».
+3. El sistema muestra el total de citas y la cantidad por estado (programadas, confirmadas, atendidas, canceladas e inasistencias), el total por médico y por especialidad, y el detalle de las citas en orden cronológico, de 25 en 25.
+4. Elige la pestaña «Pacientes registrados» y el sistema muestra los pacientes registrados en el rango, con los totales de registrados, verificados y activos.
+
+**Flujos alternos**
+
+- 2a. Con un mismo día y un médico, el reporte de citas equivale a la agenda diaria de ese médico; con un solo estado equivale al reporte de citas por estado, y con una sola fecha, a las citas programadas para esa fecha.
+- 3a. No hay citas con esos filtros: el sistema lo indica con un aviso y los totales quedan en cero.
+- 2b. Una fecha no es válida, o la inicial es posterior a la final: se usa el período por defecto con un aviso. Si solo se indica una fecha, la otra la acompaña. Los filtros desconocidos o manipulados se ignoran.
+- \*. Solo el Administrador consulta los reportes (RN12). La exportación a CSV o PDF es un opcional abierto (sección 4.1) y no se implementó.
+
 #### CU-14 Consultar historial de citas
 
 |                   |                                                                                                                                                                           |
@@ -767,6 +866,74 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 2b. El paciente está desactivado: la Recepcionista ve su historial completo con un aviso (RN10, RN11).
 - 4a. El estado de la URL no es uno de los cinco conocidos o llega como arreglo (`?estado[]=`): se ignora y se muestran todas las citas.
 - \*. Una cuenta de paciente nunca ve citas de otro paciente: su ruta no recibe el identificador (RN12). Una cuenta sin ficha de paciente recibe «no encontrado».
+
+#### CU-16 Registrar nota clínica
+
+|                   |                                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Actores**       | Médico                                                                                                                                              |
+| **Requisito**     | RF16                                                                                                                                                |
+| **Precondición**  | El Médico inició sesión y la cita es suya y está «Atendida».                                                                                        |
+| **Postcondición** | La cita tiene una nota clínica con quién y cuándo la modificó por última vez; la operación consta en la bitácora.                                   |
+
+**Flujo principal**
+
+1. En su agenda (CU-13), el Médico elige «Nota clínica» en una cita atendida.
+2. El sistema muestra el formulario, vacío o con la nota existente: motivo de consulta, diagnóstico, tratamiento o indicaciones, y observaciones.
+3. El Médico completa al menos un campo y guarda.
+4. El sistema vuelve a leer la cita dentro de una transacción, comprueba que sea del médico y esté atendida, guarda la nota (la crea o sobrescribe la anterior, sin conservar versiones) con el usuario que la modificó y registra `nota_registrada` o `nota_modificada` en la bitácora.
+5. El sistema vuelve a la agenda con un mensaje de confirmación.
+
+**Flujos alternos**
+
+- 1a. La cita está programada, confirmada, cancelada o con inasistencia: se rechaza, porque solo se anotan las consultas realizadas.
+- 1b. La cita es de otro médico: el sistema responde «no encontrado» (RN12). Cada médico edita solo sus notas.
+- 3a. Todos los campos están vacíos o alguno supera los 2000 caracteres: se señalan los campos y no se guarda nada.
+- \*. El autor, la cita y el médico nunca se toman del formulario. Solo el Médico registra notas: la Recepcionista, el Paciente y el Administrador reciben 403.
+
+#### CU-17 Consultar notas clínicas
+
+|                   |                                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Actores**       | Médico, Recepcionista y Paciente                                                                                               |
+| **Requisito**     | RF16                                                                                                                           |
+| **Precondición**  | El actor inició sesión.                                                                                                        |
+| **Postcondición** | El sistema muestra las notas clínicas del paciente en solo lectura, sin modificar ningún dato.                                 |
+
+**Flujo principal**
+
+1. La Recepcionista abre las notas desde la ficha del paciente, el Médico desde «Notas del paciente» en su agenda y el Paciente desde «Mis notas».
+2. El sistema lista las notas del paciente de la cita más reciente a la más antigua: fecha, especialidad, médico, los cuatro campos que tengan contenido y quién y cuándo las modificó por última vez.
+3. Solo el autor ve el botón «Editar» en sus propias notas.
+
+**Flujos alternos**
+
+- 2a. El paciente no tiene notas: el sistema lo indica con un aviso.
+- 2b. El Paciente tiene la ficha pendiente de verificación: no ve sus notas hasta que la Recepcionista la verifique (sección 4.1).
+- 1a. El Médico pide un paciente que no tiene ni tuvo una cita (no cancelada) con él: el sistema responde «no encontrado». Si lo tiene, ve todas sus notas, incluidas las de otros médicos.
+- 1b. El Paciente solo accede a las suyas: su ruta no recibe identificador. Una cuenta sin ficha de paciente recibe «no encontrado». El Administrador recibe 403 (RN12).
+
+#### CU-18 Ver recordatorio de citas
+
+|                   |                                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Actores**       | Paciente                                                                                                                |
+| **Requisito**     | RF15                                                                                                                    |
+| **Precondición**  | El Paciente inició sesión y tiene al menos una cita vigente en los próximos días.                                       |
+| **Postcondición** | El sistema muestra el aviso en el inicio, sin modificar ningún dato.                                                    |
+
+**Flujo principal**
+
+1. El Paciente inicia sesión y el sistema lo lleva al inicio.
+2. El sistema busca sus citas «Programadas» o «Confirmadas» que todavía no comenzaron y caen hoy o en los 2 días siguientes (valor de `config/clinica.php`, hora de La Paz).
+3. El sistema muestra el banner «Sus próximas citas», una línea por cita con el día («Hoy», «Mañana» o la fecha), la hora y el médico, y un enlace al comprobante.
+
+**Flujos alternos**
+
+- 2a. No hay citas en ese lapso: el inicio se muestra sin banner.
+- 2b. Las citas canceladas, atendidas, con inasistencia, pasadas o ya iniciadas hoy no se recuerdan.
+- 2c. El Paciente con la ficha pendiente de verificación también recibe el aviso, porque puede reservar (sección 4.1).
+- \*. El aviso muestra solo la fecha, la hora y el médico, nunca el motivo, el diagnóstico ni datos médicos (RNF16). Los demás roles no ven el banner. No se envía ningún correo ni SMS.
 
 #### CU-19 Renovar contraseña temporal
 
@@ -1984,7 +2151,7 @@ La plantilla base `resources/views/layouts/base.blade.php` dibuja la barra de na
 
 ### 7.3 Implementación de la arquitectura de subsistemas
 
-Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y el CU-09, el CU-11 y el CU-14 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
+Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y los CU-09 a CU-18 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
 
 Todos los servicios de este ciclo usan `BitacoraService` (RNF13) y `ReglaDeNegocioException` (sección 7.2); no se repite en cada tabla.
 
@@ -2349,6 +2516,80 @@ Reglas aplicadas:
 ```
 
 
+#### CU-18 Ver recordatorio de citas
+
+| Elemento    | Archivo                                                                             |
+| ----------- | ----------------------------------------------------------------------------------- |
+| Controlador | `app/Http/Controllers/InicioController.php`                                         |
+| Servicio    | `app/Services/RecordatorioService.php`                                              |
+| Vista       | `resources/views/inicio.blade.php` (banner «Sus próximas citas»)                    |
+| Configuración | `config/clinica.php` (`citas.recordatorio_dias` = 2)                              |
+| Pruebas     | `tests/Feature/Recordatorios/RecordatorioTest.php`                                  |
+
+Reglas aplicadas:
+
+- No hay ruta nueva: el banner se arma en el inicio, al que lleva el inicio de sesión. Solo se calcula para las cuentas con el permiso `recordatorios:consultar`, que concede el rol Paciente (RN12); una cuenta de paciente sin ficha no falla.
+- `RecordatorioService::proximas` devuelve solo las citas del propio paciente en estado «Programada» o «Confirmada», desde hoy hasta hoy más los días configurados (hora de La Paz), y descarta las de hoy que ya comenzaron.
+- La vista muestra el día, la hora y el médico, nunca el motivo ni datos médicos (RNF16). El aviso es solo dentro del sistema, sin correo ni SMS.
+
+#### CU-16 y CU-17 Notas clínicas
+
+| Elemento                | Archivo                                                                                                         |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Controlador             | `app/Http/Controllers/NotaClinicaController.php`                                                                |
+| Solicitud de validación | `app/Http/Requests/NotaClinicaRequest.php`                                                                      |
+| Servicio                | `app/Services/NotaClinicaService.php`                                                                           |
+| Modelo                  | `app/Models/NotaClinica.php`                                                                                    |
+| Vistas                  | `resources/views/notas/formulario.blade.php` y `resources/views/notas/index.blade.php`; enlaces en la agenda y en la ficha del paciente |
+| Pruebas                 | `tests/Feature/Notas/NotaClinicaTest.php`                                                                       |
+
+Reglas aplicadas:
+
+- Las rutas de escritura (`GET` y `PUT /agenda/{cita}/nota`) exigen `notas:registrar`, que solo concede el rol Médico. Las de lectura exigen `notas:consultar`: `/pacientes/{paciente}/notas` (además `pacientes:consultar`, para la Recepcionista y el Médico) y `/mis-notas` (el Paciente) (RN12, RNF19).
+- `NotaClinicaService::guardar` bloquea la cita (`lockForUpdate`) y comprueba que sea del médico de la sesión y esté atendida. Hay una sola nota por cita (`cita_id` es único): guardar de nuevo la sobrescribe, y `modificado_por` y `updated_at` indican quién y cuándo la modificó, sin versiones. La clave foránea `(cita_id, medico_id)` de la base impide que otro médico escriba la nota.
+- Al menos uno de los cuatro campos debe tener contenido y cada uno admite hasta 2000 caracteres. La cita, el médico y el autor no vienen del formulario.
+- El Médico solo ve las notas de pacientes que tienen o tuvieron una cita no cancelada con él (`NotaClinicaService::atiende`); allí ve también las de otros médicos, pero solo edita las suyas. La Recepcionista y el Paciente las ven en solo lectura.
+- El Paciente con la ficha pendiente de verificación no ve sus notas; la pantalla se lo explica (sección 4.1).
+- Las operaciones quedan en la bitácora como `nota_registrada` y `nota_modificada`.
+
+#### CU-15 Generar reportes
+
+| Elemento    | Archivo                                                              |
+| ----------- | -------------------------------------------------------------------- |
+| Controlador | `app/Http/Controllers/ReporteController.php`                         |
+| Servicio    | `app/Services/ReporteService.php`                                    |
+| Vista       | `resources/views/reportes/index.blade.php`                           |
+| Menú        | `config/menu.php` (opción «Reportes», permiso `reportes:consultar`)  |
+| Pruebas     | `tests/Feature/Reportes/ReporteTest.php`                             |
+
+Reglas aplicadas:
+
+- Una sola ruta `GET /reportes` con el permiso `reportes:consultar`, que solo concede el rol Administrador (RN12, RNF19). La Recepcionista, el Médico y el Paciente reciben 403.
+- `ReporteService` arma todas las consultas con el rango de fechas inclusivo (período por defecto: del primer día del mes a hoy, hora de La Paz) y los filtros opcionales de médico, especialidad y estado. Los totales por estado, por médico y por especialidad salen de consultas agrupadas en la base de datos, no de contar filas en memoria.
+- El detalle de citas va en orden cronológico y paginado de 25 en 25; incluye las canceladas y las inasistencias para no perder trazabilidad (RN10).
+- El reporte de pacientes cuenta los registrados en el rango por su fecha de alta, con los totales de verificados y activos.
+- Los parámetros inválidos no producen error: una fecha inexistente o un rango al revés vuelve al período por defecto con un aviso, y un estado desconocido, un identificador fuera de rango o un arreglo se ignoran.
+- Los reportes no modifican datos. Las columnas de las consultas se califican con la tabla `citas` porque los totales se unen con `medicos`, `personas` y `especialidades`.
+
+#### CU-10 Reprogramar cita
+
+| Elemento                | Archivo                                                                                                    |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Controlador             | `app/Http/Controllers/CitaController.php` (métodos `reprogramar` y `actualizar`, compartidos con CU-09)    |
+| Solicitud de validación | `app/Http/Requests/ReprogramarCitaRequest.php`                                                             |
+| Servicio                | `app/Services/CitaService.php` (método `reprogramar`; reutiliza la cuadrícula y las reglas del CU-09)      |
+| Vista                   | `resources/views/citas/reprogramar.blade.php` y el botón en `resources/views/citas/comprobante.blade.php`  |
+| Pruebas                 | `tests/Feature/Citas/ReprogramarCitaTest.php`                                                              |
+
+Reglas aplicadas:
+
+- Dos pares de rutas con el mismo controlador: `GET /citas/{cita}/reprogramar` y `PUT /citas/{cita}` (`citas:gestionar`, Recepcionista) y sus equivalentes en `/mis-citas` (`citas:gestionar_propias`, Paciente) (RN12, RNF19). Quien no tiene el permiso recibe 403; el Paciente que pide la cita de otro recibe 404.
+- Solo se recibe la nueva fecha y la nueva hora: el paciente, el médico, la especialidad, el estado y la hora final no vienen del formulario (RN08).
+- `CitaService::reprogramar` bloquea la fila (`lockForUpdate`) y vuelve a leer la cita: solo se reprograman las programadas o confirmadas que no comenzaron, y el Paciente con al menos 24 horas de anticipación respecto de la cita actual (RN15).
+- El nuevo horario pasa por las mismas comprobaciones que una cita nueva: fecha no pasada y dentro del límite, partes activas, horario dentro de un bloque de atención y en la cuadrícula, sin choque con otra cita del médico (RN07) ni del paciente (RN17) y verificado otra vez en el servidor (RN13). La propia cita se excluye del cálculo de ocupación.
+- Las restricciones de exclusión de la base de datos siguen siendo la última defensa si dos solicitudes compiten; el servicio traduce el error `23P01` a un mensaje de negocio.
+- La cita queda «Programada» y se actualiza la sucursal según el bloque elegido. Queda en la bitácora como `cita_reprogramada`, con el horario anterior y el nuevo.
+
 #### CU-11 Cancelar cita
 
 | Elemento                | Archivo                                                                                       |
@@ -2369,6 +2610,45 @@ Reglas aplicadas:
 - El motivo es obligatorio y de hasta 500 caracteres; el formulario solo envía `motivo_cancelacion`, de modo que no se puede cambiar el estado ni la fecha desde la solicitud.
 - La cancelación queda en la bitácora como `cita_cancelada`, con el código de la cita y el motivo.
 
+
+
+
+#### CU-12 Controlar asistencia
+
+| Elemento    | Archivo                                                                                                         |
+| ----------- | --------------------------------------------------------------------------------------------------------------- |
+| Controlador | `app/Http/Controllers/AsistenciaController.php`                                                                 |
+| Servicio    | `app/Services/AsistenciaService.php`                                                                            |
+| Modelo      | `app/Models/Cita.php` (métodos `inicio` y `vigente`)                                                            |
+| Vistas      | botones en `resources/views/citas/comprobante.blade.php` y en `resources/views/agenda/index.blade.php`          |
+| Pruebas     | `tests/Feature/Citas/AsistenciaTest.php`                                                                        |
+
+Reglas aplicadas:
+
+- Tres rutas `PATCH` con permisos distintos (RN12, RNF19): `/citas/{cita}/asistencia` (`citas:gestionar`, Recepcionista: confirmar, atendida o inasistencia), `/agenda/{cita}/atender` (`citas:atender`, Médico: solo atendida y solo las citas de su agenda) y `/mis-citas/{cita}/confirmar` (`citas:gestionar_propias`, Paciente: solo confirmar la propia).
+- `AsistenciaService` aplica el diagrama de estados de 6.1: solo se cambia el estado de una cita «Programada» o «Confirmada». Confirmar exige que la cita no haya comenzado; marcar atendida o inasistencia exige que ya haya comenzado (hora de La Paz). Una cita cancelada no puede marcarse como atendida, y las atendidas y con inasistencia no cambian (RN10).
+- Bloquea la fila (`lockForUpdate`) dentro de una transacción y vuelve a leer el estado, de modo que dos solicitudes simultáneas no aplican dos transiciones ni dejan dos registros en la bitácora.
+- Las vistas solo muestran los botones de las acciones que `AsistenciaService::posibles` considera válidas hoy para esa cita; el servidor vuelve a comprobarlas.
+- Cada transición queda en la bitácora (`cita_confirmada`, `cita_atendida`, `cita_inasistencia`).
+
+#### CU-13 Consultar agenda médica
+
+| Elemento    | Archivo                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------- |
+| Controlador | `app/Http/Controllers/AgendaController.php`                                                     |
+| Servicio    | `app/Services/AgendaService.php`                                                                |
+| Vista       | `resources/views/agenda/index.blade.php`                                                        |
+| Menú        | `config/menu.php` (opción «Agenda», permiso `agenda:consultar`)                                 |
+| Pruebas     | `tests/Feature/Citas/AgendaTest.php`                                                            |
+
+Reglas aplicadas:
+
+- Una sola ruta `GET /agenda` con el permiso `agenda:consultar`, que conceden los roles Recepcionista y Médico (RN12, RNF19). El Paciente y el Administrador reciben 403.
+- La Recepcionista elige al médico con el parámetro `medico`. Para el rol Médico ese parámetro se ignora: la agenda siempre es la del médico de la sesión, y una cuenta de médico sin ficha recibe 404.
+- `AgendaService` devuelve las citas del médico en la fecha, ordenadas por hora, con el filtro opcional de estado. Incluye las canceladas (RN10). Los médicos desactivados conservan su agenda (RN11).
+- La fecha se valida con el formato AAAA-MM-DD; si no es válida se usa la de hoy (hora de La Paz) con un aviso. El estado solo acepta los cinco conocidos y los parámetros que llegan como arreglo se ignoran.
+- El motivo breve se muestra porque ambos roles que pueden abrir la agenda tienen el permiso `agenda:consultar`.
+- La consulta no modifica datos.
 
 #### CU-14 Consultar historial de citas
 
@@ -2459,7 +2739,7 @@ Al escanear el código QR se abre la página del repositorio. La estructura de c
 
 **Objetivo.** Comprobar que el sistema cumple los casos de uso y las reglas de negocio del Ciclo #1 (CU-01 a CU-08 y CU-19), que rechaza los datos y los accesos inválidos, y que la base de datos hace cumplir sus restricciones aunque la aplicación falle.
 
-**Alcance.** Ciclo #1: acceso y roles, usuarios, pacientes, médicos, especialidades, horarios y perfil del paciente. Las pruebas 3 a 8 del enunciado dependen de las citas (CU-09 en adelante) y se ejecutan en el Ciclo #2: las pruebas 3, 4 y 5 ya se ejecutaron con el CU-09 y las pruebas 6 y 7 con el CU-11 y el CU-14 (sección 8.2.1).
+**Alcance.** Ciclo #1: acceso y roles, usuarios, pacientes, médicos, especialidades, horarios y perfil del paciente. Las pruebas 3 a 8 del enunciado dependen de las citas (CU-09 en adelante) y se ejecutan en el Ciclo #2: las pruebas 3, 4 y 5 ya se ejecutaron con el CU-09 y las pruebas 6, 7 y 8 con el CU-11, el CU-14 y el CU-13 (sección 8.2.1).
 
 **Estrategia.** Cada caso de uso se prueba en tres frentes: automatizado, contra la base de datos real y de forma manual.
 
@@ -2490,7 +2770,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 | Ciclo | Pruebas                                                                                 | Estado                                                               |
 | ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | En curso: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6 y 7 con CU-11 y CU-14; el resto, pendiente |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | Completo: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
 
 ### 8.2 Casos de prueba
 
@@ -2507,7 +2787,7 @@ Los resultados obtenidos salen de la ejecución de la suite del 05/11/2026 (secc
 | 5   | Intentar reservar fuera del horario médico           | El sistema rechaza la cita                        | El sistema rechaza las horas anteriores a la apertura, posteriores al cierre o que no caen en la cuadrícula del bloque, y los días en que el médico no atiende; no se guarda ninguna cita. La cuadrícula tampoco ofrece los horarios que terminarían después del bloque. Pruebas `CitaTest::rechaza_reservar_fuera_del_horario_del_medico` y `CitaTest::la_cuadricula_parte_de_cada_bloque_y_cada_horario_termina_dentro_de_su_bloque`.                                               | Aprobada |
 | 6   | Cancelar una cita                                    | Cambia a estado cancelado y conserva el historial | La Recepcionista (o el Paciente, con al menos 24 horas de anticipación) cancela la cita indicando el motivo: la fila no se elimina, pasa a «Cancelada» con su motivo, el horario queda disponible otra vez y consta `cita_cancelada` en la bitácora. No se cancelan las citas atendidas, las inasistencias, las ya canceladas ni las que ya comenzaron. Pruebas `CancelarCitaTest::cancela_una_cita_y_conserva_el_historial`, `el_horario_cancelado_queda_disponible_otra_vez`, `no_cancela_una_cita_atendida_ni_una_inasistencia` y `el_paciente_no_cancela_con_menos_de_24_horas`. | Ciclo #2 |
 | 7   | Consultar el historial de un paciente                | Aparecen sus citas registradas                    | La Recepcionista abre el historial del paciente y ve todas sus citas, pasadas, futuras y canceladas, de la más reciente a la más antigua, con código, fecha y hora, médico, especialidad, estado, motivo de la cancelación y fecha de registro; solo aparecen las de ese paciente y se puede filtrar por estado. El Paciente ve únicamente las suyas en «Mi historial» y no puede abrir el de otro (403). Pruebas `HistorialTest::la_recepcionista_ve_las_citas_registradas_del_paciente`, `solo_aparecen_las_citas_de_ese_paciente`, `filtra_por_estado` y `el_paciente_ve_su_propio_historial_y_no_el_de_otros`. | Ciclo #2 |
-| 8   | Buscar las citas de un médico por fecha              | Se muestran los resultados correctos              | Depende de CU-13                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Ciclo #2 |
+| 8   | Buscar las citas de un médico por fecha              | Se muestran los resultados correctos              | La Recepcionista elige al médico y la fecha y el sistema lista solo sus citas de ese día, en orden de hora, con código, paciente, especialidad, estado y motivo; no aparecen las de otro día ni las de otro médico, y se puede filtrar por estado. El Médico ve únicamente su propia agenda aunque pida otro médico en la dirección. Pruebas `AgendaTest::muestra_las_citas_del_medico_en_la_fecha_pedida`, `filtra_por_estado` y `el_medico_ve_su_propia_agenda_y_no_la_de_otro`. | Ciclo #2 |
 | 9   | Ingresar a una página interna sin iniciar sesión     | El acceso es denegado                             | El sistema redirige al formulario de inicio de sesión sin mostrar la página. Se comprueba en el inicio y en cada módulo de gestión (usuarios, pacientes, médicos, especialidades, horarios y perfil). Prueba `LoginTest::una_pagina_interna_sin_sesion_redirige_al_login` y `sin_sesion_se_redirige_al_login` de cada módulo.                                                                                                                                                         | Aprobada |
 | 10  | Intentar ejecutar una operación con datos inválidos  | El servidor valida y rechaza la operación         | El servidor rechaza cada dato inválido con un error en el campo correspondiente y no guarda nada. En el alta de pacientes se prueban doce casos: sin nombre, sin apellido, sin CI, CI con letras, CI muy corto, teléfono inválido, teléfono de emergencia inválido, tipo de sangre inválido, sexo inválido, fecha de nacimiento futura, correo mal escrito y correo de otra persona. Prueba `PacienteTest::valida_los_datos_del_formulario`, con pruebas equivalentes en cada módulo. | Aprobada |
 
@@ -2565,10 +2845,10 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 366         |
-| Pruebas aprobadas  | 366         |
+| Pruebas ejecutadas | 463         |
+| Pruebas aprobadas  | 463         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 2675        |
+| Aserciones         | 3049        |
 | Duración           | 21 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
@@ -2896,7 +3176,7 @@ Lo construido responde a los objetivos específicos que tocan a este ciclo:
 - **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
 - **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada que usará el cálculo de disponibilidad del Ciclo #2.
 - **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el CU-09, el CU-11 y el CU-14 son 366 (sección 8 y Anexo C).
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con los CU-09 a CU-18 son 463 (sección 8 y Anexo C).
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -2972,15 +3252,22 @@ Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogram
 | CU-07       | `GET /horarios`, `GET/POST /horarios/medico/{medico}`, `GET /horarios/{horario}/editar`, `PUT /horarios/{horario}`, `DELETE /horarios/{horario}`                                                                                                                                                         |
 | CU-08       | `GET/PUT /perfil`                                                                                                                                                                                                                                                                                        |
 | CU-09       | `GET /citas/nueva`, `POST /citas`, `GET /citas/{cita}` (Recepcionista, `citas:gestionar`); `GET /mis-citas/nueva`, `POST /mis-citas`, `GET /mis-citas/{cita}` (Paciente, `citas:gestionar_propias`)                                                                                                      |
+| CU-10       | `GET /citas/{cita}/reprogramar`, `PUT /citas/{cita}` (Recepcionista, `citas:gestionar`); `GET /mis-citas/{cita}/reprogramar`, `PUT /mis-citas/{cita}` (Paciente, `citas:gestionar_propias`) |
 | CU-11       | `PATCH /citas/{cita}/cancelar` (Recepcionista, `citas:gestionar`); `PATCH /mis-citas/{cita}/cancelar` (Paciente, `citas:gestionar_propias`) |
+| CU-12       | `PATCH /citas/{cita}/asistencia` (Recepcionista, `citas:gestionar`); `PATCH /agenda/{cita}/atender` (Médico, `citas:atender`); `PATCH /mis-citas/{cita}/confirmar` (Paciente, `citas:gestionar_propias`) |
+| CU-13       | `GET /agenda` (Recepcionista y Médico, `agenda:consultar`) |
 | CU-14       | `GET /pacientes/{paciente}/historial` (Recepcionista, `historial:consultar` y `pacientes:consultar`); `GET /mi-historial` (Paciente, `historial:consultar`) |
+| CU-15       | `GET /reportes` (Administrador, `reportes:consultar`) |
+| CU-16       | `GET /agenda/{cita}/nota`, `PUT /agenda/{cita}/nota` (Médico, `notas:registrar`) |
+| CU-17       | `GET /pacientes/{paciente}/notas` (Recepcionista y Médico, `notas:consultar` y `pacientes:consultar`); `GET /mis-notas` (Paciente, `notas:consultar`) |
+| CU-18       | Sin ruta propia: el aviso se muestra en `GET /inicio` (Paciente, `recordatorios:consultar`) |
 | Comunes     | `GET /inicio`, `GET /` (redirige a `/inicio`)                                                                                                                                                                                                                                                            |
 
-Son 58 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
+Son 71 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **366 pruebas, 366 aprobadas, 2675 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **463 pruebas, 463 aprobadas, 3049 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -2991,6 +3278,12 @@ Resultado de `php artisan test`: **366 pruebas, 366 aprobadas, 2675 aserciones**
 | `Feature\Citas\CitaTest`                           | 31      | CU-09                                         |
 | `Feature\Citas\CancelarCitaTest`                    | 20      | CU-11                                         |
 | `Feature\Citas\HistorialTest`                        | 16      | CU-14                                         |
+| `Feature\Citas\AgendaTest`                           | 11      | CU-13                                         |
+| `Feature\Citas\AsistenciaTest`                       | 18      | CU-12                                         |
+| `Feature\Citas\ReprogramarCitaTest`                  | 22      | CU-10                                         |
+| `Feature\Reportes\ReporteTest`                       | 16      | CU-15                                         |
+| `Feature\Notas\NotaClinicaTest`                      | 20      | CU-16 y CU-17                                 |
+| `Feature\Recordatorios\RecordatorioTest`             | 10      | CU-18                                         |
 | `Feature\Acceso\LoginTest`                         | 26      | CU-01                                         |
 | `Feature\Pacientes\PacienteTest`                   | 20      | CU-04                                         |
 | `Feature\Pacientes\AccesoPacienteTest`             | 20      | CU-04 y CU-19                                 |

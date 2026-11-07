@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AccesoController;
 use App\Http\Controllers\AccesoPacienteController;
+use App\Http\Controllers\AgendaController;
+use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\CambioPasswordController;
 use App\Http\Controllers\CitaController;
 use App\Http\Controllers\EspecialidadController;
@@ -9,9 +11,11 @@ use App\Http\Controllers\HistorialController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MedicoController;
+use App\Http\Controllers\NotaClinicaController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\PerfilController;
 use App\Http\Controllers\RegistroController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,9 +54,17 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         Route::post('/', [CitaController::class, 'store'])->name('store');
         Route::get('/{cita}', [CitaController::class, 'comprobante'])
             ->where(['cita' => '[0-9]+'])->name('comprobante');
+        // CU-10: reprogramar la cita (nueva fecha y hora).
+        Route::get('/{cita}/reprogramar', [CitaController::class, 'reprogramar'])
+            ->where(['cita' => '[0-9]+'])->name('reprogramar');
+        Route::put('/{cita}', [CitaController::class, 'actualizar'])
+            ->where(['cita' => '[0-9]+'])->name('actualizar');
         // CU-11: cancelar la cita (no se elimina: pasa a CANCELADA).
         Route::patch('/{cita}/cancelar', [CitaController::class, 'cancelar'])
             ->where(['cita' => '[0-9]+'])->name('cancelar');
+        // CU-12: confirmar, marcar atendida o registrar inasistencia.
+        Route::patch('/{cita}/asistencia', [AsistenciaController::class, 'recepcion'])
+            ->where(['cita' => '[0-9]+'])->name('asistencia');
     });
 
     Route::prefix('mis-citas')->name('mis-citas.')->middleware('can:citas:gestionar_propias')->group(function () {
@@ -63,6 +75,14 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         // CU-11: cancelar la cita (no se elimina: pasa a CANCELADA).
         Route::patch('/{cita}/cancelar', [CitaController::class, 'cancelar'])
             ->where(['cita' => '[0-9]+'])->name('cancelar');
+        // CU-10: reprogramar la cita (nueva fecha y hora).
+        Route::get('/{cita}/reprogramar', [CitaController::class, 'reprogramar'])
+            ->where(['cita' => '[0-9]+'])->name('reprogramar');
+        Route::put('/{cita}', [CitaController::class, 'actualizar'])
+            ->where(['cita' => '[0-9]+'])->name('actualizar');
+        // CU-12: el Paciente confirma su propia asistencia.
+        Route::patch('/{cita}/confirmar', [AsistenciaController::class, 'paciente'])
+            ->where(['cita' => '[0-9]+'])->name('confirmar');
     });
 
     // CU-03: gestionar usuarios y roles del personal (solo el Administrador, con usuarios:gestionar).
@@ -121,6 +141,32 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
             Route::patch('/estado', [EspecialidadController::class, 'estado'])->name('estado');
         });
     });
+
+    // CU-12: el Médico marca como atendidas las citas de su agenda (citas:atender).
+    Route::patch('/agenda/{cita}/atender', [AsistenciaController::class, 'medico'])
+        ->where(['cita' => '[0-9]+'])->middleware('can:citas:atender')->name('agenda.atender');
+
+    // CU-15: reportes administrativos (reportes:consultar, solo el Administrador).
+    Route::get('/reportes', [ReporteController::class, 'index'])
+        ->middleware('can:reportes:consultar')->name('reportes.index');
+
+    // CU-16: el Médico escribe y edita la nota clínica de sus citas atendidas (notas:registrar).
+    Route::prefix('agenda/{cita}/nota')->where(['cita' => '[0-9]+'])->middleware('can:notas:registrar')->group(function () {
+        Route::get('/', [NotaClinicaController::class, 'formulario'])->name('notas.formulario');
+        Route::put('/', [NotaClinicaController::class, 'guardar'])->name('notas.guardar');
+    });
+
+    // CU-17: consultar notas clínicas (notas:consultar). La Recepcionista y el Médico ven las de un
+    // paciente (además exigen pacientes:consultar); el Paciente ve las suyas en /mis-notas.
+    Route::get('/pacientes/{paciente}/notas', [NotaClinicaController::class, 'paciente'])
+        ->where(['paciente' => '[0-9]+'])->middleware(['can:notas:consultar', 'can:pacientes:consultar'])
+        ->name('pacientes.notas');
+    Route::get('/mis-notas', [NotaClinicaController::class, 'propias'])
+        ->middleware('can:notas:consultar')->name('notas.propias');
+
+    // CU-13: agenda médica (agenda:consultar). La Recepcionista elige al médico; el Médico ve la suya.
+    Route::get('/agenda', [AgendaController::class, 'index'])
+        ->middleware('can:agenda:consultar')->name('agenda.index');
 
     // CU-14: historial de citas (historial:consultar). La Recepcionista lo ve de cualquier paciente
     // (además exige pacientes:consultar); el Paciente solo el suyo, en /mi-historial.

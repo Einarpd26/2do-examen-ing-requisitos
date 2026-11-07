@@ -20,6 +20,9 @@
             @can('historial:consultar')
                 <a href="{{ route('pacientes.historial', $paciente) }}" class="btn btn-outline-primary btn-sm">Historial de citas</a>
             @endcan
+            @can('notas:consultar')
+                <a href="{{ route('pacientes.notas', $paciente) }}" class="btn btn-outline-primary btn-sm">Notas clínicas</a>
+            @endcan
             <a href="{{ route('pacientes.edit', $paciente) }}" class="btn btn-clinica btn-sm">Editar</a>
             <form method="POST" action="{{ route('pacientes.estado', $paciente) }}"
                   onsubmit="return confirm('{{ $paciente->estado ? 'Se desactivará al paciente y su cuenta. El historial se conserva.' : 'Se reactivará al paciente y su cuenta.' }}')">

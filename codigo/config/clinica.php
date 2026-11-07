@@ -62,6 +62,8 @@ return [
     'citas' => [
         'dias_anticipacion_max' => 60,
         'horas_min_cancelacion_paciente' => 24,
+        // Días hacia adelante que cubre el aviso de próximas citas del Paciente (CU-18).
+        'recordatorio_dias' => 2,
     ],
 
 ];
