@@ -7,7 +7,7 @@
 | **Grupo**        | SC                                                     |
 | **Integrantes**  | Einar Padilla Delgadillo<br>Daniel Acosta Roca         |
 | **Docente**      | Angeliza Garzon Cuellar                                |
-| **Presentación** | 1 — Ciclo #1 (24/10/2026)                              |
+| **Presentación** | 2 — Ciclo #2 (07/11/2026)                              |
 | **Repositorio**  | https://github.com/Einarpd26/2do-examen-ing-requisitos |
 | **Código QR**    | ![Código QR del repositorio](img/qr-repositorio.png)   |
 
@@ -95,7 +95,7 @@ El sistema es una aplicación web accesible desde un navegador (PHP, PostgreSQL,
 | Ciclo    | Requisitos                                                                                                                                        | Estado    |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios · RF14 Cuenta y perfil del paciente                      | En curso  |
-| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | En curso: CU-09 a CU-17 implementados |
+| Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | Completo: CU-09 a CU-18 implementados |
 
 ---
 
@@ -474,7 +474,7 @@ flowchart LR
 
 ### 4.6 Especificación de casos de uso
 
-Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09 a CU-17). Solo falta el CU-18 (recordatorio de citas), que se agrega en la segunda presentación.
+Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09 a CU-18), es decir, todos los del Ciclo #2.
 
 #### CU-01 Iniciar y cerrar sesión
 
@@ -912,6 +912,28 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 2b. El Paciente tiene la ficha pendiente de verificación: no ve sus notas hasta que la Recepcionista la verifique (sección 4.1).
 - 1a. El Médico pide un paciente que no tiene ni tuvo una cita (no cancelada) con él: el sistema responde «no encontrado». Si lo tiene, ve todas sus notas, incluidas las de otros médicos.
 - 1b. El Paciente solo accede a las suyas: su ruta no recibe identificador. Una cuenta sin ficha de paciente recibe «no encontrado». El Administrador recibe 403 (RN12).
+
+#### CU-18 Ver recordatorio de citas
+
+|                   |                                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Actores**       | Paciente                                                                                                                |
+| **Requisito**     | RF15                                                                                                                    |
+| **Precondición**  | El Paciente inició sesión y tiene al menos una cita vigente en los próximos días.                                       |
+| **Postcondición** | El sistema muestra el aviso en el inicio, sin modificar ningún dato.                                                    |
+
+**Flujo principal**
+
+1. El Paciente inicia sesión y el sistema lo lleva al inicio.
+2. El sistema busca sus citas «Programadas» o «Confirmadas» que todavía no comenzaron y caen hoy o en los 2 días siguientes (valor de `config/clinica.php`, hora de La Paz).
+3. El sistema muestra el banner «Sus próximas citas», una línea por cita con el día («Hoy», «Mañana» o la fecha), la hora y el médico, y un enlace al comprobante.
+
+**Flujos alternos**
+
+- 2a. No hay citas en ese lapso: el inicio se muestra sin banner.
+- 2b. Las citas canceladas, atendidas, con inasistencia, pasadas o ya iniciadas hoy no se recuerdan.
+- 2c. El Paciente con la ficha pendiente de verificación también recibe el aviso, porque puede reservar (sección 4.1).
+- \*. El aviso muestra solo la fecha, la hora y el médico, nunca el motivo, el diagnóstico ni datos médicos (RNF16). Los demás roles no ven el banner. No se envía ningún correo ni SMS.
 
 #### CU-19 Renovar contraseña temporal
 
@@ -2129,7 +2151,7 @@ La plantilla base `resources/views/layouts/base.blade.php` dibuja la barra de na
 
 ### 7.3 Implementación de la arquitectura de subsistemas
 
-Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y los CU-09 a CU-17 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
+Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y los CU-09 a CU-18 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
 
 Todos los servicios de este ciclo usan `BitacoraService` (RNF13) y `ReglaDeNegocioException` (sección 7.2); no se repite en cada tabla.
 
@@ -2494,6 +2516,22 @@ Reglas aplicadas:
 ```
 
 
+#### CU-18 Ver recordatorio de citas
+
+| Elemento    | Archivo                                                                             |
+| ----------- | ----------------------------------------------------------------------------------- |
+| Controlador | `app/Http/Controllers/InicioController.php`                                         |
+| Servicio    | `app/Services/RecordatorioService.php`                                              |
+| Vista       | `resources/views/inicio.blade.php` (banner «Sus próximas citas»)                    |
+| Configuración | `config/clinica.php` (`citas.recordatorio_dias` = 2)                              |
+| Pruebas     | `tests/Feature/Recordatorios/RecordatorioTest.php`                                  |
+
+Reglas aplicadas:
+
+- No hay ruta nueva: el banner se arma en el inicio, al que lleva el inicio de sesión. Solo se calcula para las cuentas con el permiso `recordatorios:consultar`, que concede el rol Paciente (RN12); una cuenta de paciente sin ficha no falla.
+- `RecordatorioService::proximas` devuelve solo las citas del propio paciente en estado «Programada» o «Confirmada», desde hoy hasta hoy más los días configurados (hora de La Paz), y descarta las de hoy que ya comenzaron.
+- La vista muestra el día, la hora y el médico, nunca el motivo ni datos médicos (RNF16). El aviso es solo dentro del sistema, sin correo ni SMS.
+
 #### CU-16 y CU-17 Notas clínicas
 
 | Elemento                | Archivo                                                                                                         |
@@ -2732,7 +2770,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 | Ciclo | Pruebas                                                                                 | Estado                                                               |
 | ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | En curso: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15 y las notas clínicas con CU-16 y CU-17; falta el CU-18 |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | Completo: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
 
 ### 8.2 Casos de prueba
 
@@ -2807,10 +2845,10 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 453         |
-| Pruebas aprobadas  | 453         |
+| Pruebas ejecutadas | 463         |
+| Pruebas aprobadas  | 463         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 3021        |
+| Aserciones         | 3049        |
 | Duración           | 21 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
@@ -3138,7 +3176,7 @@ Lo construido responde a los objetivos específicos que tocan a este ciclo:
 - **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
 - **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada que usará el cálculo de disponibilidad del Ciclo #2.
 - **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con los CU-09 a CU-17 son 453 (sección 8 y Anexo C).
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con los CU-09 a CU-18 son 463 (sección 8 y Anexo C).
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -3222,13 +3260,14 @@ Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogram
 | CU-15       | `GET /reportes` (Administrador, `reportes:consultar`) |
 | CU-16       | `GET /agenda/{cita}/nota`, `PUT /agenda/{cita}/nota` (Médico, `notas:registrar`) |
 | CU-17       | `GET /pacientes/{paciente}/notas` (Recepcionista y Médico, `notas:consultar` y `pacientes:consultar`); `GET /mis-notas` (Paciente, `notas:consultar`) |
+| CU-18       | Sin ruta propia: el aviso se muestra en `GET /inicio` (Paciente, `recordatorios:consultar`) |
 | Comunes     | `GET /inicio`, `GET /` (redirige a `/inicio`)                                                                                                                                                                                                                                                            |
 
 Son 71 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **453 pruebas, 453 aprobadas, 3021 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **463 pruebas, 463 aprobadas, 3049 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -3244,6 +3283,7 @@ Resultado de `php artisan test`: **453 pruebas, 453 aprobadas, 3021 aserciones**
 | `Feature\Citas\ReprogramarCitaTest`                  | 22      | CU-10                                         |
 | `Feature\Reportes\ReporteTest`                       | 16      | CU-15                                         |
 | `Feature\Notas\NotaClinicaTest`                      | 20      | CU-16 y CU-17                                 |
+| `Feature\Recordatorios\RecordatorioTest`             | 10      | CU-18                                         |
 | `Feature\Acceso\LoginTest`                         | 26      | CU-01                                         |
 | `Feature\Pacientes\PacienteTest`                   | 20      | CU-04                                         |
 | `Feature\Pacientes\AccesoPacienteTest`             | 20      | CU-04 y CU-19                                 |
