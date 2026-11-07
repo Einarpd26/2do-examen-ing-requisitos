@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
 
+        // Las páginas con sesión no quedan en la caché del navegador (el botón «Atrás» tras cerrar sesión).
+        $middleware->web(append: [\App\Http\Middleware\SinCacheConSesion::class]);
+
         $middleware->alias([
             'cuenta.vigente' => \App\Http\Middleware\VerificarCuenta::class,
         ]);

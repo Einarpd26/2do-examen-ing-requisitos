@@ -3,12 +3,6 @@
 @section('titulo', 'Especialidades · Clínica Vida Salud')
 
 @php
-    $etiquetas = ['activas' => 'Activas', 'inactivas' => 'Inactivas', 'todas' => 'Todas'];
-    $pestanas = collect($etiquetas)->map(fn ($etiqueta, $clave) => [
-        'etiqueta' => $etiqueta,
-        'url' => route('especialidades.index', $clave === 'activas' ? [] : ['estado' => $clave]),
-        'cuenta' => $cuentas[$clave],
-    ])->all();
     $vacio = [
         'activas' => 'No hay especialidades activas.',
         'inactivas' => 'No hay especialidades inactivas.',
@@ -22,10 +16,33 @@
         <a href="{{ route('especialidades.create') }}" class="btn btn-clinica">Registrar especialidad</a>
     </div>
 
+    <form method="GET" action="{{ route('especialidades.index') }}" class="row g-2 mb-3" role="search">
+        @if (request()->has('estado'))
+            <input type="hidden" name="estado" value="{{ $vista }}">
+        @endif
+        <div class="col-12 col-md-8 col-lg-6">
+            <label for="q" class="visually-hidden">Buscar especialidad</label>
+            <input type="search" id="q" name="q" value="{{ $texto }}" class="form-control" maxlength="100"
+                   placeholder="Buscar por nombre o parte del nombre">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-secondary">Buscar</button>
+            @if ($texto !== '')
+                <a href="{{ route('especialidades.index') }}" class="btn btn-link">Limpiar</a>
+            @endif
+        </div>
+    </form>
+
+    @if ($texto !== '' && ! request()->has('estado'))
+        <p class="small text-secondary">La búsqueda incluye a las especialidades inactivas.</p>
+    @endif
+
     <x-pestanas :pestanas="$pestanas" :activa="$vista" titulo="Estado de las especialidades" />
 
     @if ($especialidades->isEmpty())
-        <div class="alert alert-info">{{ $vacio[$vista] }}</div>
+        <div class="alert alert-info">
+            @if ($texto !== '') No hay especialidades que coincidan con «{{ $texto }}» en esta pestaña. @else {{ $vacio[$vista] }} @endif
+        </div>
     @else
         <div class="card shadow-sm">
             <div class="table-responsive">

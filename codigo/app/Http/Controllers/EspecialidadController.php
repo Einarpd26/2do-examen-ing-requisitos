@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ListadoConPestanas;
 use App\Http\Requests\EspecialidadRequest;
 use App\Models\Especialidad;
 use App\Services\EspecialidadService;
@@ -14,28 +15,44 @@ use Illuminate\View\View;
  */
 class EspecialidadController extends Controller
 {
-    /** Pestañas del listado: por defecto solo las activas; las dadas de baja siguen a un clic. */
-    private const VISTAS = ['activas', 'inactivas', 'todas'];
+    use ListadoConPestanas;
 
+    /** Pestañas del listado: por defecto solo las activas; las dadas de baja siguen a un clic. */
+    protected function etiquetasDePestanas(): array
+    {
+        return ['activas' => 'Activas', 'inactivas' => 'Inactivas', 'todas' => 'Todas'];
+    }
+
+    /**
+     * Con una búsqueda y sin pestaña elegida se busca en todas, también en las inactivas,
+     * como en el listado de médicos.
+     */
     public function index(Request $request): View
     {
-        $vista = $this->vista($request->query('estado'));
+        $texto = trim((string) $request->query('q'));
+        $vista = $this->vistaDelListado($request, $texto);
+        $patron = addcslashes($texto, '%_\\');
 
-        $especialidades = Especialidad::query()
+        $busqueda = Especialidad::query()
+            ->when($texto !== '', fn ($consulta) => $consulta->where('nombre', 'ilike', '%'.$patron.'%'));
+
+        // Los contadores muestran cuántas hay en cada pestaña, para que lo oculto no pase inadvertido.
+        $activas = (clone $busqueda)->where('estado', true)->count();
+        $inactivas = (clone $busqueda)->where('estado', false)->count();
+        $cuentas = ['activas' => $activas, 'inactivas' => $inactivas, 'todas' => $activas + $inactivas];
+
+        $especialidades = $busqueda
             ->withCount('medicos')
             ->when($vista === 'activas', fn ($consulta) => $consulta->where('estado', true))
             ->when($vista === 'inactivas', fn ($consulta) => $consulta->where('estado', false))
             ->orderBy('nombre')
             ->get();
 
-        // Los contadores muestran cuántas hay en cada pestaña, para que lo oculto no pase inadvertido.
-        $activas = Especialidad::where('estado', true)->count();
-        $inactivas = Especialidad::where('estado', false)->count();
-
         return view('especialidades.index', [
             'especialidades' => $especialidades,
+            'texto' => $texto,
             'vista' => $vista,
-            'cuentas' => ['activas' => $activas, 'inactivas' => $inactivas, 'todas' => $activas + $inactivas],
+            'pestanas' => $this->pestanas('especialidades.index', $cuentas, $texto),
         ]);
     }
 
@@ -82,11 +99,5 @@ class EspecialidadController extends Controller
             ->with('exito', $activa
                 ? 'Especialidad reactivada. Ya aparece en la pestaña Activas.'
                 : 'Especialidad desactivada. Puede verla en la pestaña Inactivas; lo ya registrado se conserva.');
-    }
-
-    /** Una pestaña desconocida cae en la de activas. */
-    private function vista(mixed $valor): string
-    {
-        return in_array($valor, self::VISTAS, true) ? $valor : 'activas';
     }
 }

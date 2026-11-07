@@ -11,6 +11,7 @@ use App\Models\Persona;
 use App\Models\Sucursal;
 use App\Models\Usuario;
 use App\Services\EspecialidadService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreaCuentas;
 use Tests\TestCase;
@@ -384,6 +385,53 @@ class EspecialidadTest extends TestCase
         $this->assertSame(1, Especialidad::count());
     }
 
+    // --- Búsqueda (PM-07) ---------------------------------------------------------------
+
+    public function test_busca_por_parte_del_nombre_sin_distinguir_mayusculas_e_incluye_las_inactivas(): void
+    {
+        $this->crearEspecialidad(['nombre' => 'Cardiología pediátrica', 'estado' => false]);
+        $this->crearEspecialidad(['nombre' => 'Dermatología']);
+
+        $this->actingAs($this->administrador())
+            ->get(route('especialidades.index', ['q' => 'CARDIO']))
+            ->assertOk()
+            ->assertSee('Cardiología pediátrica')
+            ->assertDontSee('Dermatología')
+            ->assertSee('La búsqueda incluye a las especialidades inactivas.');
+    }
+
+    public function test_la_busqueda_respeta_la_pestana_elegida_y_sus_contadores(): void
+    {
+        $this->crearEspecialidad(['nombre' => 'Cardiología', 'estado' => false]);
+        $this->crearEspecialidad(['nombre' => 'Cardiología pediátrica']);
+        $this->crearEspecialidad(['nombre' => 'Dermatología']);
+
+        $respuesta = $this->actingAs($this->administrador())
+            ->get(route('especialidades.index', ['q' => 'cardio', 'estado' => 'activas']))
+            ->assertOk()
+            ->assertSee('Cardiología pediátrica')
+            ->assertDontSee('La búsqueda incluye a las especialidades inactivas.');
+
+        $this->assertDontSeeFila($respuesta, 'Cardiología</td>');
+        $respuesta->assertSeeInOrder(['Activas', '1', 'Inactivas', '1', 'Todas', '2']);
+    }
+
+    public function test_sin_coincidencias_lo_avisa_y_los_comodines_no_rompen_la_busqueda(): void
+    {
+        $this->crearEspecialidad(['nombre' => 'Pediatría']);
+
+        $this->actingAs($this->administrador())
+            ->get(route('especialidades.index', ['q' => '%_']))
+            ->assertOk()
+            ->assertDontSee('Pediatría</td>', false)
+            ->assertSee('No hay especialidades que coincidan con «%_» en esta pestaña.');
+    }
+
+    private function assertDontSeeFila($respuesta, string $html): void
+    {
+        $this->assertStringNotContainsString('fw-semibold">'.$html, $respuesta->getContent());
+    }
+
     // --- Modificar -----------------------------------------------------------------------
 
     public function test_modifica_la_especialidad_y_queda_en_la_bitacora(): void
@@ -499,7 +547,7 @@ class EspecialidadTest extends TestCase
     {
         $this->crearEspecialidad(['nombre' => 'Cardiología']);
 
-        $this->expectException(\Illuminate\Database\UniqueConstraintViolationException::class);
+        $this->expectException(UniqueConstraintViolationException::class);
         Especialidad::create($this->datos(['nombre' => '  CARDIOLOGÍA ']));
     }
 
