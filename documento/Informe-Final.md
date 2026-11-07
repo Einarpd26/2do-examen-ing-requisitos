@@ -186,7 +186,7 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 - **Duración de la cita:** es un parámetro de la **especialidad** (en minutos), no del horario ni del médico. La cita hereda la duración de la especialidad elegida al reservar. Como la agenda de un médico puede mezclar duraciones, el anti-duplicados compara **intervalos**, no solo la hora de inicio (RF07, RNF17).
 - **Códigos:** el «código» de paciente, médico y cita que piden RF02, RF03 y RF06 es su identificador único (`id`). En pantallas e impresos se muestra con formato (`PAC-000001`, `MED-000001`, `CM-000001`), que arma la aplicación a partir del `id`; no se guarda ni se escribe a mano.
 - **Registro propio del Paciente:** primer nombre, apellido paterno, CI, celular y contraseña obligatorios; segundo nombre, apellido materno y correo opcionales. Se crea la cuenta y la ficha del paciente en estado **pendiente de verificación**. Si el CI ya tiene ficha, el registro propio se rechaza y se indica pedir el acceso en recepción.
-- **Alta de cuenta por la Recepcionista:** para reducir la fricción, la Recepcionista también puede crear la cuenta del Paciente. El sistema genera una **contraseña temporal** aleatoria con vigencia de **72 horas**, la muestra **una sola vez** en pantalla (botones Copiar e Imprimir) y la Recepcionista se la entrega impresa o por mensaje de texto o WhatsApp. El sistema no envía correos ni mensajes. En su primer ingreso el Paciente debe cambiarla; si venció, no puede entrar hasta que se renueve.
+- **Alta de cuenta por la Recepcionista:** para reducir la fricción, la Recepcionista también puede crear la cuenta del Paciente. El sistema genera una **contraseña temporal** aleatoria con vigencia de **72 horas**, la muestra **una sola vez** en pantalla (botones «Copiar contraseña» e «Imprimir») y la Recepcionista se la entrega impresa o por mensaje de texto o WhatsApp. El sistema no envía correos ni mensajes. En su primer ingreso el Paciente debe cambiarla; si venció, no puede entrar hasta que se renueve.
 - **Renovación y contraseña olvidada:** la Recepcionista o el Administrador pueden generar una nueva contraseña temporal en cualquier momento (porque venció o porque el titular olvidó la suya): se genera otra con nuevas 72 horas y la anterior deja de servir. El titular la solicita a recepción; la pantalla de inicio de sesión muestra el celular de la clínica para ese fin. Para evitar suplantaciones, la contraseña nueva se envía solo al celular registrado en la ficha del paciente (mensaje o WhatsApp) o se entrega en persona con documento, nunca a un número nuevo que indique quien llama. Es el caso de uso **CU-19**: la renovación exige indicar cómo se verificó la identidad y eso queda en la bitácora. La recuperación por cuenta propia del paciente (por correo) queda fuera del alcance: necesita un servicio de correo y el correo del paciente es opcional y no está verificado.
 - **Verificación de la ficha:** una ficha de registro propio queda pendiente hasta que la Recepcionista compare el documento en persona y la marque como verificada; en ese acto puede renovar la contraseña, para sacar de la cuenta a quien se haya registrado con un CI ajeno. Mientras está pendiente, el Paciente puede iniciar sesión, ver su perfil básico y reservar citas, pero **no ve su información médica ni sus notas clínicas**. Una ficha creada por la Recepcionista queda verificada de inmediato.
 - **Información médica y contacto de emergencia:** los registra y edita la Recepcionista. El Paciente los ve en solo lectura. El Médico los ve en solo lectura.
@@ -561,7 +561,7 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 1. El Administrador abre la lista de usuarios del personal (las cuentas de pacientes se gestionan en CU-02 y CU-04).
 2. Elige crear o modificar un usuario e ingresa los datos de la persona (CI, primer nombre, segundo nombre opcional, apellido paterno, apellido materno opcional, teléfono, correo) y el rol. Si el rol es Médico, selecciona el médico (CU-05) al que se vincula la cuenta.
 3. El sistema valida los datos y que el CI y el correo sean únicos.
-4. El sistema guarda el cambio. Al crear un usuario, genera una contraseña temporal aleatoria con vigencia de 72 horas y la muestra una sola vez, con botones Copiar e Imprimir; el Administrador se la entrega al empleado, quien debe cambiarla en su primer ingreso.
+4. El sistema guarda el cambio. Al crear un usuario, genera una contraseña temporal aleatoria con vigencia de 72 horas y la muestra una sola vez, con los botones «Copiar contraseña» e «Imprimir»; el Administrador se la entrega al empleado, quien debe cambiarla en su primer ingreso.
 5. El Administrador puede activar o desactivar la cuenta.
 6. Si el titular olvidó su contraseña o la temporal venció, el Administrador puede renovarla en cualquier momento: el sistema genera otra con nuevas 72 horas, la muestra una sola vez e invalida la anterior.
 
@@ -569,7 +569,7 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 
 **Flujos alternos**
 
-- 3a. CI o correo repetido: se rechaza el cambio. Si el CI pertenece a una persona sin cuenta (por ejemplo, un paciente), se reutiliza esa persona sin modificar sus datos personales.
+- 3a. CI o correo repetido: se rechaza el cambio. Si el CI pertenece a una persona sin cuenta (por ejemplo, un paciente), se reutiliza esa persona sin modificar sus datos personales, salvo que no tuviera correo: entonces se le asigna el indicado, porque el personal entra con su correo.
 - 3b. El médico seleccionado ya tiene una cuenta vinculada o está desactivado: se rechaza el cambio.
 - 5a. El Administrador intenta desactivar su propia cuenta, cambiarse el rol o renovarse la contraseña: se rechaza (para su contraseña usa «Cambiar contraseña»).
 - 5b. El cambio dejaría al sistema sin un Administrador activo: se rechaza.
@@ -591,7 +591,7 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 2. Registra o modifica los datos personales (CI, primer nombre, segundo nombre, apellido paterno, apellido materno, fecha de nacimiento, sexo, teléfono, correo, dirección), la información médica (tipo de sangre, alergias, enfermedades crónicas, medicamentos, antecedentes relevantes) y el contacto de emergencia (nombre, parentesco, teléfono).
 3. El sistema valida los datos. Si el CI ya existe como persona sin ficha de paciente (por ejemplo, un médico), reutiliza esa persona y le crea la ficha.
 4. El sistema guarda los cambios.
-5. Si el paciente no tiene cuenta, la Recepcionista la crea: el sistema genera una contraseña temporal aleatoria con vigencia de 72 horas y la muestra una sola vez, con botones Copiar e Imprimir. La Recepcionista se la entrega al paciente, impresa o por mensaje de texto o WhatsApp. El paciente entra con su CI.
+5. Si el paciente no tiene cuenta, la Recepcionista la crea: el sistema genera una contraseña temporal aleatoria con vigencia de 72 horas y la muestra una sola vez, con los botones «Copiar contraseña» e «Imprimir». La Recepcionista se la entrega al paciente, impresa o por mensaje de texto o WhatsApp. El paciente entra con su CI.
 6. Si el paciente se registró solo (CU-02), la Recepcionista compara su documento y marca la ficha como verificada; en ese acto puede renovar la contraseña.
 7. Si el paciente olvidó su contraseña o la temporal venció, la Recepcionista puede renovarla en cualquier momento: el sistema genera otra con nuevas 72 horas e invalida la anterior.
 8. Para dar de baja, la Recepcionista desactiva el registro; no se elimina. Si el paciente tiene cuenta de paciente, esta se desactiva con él y se reactiva si lo reactiva.
@@ -678,7 +678,7 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 3b. El bloque se superpone con otro del mismo médico el mismo día: se rechaza y el mensaje nombra el bloque en conflicto. Dos bloques pegados (uno termina a las 12:00 y el otro empieza a las 12:00) no se superponen. Lo garantiza también la base de datos.
 - 3c. El médico está desactivado: no se puede registrar, modificar ni eliminar su horario hasta reactivarlo (CU-05).
 - 5a. Modificar o eliminar un bloque dejaría fuera de la atención a una cita futura ya agendada (programada o confirmada): se rechaza, el mensaje indica cuáles y se pide reprogramarlas o cancelarlas antes.
-- 5b. No impiden el cambio las citas canceladas, las pasadas, las de otro médico, las que ya estaban fuera del horario antes del cambio ni las que cubre otro bloque.
+- 5b. No impiden el cambio las citas canceladas, las de fechas anteriores a hoy, las de otro médico, las que ya estaban fuera del horario antes del cambio ni las que cubre otro bloque.
 
 #### CU-08 Gestionar mi perfil
 
@@ -803,7 +803,7 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 
 **Flujo principal**
 
-1. Antes de la cita, la Recepcionista (o el Paciente, en su propia cita) elige «Confirmar asistencia» en el comprobante y la cita pasa de «Programada» a «Confirmada».
+1. Antes de la cita, la Recepcionista elige «Confirmar asistencia» (o el Paciente, en su propia cita, «Confirmar mi asistencia») en el comprobante y la cita pasa de «Programada» a «Confirmada».
 2. Cuando la cita ya comenzó, la Recepcionista elige en el comprobante «Marcar como atendida» o «Registrar inasistencia»; el Médico marca «Marcar atendida» en su agenda (CU-13).
 3. El sistema vuelve a leer la cita dentro de una transacción, comprueba que la transición sea válida, cambia el estado y registra `cita_confirmada`, `cita_atendida` o `cita_inasistencia` en la bitácora.
 4. El sistema muestra el resultado y deja de ofrecer acciones sobre esa cita.
@@ -972,7 +972,7 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 2. La Recepcionista **comprueba la identidad** del titular: compara su documento de identidad en persona, o responde solo al celular registrado en su ficha.
 3. Abre la ficha del paciente (CU-04), elige «Renovar contraseña temporal» e indica cómo verificó la identidad.
 4. El sistema genera una contraseña temporal aleatoria de 14 caracteres con vigencia de 72 horas, invalida la anterior, pone en cero los intentos fallidos y levanta el bloqueo.
-5. El sistema muestra la contraseña **una sola vez** (botones Copiar e Imprimir) y registra en la bitácora quién renovó, a quién y cómo se verificó la identidad.
+5. El sistema muestra la contraseña **una sola vez** (botones «Copiar contraseña» e «Imprimir») y registra en la bitácora quién renovó, a quién y cómo se verificó la identidad.
 6. La Recepcionista entrega la contraseña impresa, en persona, o por mensaje al celular registrado.
 7. El titular entra (CU-01) y el sistema le obliga a elegir una contraseña propia.
 
@@ -1038,7 +1038,7 @@ flowchart LR
     Admin --- CU01 & CU03 & CU05 & CU06 & CU07 & CU15 & CU19
     Recep --- CU01 & CU04 & CU19 & CU09 & CU10 & CU11 & CU12 & CU13 & CU14 & CU17
     Medico --- CU01 & CU12 & CU13 & CU16 & CU17
-    Pac --- CU01 & CU02 & CU08 & CU09 & CU10 & CU11 & CU14 & CU17 & CU18
+    Pac --- CU01 & CU02 & CU08 & CU09 & CU10 & CU11 & CU12 & CU14 & CU17 & CU18
 ```
 
 #### 4.5.2 Control de acceso (RBAC)
@@ -1221,7 +1221,7 @@ flowchart LR
     C -- "5: citas ordenadas por hora" --> V
     V -- "6: mostrar agenda" --> U
     U -- "7: abrir ficha<br/>del paciente (Médico)" --> F[FichaLectura]
-    F -- "8: ¿tiene o tuvo cita<br/>con este médico?" --> C
+    F -- "8: ¿tiene o tuvo una cita no<br/>cancelada con este médico?" --> C
     C -- "9: datos del paciente" --> P[Paciente]
     C -- "10: ficha de solo lectura" --> F
 ```
@@ -1451,13 +1451,15 @@ classDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> Programada : registrar cita
-    Programada --> Confirmada : confirmar asistencia<br/>(Recepcionista o Paciente)
+    Programada --> Confirmada : confirmar asistencia, antes de comenzar<br/>(Recepcionista o Paciente)
+    Programada --> Programada : reprogramar
+    Confirmada --> Programada : reprogramar<br/>(se debe confirmar de nuevo)
     Programada --> Cancelada : cancelar
     Confirmada --> Cancelada : cancelar
-    Programada --> Atendida : marcar atendida
-    Confirmada --> Atendida : marcar atendida
-    Programada --> Inasistencia : paciente no se presentó
-    Confirmada --> Inasistencia : paciente no se presentó
+    Programada --> Atendida : marcar atendida, una vez comenzada<br/>(Recepcionista o Médico de la cita)
+    Confirmada --> Atendida : marcar atendida, una vez comenzada<br/>(Recepcionista o Médico de la cita)
+    Programada --> Inasistencia : paciente no se presentó, una vez comenzada<br/>(Recepcionista)
+    Confirmada --> Inasistencia : paciente no se presentó, una vez comenzada<br/>(Recepcionista)
     Atendida --> [*]
     Cancelada --> [*]
     Inasistencia --> [*]
@@ -1487,7 +1489,7 @@ flowchart TB
     IA["Identidad y acceso<br/>CU-01, CU-03, CU-08"]
 
     CR -.-> CI
-    CR -.-> NC
+    CR -.-> MH
     CR -.-> PA
     NC -.-> CI
     CI -.-> PA
@@ -1515,7 +1517,7 @@ flowchart TB
 
 **Lectura del diagrama.** Las flechas apuntan siempre hacia la base (de consultas hacia identidad), así que no hay dependencias circulares entre los paquetes y cada uno puede probarse con los de abajo. Esto es el orden en que se construyó el sistema: el Ciclo #1 entregó los paquetes de Identidad y acceso, Pacientes y Médicos y horarios; el Ciclo #2, los de Citas, Atención clínica y Consultas y reportes.
 
-**Dos lecturas hacia arriba.** A nivel de análisis son consultas de solo lectura y no cambian la estructura: `UsuarioService` consulta la ficha del Médico para crear o reactivar una cuenta de médico solo si el médico está activo (CU-03), y `MedicoService` consulta las citas del médico antes de quitarle una especialidad con la que ya tiene citas (CU-05). En el diseño no se modelan como dependencias estructurales.
+**Tres lecturas hacia arriba.** A nivel de análisis son consultas de solo lectura y no cambian la estructura: `UsuarioService` consulta la ficha del Médico para crear o reactivar una cuenta de médico solo si el médico está activo (CU-03), y `MedicoService` consulta las citas del médico antes de quitarle una especialidad con la que ya tiene citas (CU-05), y `HorarioService` consulta las citas del médico para impedir cambios de horario que las dejen fuera de la atención (CU-07). En el diseño no se modelan como dependencias estructurales.
 
 Cada paquete es la base del subsistema que se describe en la sección 7.3.
 
@@ -1537,9 +1539,9 @@ flowchart TB
     end
     subgraph Aplicacion["Aplicación"]
         R["Rutas (routes/web.php)"]
-        M["Middleware: auth (sesión válida),<br/>cuenta.vigente (cuenta activa y cambio<br/>obligatorio de contraseña),<br/>can: (permiso de cada operación)"]
+        M["Middleware: guest (rutas públicas),<br/>auth (sesión válida), throttle (límite<br/>de solicitudes), cuenta.vigente (cuenta activa y cambio<br/>obligatorio de contraseña),<br/>can: (permiso de cada operación)"]
         C["Controladores + Form Requests<br/>(«control»)"]
-        S["Servicios: uno por módulo, más<br/>Autenticación, ContraseñaTemporal<br/>y Bitácora"]
+        S["Servicios: uno por módulo, más<br/>Autenticación, ContrasenaTemporal<br/>y Bitácora"]
     end
     subgraph Dominio["Dominio y datos"]
         E["Modelos Eloquent<br/>(«entity»)"]
@@ -1690,7 +1692,7 @@ sequenceDiagram
     participant F as FormPaciente (Blade)
     participant C as AccesoPacienteController
     participant S as PacienteService
-    participant T as ContraseñaTemporalService
+    participant T as ContrasenaTemporalService
     participant U as Usuario
     participant B as BitacoraService
 
@@ -1722,7 +1724,7 @@ sequenceDiagram
     participant C as AccesoPacienteController
     participant V as RenovarAccesoRequest
     participant S as PacienteService
-    participant T as ContraseñaTemporalService
+    participant T as ContrasenaTemporalService
     participant U as Usuario
     participant B as BitacoraService
 
@@ -2184,11 +2186,11 @@ erDiagram
 - El CI es único en `personas`; el correo es único sin distinguir mayúsculas y solo cuando existe.
 - Los datos del personal administrativo (Administrador, Recepcionista) viven en `personas` y `usuarios`, sin ficha.
 - El correo es obligatorio para el personal y para el Paciente es opcional; esa regla la valida la aplicación, porque depende del rol.
-- Una restricción de exclusión impide horarios de atención superpuestos del mismo médico en el mismo día (CU-07) y citas superpuestas del mismo médico (RNF17); las citas canceladas no cuentan.
+- Una restricción de exclusión impide horarios de atención superpuestos del mismo médico en el mismo día (CU-07) y citas superpuestas del mismo médico (RNF17) o del mismo paciente, aunque sean con médicos distintos; las citas canceladas no cuentan.
 - Una clave foránea compuesta exige que el médico de una cita ejerza la especialidad elegida, y otra ata la nota clínica al médico de su cita. Consecuencia: no se puede quitar una especialidad a un médico que tiene citas con ella.
 - El código de paciente, médico y cita es el `id`, identificador único (RF02, RF03, RF06); el formato `PAC-000001` se arma al mostrarlo y no se guarda. Pueden quedar saltos en la numeración, porque el `id` no se revierte si el alta falla. La matrícula del médico (`nro_registro_profesional`) es un dato distinto: la emite una entidad externa y se guarda aparte, única y obligatoria.
 - La bitácora es de solo escritura: un disparador impide modificar, borrar o vaciar sus filas. Su campo `detalle` guarda el contexto de la acción, por ejemplo cómo se verificó la identidad al renovar una contraseña (CU-19).
-- Las claves foráneas llevan índice, porque PostgreSQL no los crea solo.
+- Las claves foráneas llevan índice, porque PostgreSQL no los crea solo, salvo `notas_clinicas.modificado_por`, que solo se consulta al mostrar la nota.
 - Las reglas que cruzan tablas (cita dentro del horario del médico, duración de la cita, médico activo, fecha futura, transiciones de estado, que un médico no se atienda a sí mismo) las valida la aplicación y se cubren con pruebas.
 
 #### 6.3.2 Modelo físico (DDL PostgreSQL)
@@ -2441,7 +2443,7 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 | Mi perfil                            | Paciente                     | CU-08        | Datos personales; información médica y contacto de emergencia en solo lectura si la ficha está verificada; edición de teléfono y contraseña         |
 | Lista de pacientes                   | Recepcionista                | CU-04        | Búsqueda por CI, nombre o apellido; estado de verificación                                                                                          |
 | Formulario de paciente               | Recepcionista                | CU-04        | Datos personales, información médica, contacto de emergencia; acciones: crear o renovar acceso, verificar ficha, desactivar                         |
-| Credenciales temporales              | Recepcionista, Administrador | CU-03, CU-04 | Contraseña mostrada una sola vez, con vencimiento y botones Copiar e Imprimir                                                                       |
+| Credenciales temporales              | Recepcionista, Administrador | CU-03, CU-04 | Contraseña mostrada una sola vez, con vencimiento y botones «Copiar contraseña» e «Imprimir»                                                                       |
 | Lista y formulario de usuarios       | Administrador                | CU-03        | Alta del personal, rol, vínculo con médico, activar o desactivar, renovar contraseña                                                                |
 | Lista y formulario de médicos        | Administrador                | CU-05        | Búsqueda; pestañas Activos, Inactivos y Todos con su contador; datos, registro profesional, especialidades, estado                                  |
 | Lista y formulario de especialidades | Administrador                | CU-06        | Pestañas Activas, Inactivas y Todas con su contador; nombre, descripción, duración de la cita, estado                                               |
@@ -2451,12 +2453,12 @@ Interfaz en Blade con Bootstrap 5: barra de navegación superior cuyas opciones 
 
 **Menú por rol**
 
-| Rol           | Opciones                                       |
-| ------------- | ---------------------------------------------- |
-| Administrador | Usuarios · Médicos · Especialidades · Horarios |
-| Recepcionista | Registrar cita · Pacientes                     |
-| Médico        | (Ciclo #2: agenda y notas clínicas)            |
-| Paciente      | Reservar cita · Mi perfil                      |
+| Rol           | Opciones                                                              |
+| ------------- | --------------------------------------------------------------------- |
+| Administrador | Usuarios · Médicos · Especialidades · Horarios de atención · Reportes |
+| Recepcionista | Registrar cita · Agenda · Pacientes                                   |
+| Médico        | Agenda (desde cada cita: nota clínica y ficha del paciente)           |
+| Paciente      | Reservar cita · Mi historial · Mis notas · Mi perfil                  |
 
 ---
 
@@ -2647,7 +2649,7 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
     }
 ```
 
-**Base de datos.** El esquema del Ciclo #1 está escrito en SQL puro en `database/sql/` (`001_esquema_base.sql`, `002_citas_y_notas.sql`, `003_catalogos_iniciales.sql`); las migraciones de `database/migrations/` solo ejecutan esos archivos. Así las restricciones no dependen de la aplicación: unicidad (CI, correo, registro profesional, nombre de especialidad), formatos con `CHECK`, claves foráneas y la restricción de exclusión de los horarios. Esta es la que impide que un médico tenga dos bloques superpuestos el mismo día:
+**Base de datos.** El esquema está escrito en SQL puro en `database/sql/` (`001_esquema_base.sql`, `002_citas_y_notas.sql`, `003_catalogos_iniciales.sql` y `004_citas_sin_superposicion_paciente.sql`); las migraciones de `database/migrations/` solo ejecutan esos archivos. Así las restricciones no dependen de la aplicación: unicidad (CI, correo, registro profesional, nombre de especialidad), formatos con `CHECK`, claves foráneas y la restricción de exclusión de los horarios. Esta es la que impide que un médico tenga dos bloques superpuestos el mismo día:
 
 `database/sql/001_esquema_base.sql`
 
@@ -2670,6 +2672,12 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         ['etiqueta' => 'Médicos', 'permiso' => 'medicos:gestionar', 'ruta' => 'medicos.index'],
         ['etiqueta' => 'Especialidades', 'permiso' => 'especialidades:gestionar', 'ruta' => 'especialidades.index'],
         ['etiqueta' => 'Horarios de atención', 'permiso' => 'horarios:gestionar', 'ruta' => 'horarios.index'],
+        ['etiqueta' => 'Registrar cita', 'permiso' => 'citas:gestionar', 'ruta' => 'citas.nueva'],
+        ['etiqueta' => 'Reservar cita', 'permiso' => 'citas:gestionar_propias', 'ruta' => 'mis-citas.nueva'],
+        ['etiqueta' => 'Reportes', 'permiso' => 'reportes:consultar', 'ruta' => 'reportes.index'],
+        ['etiqueta' => 'Agenda', 'permiso' => 'agenda:consultar', 'ruta' => 'agenda.index'],
+        ['etiqueta' => 'Mi historial', 'permiso' => 'historial:consultar', 'ruta' => 'historial.propio', 'rol' => 'PACIENTE'],
+        ['etiqueta' => 'Mis notas', 'permiso' => 'notas:consultar', 'ruta' => 'notas.propias', 'rol' => 'PACIENTE'],
         ['etiqueta' => 'Pacientes', 'permiso' => 'pacientes:gestionar', 'ruta' => 'pacientes.index'],
         ['etiqueta' => 'Mi perfil', 'permiso' => 'perfil:gestionar', 'ruta' => 'perfil.mostrar'],
     ],
@@ -2682,6 +2690,11 @@ La clase `App\Support\Menu` filtra esas opciones con el mismo `Gate` que usan la
 ```php
         foreach (config('menu.opciones') as $opcion) {
             if (! Gate::forUser($cuenta)->allows($opcion['permiso'])) {
+                continue;
+            }
+
+            // Algunas opciones comparten el permiso con otro rol pero solo sirven a uno (p. ej. «Mi historial»).
+            if (isset($opcion['rol']) && $cuenta->rol->codigo !== $opcion['rol']) {
                 continue;
             }
 
@@ -2783,7 +2796,7 @@ La plantilla base `resources/views/layouts/base.blade.php` dibuja la barra de na
 
 ### 7.3 Implementación de la arquitectura de subsistemas
 
-Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y los CU-09 a CU-18 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Los casos de uso CU-10 a CU-18 no están implementados todavía. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
+Cada caso de uso implementado sigue el mismo patrón de 7.2: ruta con permiso, controlador, Form Request, servicio, modelos y vistas. Esta sección recorre los nueve casos de uso del Ciclo #1 y los CU-09 a CU-18 del Ciclo #2, y señala, para cada uno, los archivos que lo implementan, las reglas que aplica y el fragmento de código que mejor las muestra. Las rutas de cada módulo están en el Anexo B y las pruebas por módulo en el Anexo C.
 
 Todos los servicios de este ciclo usan `BitacoraService` (RNF13) y `ReglaDeNegocioException` (sección 7.2); no se repite en cada tabla.
 
@@ -3397,7 +3410,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 5. **Concurrencia:** una solicitud simultánea que choca con la base se informa como regla de negocio, sin error técnico.
 6. **Auditoría:** la acción queda en la bitácora (RNF13).
 
-**Entorno.** PHP 8.4, Laravel 13, PHPUnit 12.5 y PostgreSQL 16 en un contenedor Docker, con la base `clinica_test` separada de la de desarrollo. La suite del Ciclo #1 se ejecutó con PHP 8.4.27 y la del Ciclo #2 (07/11/2026) con PHP 8.3.6, porque la máquina de ese día no tenía 8.4; el resultado se detalla en 8.3.1. Cada prueba parte de una base vacía y con los catálogos cargados.
+**Entorno.** PHP 8.4, Laravel 13, PHPUnit 12.5 y PostgreSQL 16 en un contenedor Docker, con la base `clinica_test` separada de la de desarrollo. La suite del Ciclo #1 y la última corrida completa (07/11/2026) se ejecutaron con PHP 8.4.27 y PHPUnit 12.5.40, las versiones que exige el `composer.lock`; el resultado se detalla en 8.3.1. Cada prueba parte de una base vacía y con los catálogos cargados.
 
 **Criterio de aprobación.** Un caso se aprueba cuando se obtiene el resultado esperado. El ciclo se da por probado cuando la suite completa pasa sin fallos.
 
@@ -3412,7 +3425,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 
 #### 8.2.1 Pruebas mínimas del enunciado
 
-Los resultados obtenidos salen de la ejecución de la suite del 05/11/2026 (sección 8.3). En cada fila, la prueba automatizada está indicada como `Clase::método`.
+Los resultados obtenidos salen de la ejecución de la suite del 07/11/2026 (sección 8.3.1). En cada fila, la prueba automatizada está indicada como `Clase::método`.
 
 | N.º | Prueba                                               | Resultado esperado                                | Resultado obtenido                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Estado   |
 | --- | ---------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -3529,15 +3542,15 @@ Los resultados obtenidos salen de la ejecución de la suite del 05/11/2026 (secc
 
 #### 8.3.1 Resultado de la suite automatizada
 
-Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proyecto, con PHP 8.3.6 y PHPUnit 12.5.43.
+Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proyecto, con PHP 8.4.27 y PHPUnit 12.5.40.
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 480         |
-| Pruebas aprobadas  | 480         |
+| Pruebas ejecutadas | 481         |
+| Pruebas aprobadas  | 481         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 3141        |
-| Duración           | 37 segundos |
+| Aserciones         | 3147        |
+| Duración           | 43 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
 
@@ -3585,7 +3598,7 @@ Lista de verificación para ejecutar en el navegador, por rol y por caso de uso.
 
 **Ejecutadas hasta ahora (24/10/2026):** PM-02, PM-44, PM-56, PM-57 y PM-76, que corresponden a las pruebas 1, 2, 9 y 10 del enunciado. Se ejecutaron en el navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y se comprobó en la base de datos que los rechazos no dejaron registros. Las demás figuran como «Pendiente de ejecución».
 
-**Ejecutadas en el Ciclo #2 (06/11/2026, 23:51 hora de La Paz, y 07/11/2026 para las de validación en el cliente):** PM-88 a PM-108, el recorrido de CU-09 a CU-18 con una persona de cada rol. Se ejecutaron en un navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y con los datos de demostración. Se prepararon tres cosas directamente en la base de datos, porque dependen del reloj: un bloque de atención del sábado (para reservar una cita para «mañana» y ver el recordatorio), y una cita de hoy a las 22:00 que ya había comenzado (para poder marcarla como atendida y escribir su nota). Las capturas están en la sección 8.3.5 (figuras 21 a 36).
+**Ejecutadas en el Ciclo #2 (06/11/2026, 23:51 hora de La Paz, y 07/11/2026 para las de validación en el cliente):** PM-88 a PM-108, el recorrido de CU-09 a CU-18 con una persona de cada rol. Se ejecutaron en un navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y con los datos de demostración. Se prepararon dos cosas directamente en la base de datos, porque dependen del reloj: un bloque de atención del sábado (para reservar una cita para «mañana» y ver el recordatorio), y una cita de hoy a las 22:00 que ya había comenzado (para poder marcarla como atendida y escribir su nota). Las capturas están en la sección 8.3.5 (figuras 21 a 36).
 
 **Cuentas para probar**
 
@@ -3689,7 +3702,7 @@ Usuario de prueba: Recepcionista `demo.recepcion@clinica.test` · Contraseña: `
 | PM-44 | Registrar un paciente con datos personales, información médica y contacto de emergencia. | Se crea con código PAC-00000N.                                                                 | El sistema mostró «Paciente registrado.» y creó la ficha PAC-000006 con CI 8100001, fecha de nacimiento 20/05/1990, información médica (tipo de sangre A+) y contacto de emergencia. La ficha quedó activa y verificada. | Aprobada               |
 | PM-45 | Buscar por CI, nombre, apellido y código PAC-.                                           | Cada búsqueda lo encuentra.                                                                    |                                                                                                                                                                                                                          | Pendiente de ejecución |
 | PM-46 | Editar los datos de un paciente y guardar.                                               | Los cambios aparecen en su ficha.                                                              |                                                                                                                                                                                                                          | Pendiente de ejecución |
-| PM-47 | Crear el acceso de un paciente que no tiene cuenta.                                      | Muestra la contraseña temporal una sola vez, con botones Copiar e Imprimir.                    |                                                                                                                                                                                                                          | Pendiente de ejecución |
+| PM-47 | Crear el acceso de un paciente que no tiene cuenta.                                      | Muestra la contraseña temporal una sola vez, con los botones «Copiar contraseña» e «Imprimir».                    |                                                                                                                                                                                                                          | Pendiente de ejecución |
 | PM-48 | Entrar como ese paciente con su CI y la contraseña temporal.                             | Entra y lo obliga a cambiar la contraseña.                                                     |                                                                                                                                                                                                                          | Pendiente de ejecución |
 | PM-49 | Renovar la contraseña de un paciente sin indicar cómo se verificó su identidad.          | Se rechaza; con la verificación elegida genera otra y queda registrada.                        |                                                                                                                                                                                                                          | Pendiente de ejecución |
 | PM-50 | Verificar una ficha pendiente, con y sin la casilla de renovar la contraseña.            | La ficha pasa a verificada; con la casilla, además se renueva la contraseña.                   |                                                                                                                                                                                                                          | Pendiente de ejecución |
@@ -3790,7 +3803,7 @@ Usuarios de prueba: los mismos de CU-01.
 | PM-107 | CU-10 | Recepcionista | En «Reprogramar cita», elegir una fecha y pulsar el botón sin elegir horario. | No se envía; avisa que hay que elegir un horario. | No se envió y se mostró «Elija un horario disponible»; el aviso desapareció al elegir uno. | Aprobada |
 | PM-108 | CU-15 | Administrador | Poner «Desde» el 20/11 y «Hasta» el 01/11 y pulsar «Generar». | No se envía; avisa que las fechas no son válidas. | No se envió y se marcó el campo «Hasta». Con «Desde» 01/11 y «Hasta» 30/11 el reporte se generó. | Aprobada |
 
-Total: 87 pruebas manuales.
+Total: 108 pruebas manuales (PM-01 a PM-87 del Ciclo #1 y PM-88 a PM-108 del Ciclo #2).
 
 #### 8.3.5 Capturas de pantalla
 
@@ -3824,7 +3837,7 @@ Capturas del sistema en funcionamiento, tomadas el 24/10/2026 con las sesiones d
 
 ![Cambiar contraseña](img/capturas/07-cambiar-password.jpg)
 
-**Figura 8.** Lista de usuarios con un ancho de teléfono de 390 px: el menú se pliega en un botón, el título y el botón de acción pasan a filas separadas y la tabla se desplaza dentro de su propio recuadro, sin ensanchar la página.
+**Figura 8.** Lista de usuarios con un ancho de teléfono de 390 px: el menú se pliega en un botón, el título y el botón de acción pasan a filas separadas y la tabla se desplaza dentro de su propio recuadro, sin ensanchar la página. La captura es anterior al cambio de las tablas a tarjetas en celular (ver «Tablas como tarjetas en celular», más abajo).
 
 ![Lista de usuarios en un teléfono](img/capturas/08-usuarios-telefono-390px.jpg)
 
@@ -3876,7 +3889,9 @@ Capturas del sistema en funcionamiento, tomadas el 24/10/2026 con las sesiones d
 
 ![Página de error 404](img/capturas/20-error-404.jpg)
 
-**Adaptación a pantallas angostas.** Se midió el ancho de las pantallas con 390 px de ancho y ninguna desborda horizontalmente. Con la sesión del Administrador: inicio, usuarios (lista, alta y edición), médicos (lista, alta y edición), especialidades (lista y alta), horarios (índice y semana de un médico) y cambio de contraseña. Con la sesión del Paciente: inicio, perfil y cambio de contraseña. El login y el registro, que son públicos, tampoco desbordan. En la medición se encontraron y corrigieron dos defectos: el texto oculto de las cabeceras de las tablas ensanchaba la página en las listas de usuarios, médicos y especialidades, y el título de cada pantalla quedaba pegado a su botón de acción. Las pantallas de la Recepcionista no se midieron en este ancho.
+**Adaptación a pantallas angostas.** Se midió el ancho de las pantallas con 390 px de ancho y ninguna desborda horizontalmente. Con la sesión del Administrador: inicio, usuarios (lista, alta y edición), médicos (lista, alta y edición), especialidades (lista y alta), horarios (índice y semana de un médico) y cambio de contraseña. Con la sesión del Paciente: inicio, perfil y cambio de contraseña. El login y el registro, que son públicos, tampoco desbordan. En la medición se encontraron y corrigieron dos defectos: el texto oculto de las cabeceras de las tablas ensanchaba la página en las listas de usuarios, médicos y especialidades, y el título de cada pantalla quedaba pegado a su botón de acción. Esta primera medición se amplió el 07/11/2026 a los cuatro roles (siguiente párrafo).
+
+**Tablas como tarjetas en celular.** El 07/11/2026 se repitió la medición con un viewport emulado de 390 px de ancho y las cuentas de demostración del Administrador, la Recepcionista, el Médico y el Paciente, sobre unas 40 pantallas: listas, altas, ediciones, horarios, reportes, agenda, citas, historial, notas, perfil y cambio de contraseña. Ninguna desborda horizontalmente y ningún botón de las pantallas de la aplicación queda por debajo de los 30 px de alto. El hallazgo fue de uso, no de desborde: las tablas medían entre 571 px (especialidades) y 979 px (médicos) dentro de una pantalla de 390 px, de modo que en la lista de médicos las acciones (Horarios, Editar, Desactivar) quedaban fuera de la vista y solo una barra de desplazamiento lo indicaba. Se corrigió con una regla general: en pantallas de hasta 575 px cada fila de una tabla se muestra como una tarjeta, con la etiqueta de cada dato y los botones de acción al final; en pantallas más anchas la tabla no cambia. El script `public/js/tablas-moviles.js` copia los encabezados de cada tabla como etiquetas de sus celdas, el estilo está en `public/css/clinica.css` y el script se carga desde `resources/views/layouts/base.blade.php`. Después del cambio la tabla más ancha mide 366 px y la suite de pruebas automáticas sigue pasando completa. Las tarjetas se revisaron a simple vista en la lista de médicos y en la agenda del Médico; en el resto de las pantallas se midió el ancho, pero no se las miró una por una.
 
 Las figuras 21 a 36 son del Ciclo #2. Se tomaron el 06/11/2026 sobre el servidor de desarrollo, con las sesiones de la Recepcionista, el Paciente, el Médico y el Administrador, y los datos de demostración.
 
@@ -3944,7 +3959,7 @@ Las figuras 21 a 36 son del Ciclo #2. Se tomaron el 06/11/2026 sobre el servidor
 
 ![Reporte de pacientes registrados, con sus totales](img/capturas/36-reportes-pacientes.jpg)
 
-**Pantallas del Ciclo #2 en un ancho de teléfono (390 px).** Las figuras 37 a 42 se tomaron el 07/11/2026 con un viewport de 390 px de ancho, con los datos de demostración y las sesiones del Paciente, el Médico y el Administrador. En las seis pantallas el ancho del contenido es igual al de la ventana (390 px), es decir, no hay desplazamiento horizontal de la página; las tablas se desplazan dentro de su propio recuadro, como en la figura 8. El menú se pliega en un botón y los campos de los formularios se ajustan al ancho de la pantalla.
+**Pantallas del Ciclo #2 en un ancho de teléfono (390 px).** Las figuras 37 a 42 se tomaron el 07/11/2026 con un viewport de 390 px de ancho, con los datos de demostración y las sesiones del Paciente, el Médico y el Administrador. En las seis pantallas el ancho del contenido es igual al de la ventana (390 px), es decir, no hay desplazamiento horizontal de la página; las tablas se desplazaban dentro de su propio recuadro, como en la figura 8. Esas capturas son anteriores al cambio de las tablas a tarjetas, de modo que hoy la agenda, el historial y el detalle de reportes se ven como tarjetas en un celular. El menú se pliega en un botón y los campos de los formularios se ajustan al ancho de la pantalla.
 
 **Figura 37.** Reservar una cita desde un teléfono: horarios disponibles del martes 10/11 como botones de dos columnas (CU-09).
 
@@ -3985,7 +4000,7 @@ Lo construido responde a los objetivos específicos del enunciado:
 - **Citas sin conflictos de horario:** el servidor calcula la disponibilidad, vuelve a comprobarla dentro de una transacción y las restricciones de exclusión de PostgreSQL rechazan la cita superpuesta del médico y del paciente aunque dos solicitudes compitan (RN07, RN13, RN17). La reprogramación usa las mismas reglas.
 - **Control de estados:** una cita pasa de programada a confirmada, atendida, con inasistencia o cancelada solo por transiciones válidas, nunca se elimina y el Paciente cancela o reprograma con 24 horas de anticipación (RN10, RN15).
 - **Consultas y reportes:** agenda por médico y fecha, historial por paciente y reportes de citas y de pacientes con rango de fechas, filtros y totales, cada uno limitado a los roles autorizados (RN12).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 son 480 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 son 481 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -3995,7 +4010,7 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 
 - **Persona compartida entre fichas.** Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico). Sus datos personales viven en una única fila de `personas`, de modo que al editar la ficha del paciente (CU-04) la Recepcionista también modifica el correo con el que el médico entra al sistema. CU-03 y CU-05 evitan este efecto porque reutilizan la persona sin modificar sus datos. Se acepta por ser un caso poco frecuente; evitarlo exigiría bloquear los datos personales en CU-04 cuando la persona tiene una cuenta con otro rol.
 - **Citas atendidas o canceladas.** No existe un procedimiento autorizado para corregir una cita atendida o reabrir una cancelada: el sistema las rechaza (RF08, RF10, RN10). El enunciado deja esa política a cargo del sistema y aquí se eligió la más estricta.
-- **Pruebas manuales del Ciclo #2.** Se ejecutó un recorrido por rol de CU-09 a CU-18 (PM-88 a PM-108), pero en un ancho de 390 px solo se revisaron seis pantallas del Ciclo #2 (reservar y comprobante de la cita, agenda, historial, reportes y nota clínica, figuras 37 a 42), con un viewport emulado en el navegador y no con un teléfono físico. No se midieron en ese ancho las pantallas de la Recepcionista, la reprogramación, «Mis notas» ni el recordatorio.
+- **Pruebas manuales del Ciclo #2.** Se ejecutó un recorrido por rol de CU-09 a CU-18 (PM-88 a PM-108), pero el ancho de 390 px se revisó con un viewport emulado en el navegador y no con un teléfono físico. Las seis pantallas de las figuras 37 a 42 y unas 40 pantallas más de los cuatro roles se midieron sin desborde horizontal; las tablas se muestran como tarjetas en celular. Quedan sin medir en ese ancho la reprogramación del Paciente y las pantallas de error, y las figuras 37 a 42 no se volvieron a capturar después del cambio a tarjetas.
 - **Nombres de especialidad con tildes.** La unicidad ignora mayúsculas y espacios, pero no las tildes: «Odontologia» y «Odontología» se aceptan como dos especialidades distintas. Resolverlo requiere la extensión `unaccent` de PostgreSQL.
 
 ## Recomendación
@@ -4046,7 +4061,7 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 | Ruta                      | Contenido                                                                                                                                                                                                                                  |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `codigo/`                 | Aplicación Laravel: `app/` (controladores, servicios, modelos, solicitudes de validación y _middleware_), `database/` (migraciones, seeders y esquema SQL), `resources/views/` (vistas Blade), `routes/`, `config/`, `public/` y `tests/`. |
-| `codigo/database/sql/`    | Esquema en SQL puro: `001_esquema_base.sql`, `002_citas_y_notas.sql` y `003_catalogos_iniciales.sql`.                                                                                                                                      |
+| `codigo/database/sql/`    | Esquema en SQL puro: `001_esquema_base.sql`, `002_citas_y_notas.sql`, `003_catalogos_iniciales.sql` y `004_citas_sin_superposicion_paciente.sql`.                                                                                                                                      |
 | `documento/`              | Este informe (`Informe-Final.md`) y las decisiones de arquitectura (`adr/`).                                                                                                                                                               |
 | `diagramas/` y `pruebas/` | Reservadas para material de apoyo.                                                                                                                                                                                                         |
 
@@ -4079,7 +4094,7 @@ Son 72 rutas en total, según `php artisan route:list --except-vendor`. Solo el 
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **480 pruebas, 480 aprobadas, 3141 aserciones**, en unos 37 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **481 pruebas, 481 aprobadas, 3147 aserciones**, en unos 43 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -4093,7 +4108,7 @@ Resultado de `php artisan test`: **480 pruebas, 480 aprobadas, 3141 aserciones**
 | `Feature\Citas\AgendaTest`                           | 13      | CU-13                                         |
 | `Feature\Citas\AsistenciaTest`                       | 18      | CU-12                                         |
 | `Feature\Citas\ReprogramarCitaTest`                  | 22      | CU-10                                         |
-| `Feature\Reportes\ReporteTest`                       | 16      | CU-15                                         |
+| `Feature\Reportes\ReporteTest`                       | 17      | CU-15                                         |
 | `Feature\Notas\NotaClinicaTest`                      | 20      | CU-16 y CU-17                                 |
 | `Feature\Recordatorios\RecordatorioTest`             | 10      | CU-18                                         |
 | `Feature\Acceso\LoginTest`                         | 26      | CU-01                                         |
