@@ -1294,7 +1294,7 @@ Los archivos de Bootstrap se sirven desde `public/`, sin depender de una conexi�
 
 ### 6.2 Diseño de casos de uso (diagramas de secuencia)
 
-Se diseñan CU-01, CU-02 y CU-04 (creación de cuenta con contraseña temporal). Los demás casos del Ciclo #1 siguen el mismo patrón de controlador, Form Request, servicio y modelo.
+Se diseñan CU-01, CU-02, CU-04 y CU-19 del Ciclo #1 y todos los casos del Ciclo #2 (CU-09 a CU-18). Los demás casos del Ciclo #1 siguen el mismo patrón de controlador, Form Request, servicio y modelo.
 
 **CU-01 Iniciar sesión**
 
@@ -1445,6 +1445,324 @@ sequenceDiagram
 ```
 
 El Administrador renueva las cuentas del personal con el mismo flujo desde CU-03. Si el único Administrador olvida su contraseña, el administrador del servidor usa el comando de consola `php artisan administrador:renovar-password {correo}`, que deja constancia en la bitácora.
+
+#### Ciclo #2: citas, agenda, historial, reportes, notas y recordatorio
+
+Los casos del Ciclo #2 comparten el patrón de 7.2. Los diagramas muestran el flujo principal y las decisiones del servidor; la restricción de la base de datos es siempre la última defensa contra los choques de horario.
+
+**CU-09 Registrar cita**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista o Paciente
+    participant V as FormCita (Blade)
+    participant C as CitaController
+    participant R as CitaRequest
+    participant S as CitaService
+    participant D as Base de datos
+    participant B as BitacoraService
+
+    U->>V: elige paciente (solo Recepcionista), especialidad, médico y fecha
+    V->>C: GET /citas/nueva o /mis-citas/nueva (parámetros)
+    C->>S: horariosDisponibles(paciente, médico, especialidad, fecha)
+    S->>D: citas no canceladas del médico y del paciente ese día, y bloques de atención
+    S-->>C: horarios libres de la cuadrícula
+    C-->>V: lista de horarios disponibles
+    U->>V: elige horario, modalidad y motivo
+    V->>C: POST /citas o /mis-citas
+    C->>R: validar la forma de los datos (la hora final no se recibe)
+    C->>S: registrar(paciente, médico, especialidad, datos, actor)
+    S->>D: transacción: releer paciente, médico y especialidad
+    S->>S: validar fecha, partes activas, médico con la especialidad, no ser el propio paciente
+    S->>S: recalcular la cuadrícula y comprobar que el horario esté libre
+    alt regla incumplida
+        S-->>V: mensaje de negocio, no se guarda nada
+    else
+        S->>D: insertar la cita con hora final y sucursal calculadas por el servidor
+        alt otra solicitud ganó la carrera (restricción de exclusión 23P01)
+            D-->>S: violación de la restricción del médico o del paciente
+            S-->>V: mensaje de negocio, elegir otra hora
+        else
+            S->>B: registrar cita_creada
+            S-->>C: cita registrada
+            C-->>U: redirigir al comprobante con el código de la cita
+        end
+    end
+```
+
+**CU-10 Reprogramar cita**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista o Paciente
+    participant V as FormReprogramar (Blade)
+    participant C as CitaController
+    participant R as ReprogramarCitaRequest
+    participant S as CitaService
+    participant D as Base de datos
+    participant B as BitacoraService
+
+    U->>V: abre «Reprogramar cita» desde el comprobante
+    V->>C: GET /citas/{id}/reprogramar o /mis-citas/{id}/reprogramar
+    C->>S: exigirReprogramable(cita, comoPaciente)
+    alt cancelada, atendida, ya comenzó o el Paciente con menos de 24 horas
+        S-->>V: mensaje de negocio
+    else
+        C->>S: horariosDisponibles(..., excluir la propia cita)
+        S-->>V: horarios libres de la nueva fecha
+    end
+    U->>V: elige nueva fecha y hora
+    V->>C: PUT /citas/{id} o /mis-citas/{id}
+    C->>R: validar fecha y hora (paciente, médico y estado no se reciben)
+    C->>S: reprogramar(cita, datos, actor, comoPaciente)
+    S->>D: transacción: bloquear y releer la cita
+    S->>S: exigirReprogramable, validar fecha y partes, comprobar el horario libre
+    alt mismo horario actual o regla incumplida
+        S-->>V: mensaje de negocio, no se cambia nada
+    else
+        S->>D: actualizar fecha, hora, hora final y sucursal, estado Programada
+        alt otra solicitud ganó la carrera (23P01)
+            D-->>S: violación de la restricción de exclusión
+            S-->>V: mensaje de negocio
+        else
+            S->>B: registrar cita_reprogramada con el horario anterior y el nuevo
+            C-->>U: redirigir al comprobante actualizado
+        end
+    end
+```
+
+**CU-11 Cancelar cita**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista o Paciente
+    participant V as Comprobante (Blade)
+    participant C as CitaController
+    participant R as CancelarCitaRequest
+    participant S as CitaService
+    participant D as Base de datos
+    participant B as BitacoraService
+
+    U->>V: escribe el motivo y confirma
+    V->>C: PATCH /citas/{id}/cancelar o /mis-citas/{id}/cancelar
+    C->>R: validar que el motivo exista y tenga hasta 500 caracteres
+    alt el Paciente pide la cita de otro paciente
+        C-->>V: 404 no encontrado
+    else
+        C->>S: cancelar(cita, motivo, actor, comoPaciente)
+        S->>D: transacción: bloquear y releer la cita
+        alt ya cancelada, atendida, con inasistencia o ya comenzó
+            S-->>V: mensaje de negocio
+        else el Paciente con menos de 24 horas de anticipación
+            S-->>V: pedir comunicarse con la clínica
+        else
+            S->>D: estado Cancelada y guardar el motivo (la fila no se elimina)
+            S->>B: registrar cita_cancelada
+            C-->>U: comprobante con estado Cancelada, el horario queda libre
+        end
+    end
+```
+
+**CU-12 Controlar asistencia**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista, Médico o Paciente
+    participant V as Comprobante o Agenda (Blade)
+    participant C as AsistenciaController
+    participant S as AsistenciaService
+    participant D as Base de datos
+    participant B as BitacoraService
+
+    V->>S: posibles(cita) para mostrar solo los botones que corresponden hoy
+    U->>V: elige confirmar, marcar atendida o registrar inasistencia
+    V->>C: PATCH /citas/{id}/asistencia, /agenda/{id}/atender o /mis-citas/{id}/confirmar
+    alt el Médico pide una cita de otro médico o el Paciente la de otro paciente
+        C-->>V: 404 no encontrado
+    else
+        C->>S: registrar(cita, acción, actor)
+        S->>D: transacción: bloquear y releer la cita
+        alt cancelada, atendida o con inasistencia
+            S-->>V: mensaje de negocio, el estado no cambia
+        else confirmar una cita que ya comenzó, o atendida o inasistencia antes de comenzar
+            S-->>V: mensaje de negocio
+        else
+            S->>D: pasar a Confirmada, Atendida o Inasistencia
+            S->>B: registrar cita_confirmada, cita_atendida o cita_inasistencia
+            C-->>U: resultado y botones actualizados
+        end
+    end
+```
+
+**CU-13 Consultar agenda médica**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista o Médico
+    participant V as Agenda (Blade)
+    participant C as AgendaController
+    participant S as AgendaService
+    participant D as Base de datos
+
+    U->>V: elige médico (solo Recepcionista), fecha y estado
+    V->>C: GET /agenda (parámetros)
+    alt la cuenta es de Médico
+        C->>C: usar el médico de la sesión e ignorar el parámetro medico
+    else
+        C->>C: tomar el médico pedido, o pedir elegir uno
+    end
+    C->>S: fechaValida(fecha), si no es válida usar hoy con un aviso
+    C->>S: del(médico, fecha, estado)
+    S->>D: citas del médico ese día, por hora, con paciente y especialidad
+    S-->>C: citas (incluye canceladas)
+    C-->>U: tabla con hora, código, paciente, especialidad, estado y motivo
+```
+
+**CU-14 Consultar historial de citas**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista o Paciente
+    participant V as Historial (Blade)
+    participant C as HistorialController
+    participant S as HistorialService
+    participant D as Base de datos
+
+    U->>V: abre el historial y, si quiere, filtra por estado
+    alt Recepcionista
+        V->>C: GET /pacientes/{id}/historial (historial:consultar y pacientes:consultar)
+    else Paciente
+        V->>C: GET /mi-historial (sin identificador)
+        C->>C: usar el paciente de la sesión (sin ficha, 404)
+    end
+    C->>S: estadoValido(estado), un valor desconocido se ignora
+    C->>S: de(paciente, estado)
+    S->>D: citas del paciente, de la más reciente a la más antigua, de 15 en 15
+    S-->>C: página de citas y resumen por estado
+    C-->>U: fecha y hora, médico, especialidad, estado, motivo y fecha de registro
+```
+
+**CU-15 Generar reportes**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor A as Administrador
+    participant V as Reportes (Blade)
+    participant C as ReporteController
+    participant S as ReporteService
+    participant D as Base de datos
+
+    A->>V: elige el reporte, el rango de fechas y los filtros
+    V->>C: GET /reportes (reportes:consultar)
+    C->>S: fecha(desde) y fecha(hasta), si son inválidas o están al revés usar el período por defecto
+    alt reporte de pacientes registrados
+        C->>S: pacientes(desde, hasta) y totalesPacientes
+        S->>D: pacientes del rango y conteos de registrados, verificados y activos
+    else reporte de citas
+        C->>S: listado, porEstado y agrupadas por médico y por especialidad
+        S->>D: consultas con el rango y los filtros, totales calculados en la base
+    end
+    S-->>C: resultados y totales
+    C-->>A: reporte con totales y detalle paginado
+```
+
+**CU-16 Registrar nota clínica**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor M as Médico
+    participant V as FormNota (Blade)
+    participant C as NotaClinicaController
+    participant R as NotaClinicaRequest
+    participant S as NotaClinicaService
+    participant D as Base de datos
+    participant B as BitacoraService
+
+    M->>V: elige «Nota clínica» en una cita atendida de su agenda
+    V->>C: GET /agenda/{id}/nota (notas:registrar)
+    alt la cita es de otro médico
+        C-->>V: 404 no encontrado
+    else la cita no está atendida
+        C-->>V: mensaje de negocio
+    else
+        C-->>V: formulario, con la nota existente si la hay
+    end
+    M->>V: completa al menos un campo y guarda
+    V->>C: PUT /agenda/{id}/nota
+    C->>R: validar los cuatro textos (hasta 2000 caracteres, al menos uno con contenido)
+    C->>S: guardar(cita, datos, actor)
+    S->>D: transacción: bloquear y releer la cita
+    S->>S: comprobar que sea del médico de la sesión y esté atendida
+    S->>D: crear la nota, o sobrescribir la existente con modificado_por
+    S->>B: registrar nota_registrada o nota_modificada
+    C-->>M: volver a la agenda con la confirmación
+```
+
+**CU-17 Consultar notas clínicas**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista, Médico o Paciente
+    participant V as Notas (Blade)
+    participant C as NotaClinicaController
+    participant S as NotaClinicaService
+    participant D as Base de datos
+
+    alt Recepcionista o Médico
+        U->>V: abre las notas de un paciente
+        V->>C: GET /pacientes/{id}/notas (notas:consultar y pacientes:consultar)
+        opt la cuenta es de Médico
+            C->>S: atiende(médico, paciente)
+            S->>D: ¿tiene o tuvo una cita no cancelada con él?
+            S-->>C: si no, 404 no encontrado
+        end
+    else Paciente
+        U->>V: abre «Mis notas»
+        V->>C: GET /mis-notas (sin identificador)
+        C->>C: usar el paciente de la sesión, con la ficha pendiente no se muestran notas
+    end
+    C->>S: de(paciente)
+    S->>D: notas del paciente, de la cita más reciente a la más antigua
+    S-->>C: notas con médico y quién las modificó
+    C-->>U: notas en solo lectura, el autor ve «Editar» en las suyas
+```
+
+**CU-18 Ver recordatorio de citas**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor P as Paciente
+    participant L as FormLogin (Blade)
+    participant C as InicioController
+    participant S as RecordatorioService
+    participant D as Base de datos
+    participant V as Inicio (Blade)
+
+    P->>L: inicia sesión (CU-01)
+    L->>C: GET /inicio
+    C->>C: comprobar el permiso recordatorios:consultar y la ficha de paciente
+    C->>S: proximas(paciente)
+    S->>D: citas Programadas o Confirmadas desde hoy hasta hoy más 2 días
+    S->>S: descartar las de hoy que ya comenzaron
+    S-->>C: próximas citas
+    alt hay citas
+        C->>V: banner «Sus próximas citas» con día, hora y médico (nunca el motivo)
+    else
+        C->>V: inicio sin banner
+    end
+    V-->>P: pantalla de inicio
+```
+
 
 ### 6.3 Diseño de datos
 
