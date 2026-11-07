@@ -6,6 +6,7 @@ use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\CambioPasswordController;
 use App\Http\Controllers\CitaController;
+use App\Http\Controllers\ConsultorioController;
 use App\Http\Controllers\EspecialidadController;
 use App\Http\Controllers\FichaPacienteController;
 use App\Http\Controllers\HistorialController;
@@ -140,6 +141,19 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
             Route::get('/editar', [EspecialidadController::class, 'edit'])->name('edit');
             Route::put('/', [EspecialidadController::class, 'update'])->name('update');
             Route::patch('/estado', [EspecialidadController::class, 'estado'])->name('estado');
+        });
+    });
+
+    // CU-20: gestionar consultorios (solo el Administrador, con consultorios:gestionar; ADR-002).
+    Route::prefix('consultorios')->name('consultorios.')->middleware('can:consultorios:gestionar')->group(function () {
+        Route::get('/', [ConsultorioController::class, 'index'])->name('index');
+        Route::get('/nuevo', [ConsultorioController::class, 'create'])->name('create');
+        Route::post('/', [ConsultorioController::class, 'store'])->name('store');
+
+        Route::prefix('{consultorio}')->where(['consultorio' => '[0-9]+'])->group(function () {
+            Route::get('/editar', [ConsultorioController::class, 'edit'])->name('edit');
+            Route::put('/', [ConsultorioController::class, 'update'])->name('update');
+            Route::patch('/estado', [ConsultorioController::class, 'estado'])->name('estado');
         });
     });
 

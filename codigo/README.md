@@ -125,7 +125,7 @@ php artisan migrate && php artisan db:seed
 
 | Ruta | Contenido |
 |---|---|
-| `database/sql/` | Esquema en SQL puro: `001` (Ciclo #1), `002` (citas y notas, Ciclo #2) `003` (catálogos iniciales) y `004` (un paciente no puede tener citas superpuestas) |
+| `database/sql/` | Esquema en SQL puro: `001` (Ciclo #1), `002` (citas y notas, Ciclo #2), `003` (catálogos iniciales), `004` (un paciente no puede tener citas superpuestas) y `005` (consultorios, ADR-002) |
 | `database/migrations/` | Migraciones que ejecutan esos archivos SQL |
 | `app/Models/` | Modelos Eloquent (las entidades del análisis) |
 | `app/Services/` | Reglas transversales: autenticación, contraseñas temporales, bitácora |
@@ -145,7 +145,7 @@ php artisan migrate && php artisan db:seed
 - **CU-03 gestionar usuarios y roles:** alta del personal (Administrador, Recepcionista y Médico vinculado a un médico registrado) con contraseña temporal de 72 horas que se muestra una sola vez, edición de datos y rol, desactivación y reactivación, y renovación de contraseña con verificación de identidad. Siempre queda al menos un Administrador activo y nadie se desactiva ni se cambia el rol a sí mismo.
 - **CU-08 gestionar mi perfil:** el paciente ve sus datos y, con la ficha verificada, su información médica y contacto de emergencia en solo lectura; edita únicamente su teléfono y cambia su contraseña desde un enlace del perfil.
 - **CU-05 gestionar médicos:** alta con sus especialidades (reutiliza la persona si el CI ya existe), edición, desactivación y reactivación (nunca se eliminan). Búsqueda por nombre, especialidad, CI, registro o código, con pestañas Activos, Inactivos y Todos; la búsqueda incluye a los inactivos. No se puede quitar una especialidad con la que el médico ya tiene citas.
-- **CU-07 gestionar horarios de atención:** bloques por día de la semana para cada médico activo, con consultorio. No admite bloques superpuestos del mismo médico (los pegados sí) ni cambios que dejen fuera de la atención a una cita ya agendada. La sucursal se asigna sola (hay una única).
+- **CU-07 gestionar horarios de atención:** bloques por día de la semana para cada médico activo, con un consultorio opcional elegido de la lista de consultorios activos. No admite bloques superpuestos del mismo médico (los pegados sí), ni dos médicos en el mismo consultorio a la misma hora (RN18) ni cambios que dejen fuera de la atención a una cita ya agendada. La sucursal se asigna sola (hay una única).
 - **CU-06 gestionar especialidades:** alta, edición, desactivación y reactivación (nunca se eliminan), con nombre único sin distinguir mayúsculas ni espacios y duración de la cita entre 5 y 240 minutos. El listado muestra por defecto las activas, con pestañas Activas, Inactivas y Todas y su contador.
 - **CU-19 renovar contraseña temporal:** la recepcionista renueva la contraseña del paciente que la olvidó, indicando cómo verificó su identidad (queda en la bitácora). No usa correo electrónico.
 
@@ -160,5 +160,9 @@ php artisan migrate && php artisan db:seed
 - **CU-15 generar reportes:** reportes administrativos de citas y de pacientes con rango de fechas, filtros y totales.
 - **CU-16 y CU-17 notas clínicas:** el médico registra la nota de una cita atendida; el paciente consulta las suyas en `/mis-notas` y el personal autorizado las de un paciente.
 - **CU-18 recordatorio de citas:** al iniciar sesión, el paciente ve un aviso con sus próximas citas (por defecto, dentro de 2 días; se ajusta en `config/clinica.php`). Solo muestra fecha, hora y médico.
+
+**Después del Ciclo #2:**
+
+- **CU-20 gestionar consultorios** ([ADR-002](../documento/adr/ADR-002-consultorios-como-entidad.md)): el Administrador registra, renombra, desactiva y reactiva consultorios (nunca se eliminan), con nombre único sin distinguir mayúsculas ni espacios. Un consultorio que usan bloques de atención no se puede desactivar. La base de datos impide que dos médicos tengan bloques superpuestos en el mismo consultorio el mismo día: el consultorio se reserva durante todo el bloque, tenga citas o no.
 
 Las fechas se muestran en hora de Bolivia (`America/La_Paz`), tanto en la aplicación como en la conexión a PostgreSQL.

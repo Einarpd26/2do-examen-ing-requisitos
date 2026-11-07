@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Cita;
+use App\Models\Consultorio;
 use App\Models\HorarioAtencion;
 use App\Models\Medico;
 use App\Models\NotaClinica;
@@ -125,8 +126,14 @@ class DemoCitasSeeder extends Seeder
 
             HorarioAtencion::create([
                 'medico_id' => $medico->id, 'sucursal_id' => $sucursal->id, 'dia_semana' => $dia,
-                'hora_inicio' => '08:00', 'hora_fin' => '12:00', 'consultorio' => 'Consultorio 1',
+                'hora_inicio' => '08:00', 'hora_fin' => '12:00', 'consultorio_id' => $this->consultorio($sucursal)->id,
             ]);
         }
+    }
+
+    /** El consultorio de demostración: se crea la primera vez y después se reutiliza (ADR-002). */
+    private function consultorio(Sucursal $sucursal): Consultorio
+    {
+        return Consultorio::firstOrCreate(['sucursal_id' => $sucursal->id, 'nombre' => 'Consultorio 1']);
     }
 }

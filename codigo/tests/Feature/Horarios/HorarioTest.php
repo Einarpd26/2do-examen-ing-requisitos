@@ -5,6 +5,7 @@ namespace Tests\Feature\Horarios;
 use App\Exceptions\ReglaDeNegocioException;
 use App\Models\Bitacora;
 use App\Models\Cita;
+use App\Models\Consultorio;
 use App\Models\Especialidad;
 use App\Models\HorarioAtencion;
 use App\Models\Medico;
@@ -12,6 +13,7 @@ use App\Models\Sucursal;
 use App\Models\Usuario;
 use App\Services\HorarioService;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreaCuentas;
 use Tests\TestCase;
@@ -42,8 +44,17 @@ class HorarioTest extends TestCase
             'dia_semana' => 1,
             'hora_inicio' => '08:00',
             'hora_fin' => '12:00',
-            'consultorio' => 'Consultorio 3',
+            'consultorio_id' => null,
         ], $reemplazo);
+    }
+
+    /** Consultorio activo de la sucursal única; se reutiliza si ya existe. */
+    private function consultorio(string $nombre = 'Consultorio 3', bool $activo = true): Consultorio
+    {
+        return Consultorio::firstOrCreate(
+            ['sucursal_id' => Sucursal::firstOrFail()->id, 'nombre' => $nombre],
+            ['estado' => $activo]
+        )->refresh();
     }
 
     private function bloque(Medico $medico, int $dia, string $inicio, string $fin, ?string $consultorio = null): HorarioAtencion
@@ -54,7 +65,7 @@ class HorarioTest extends TestCase
             'dia_semana' => $dia,
             'hora_inicio' => $inicio,
             'hora_fin' => $fin,
-            'consultorio' => $consultorio,
+            'consultorio_id' => $consultorio === null ? null : $this->consultorio($consultorio)->id,
         ])->refresh();
     }
 
@@ -182,7 +193,7 @@ class HorarioTest extends TestCase
         $medico = $this->medico();
 
         $this->actingAs($administrador)
-            ->post(route('horarios.store', $medico), $this->datos())
+            ->post(route('horarios.store', $medico), $this->datos(['consultorio_id' => $this->consultorio()->id]))
             ->assertRedirect(route('horarios.medico', $medico))
             ->assertSessionHas('exito', 'Horario registrado: Lunes 08:00–12:00.');
 
@@ -192,7 +203,7 @@ class HorarioTest extends TestCase
         $this->assertSame(1, $horario->dia_semana);
         $this->assertSame('08:00', $horario->desde());
         $this->assertSame('12:00', $horario->hasta());
-        $this->assertSame('Consultorio 3', $horario->consultorio);
+        $this->assertSame('Consultorio 3', $horario->consultorio->nombre);
 
         $registro = Bitacora::where('usuario_id', $administrador->id)->where('accion', 'horario_creado')->firstOrFail();
         $this->assertSame('Lunes 08:00–12:00', $registro->detalle);
@@ -201,10 +212,10 @@ class HorarioTest extends TestCase
     public function test_el_consultorio_es_opcional(): void
     {
         $this->actingAs($this->administrador())
-            ->post(route('horarios.store', $this->medico()), $this->datos(['consultorio' => '']))
+            ->post(route('horarios.store', $this->medico()), $this->datos(['consultorio_id' => '']))
             ->assertSessionDoesntHaveErrors();
 
-        $this->assertNull(HorarioAtencion::firstOrFail()->consultorio);
+        $this->assertNull(HorarioAtencion::firstOrFail()->consultorio_id);
     }
 
     public function test_permite_bloques_pegados_el_mismo_dia_y_el_mismo_horario_otro_dia_u_otro_medico(): void
@@ -261,7 +272,9 @@ class HorarioTest extends TestCase
             'hora final invalida' => [['hora_fin' => '12:75'], 'hora_fin'],
             'hora final igual a la inicial' => [['hora_fin' => '08:00'], 'hora_fin'],
             'hora final anterior a la inicial' => [['hora_fin' => '07:00'], 'hora_fin'],
-            'consultorio muy largo' => [['consultorio' => str_repeat('a', 51)], 'consultorio'],
+            'consultorio inexistente' => [['consultorio_id' => 999999], 'consultorio_id'],
+            'consultorio con texto' => [['consultorio_id' => 'tres'], 'consultorio_id'],
+            'consultorio inactivo' => [['consultorio_id' => $this->consultorio('Consultorio 8', false)->id], 'consultorio_id'],
         ];
 
         foreach ($casos as [$reemplazo, $campo]) {
@@ -345,7 +358,7 @@ class HorarioTest extends TestCase
 
         $this->actingAs($administrador)
             ->put(route('horarios.update', $horario), $this->datos([
-                'dia_semana' => 2, 'hora_inicio' => '09:00', 'hora_fin' => '13:30', 'consultorio' => 'Consultorio 5',
+                'dia_semana' => 2, 'hora_inicio' => '09:00', 'hora_fin' => '13:30', 'consultorio_id' => $this->consultorio('Consultorio 5')->id,
             ]))
             ->assertRedirect(route('horarios.medico', $medico));
 
@@ -353,7 +366,7 @@ class HorarioTest extends TestCase
         $this->assertSame(2, $horario->dia_semana);
         $this->assertSame('09:00', $horario->desde());
         $this->assertSame('13:30', $horario->hasta());
-        $this->assertSame('Consultorio 5', $horario->consultorio);
+        $this->assertSame('Consultorio 5', $horario->consultorio->nombre);
 
         $registro = Bitacora::where('usuario_id', $administrador->id)->where('accion', 'horario_modificado')->firstOrFail();
         $this->assertSame('Lunes 08:00–12:00 → Martes 09:00–13:30', $registro->detalle);
@@ -393,7 +406,8 @@ class HorarioTest extends TestCase
             ->assertSee('Rosa Luna')
             ->assertSee('value="09:15"', false)
             ->assertSee('value="13:45"', false)
-            ->assertSee('value="Consultorio 7"', false)
+            ->assertSee('<option value="'.$horario->consultorio_id.'" selected>', false)
+            ->assertSee('Consultorio 7')
             ->assertSee('<option value="3" selected>Miércoles</option>', false)
             ->assertSee('Guardar cambios');
     }
@@ -509,7 +523,7 @@ class HorarioTest extends TestCase
 
         $this->put(route('horarios.update', $horario), $this->datos(['hora_inicio' => '08:30', 'hora_fin' => '10:00']))
             ->assertSessionDoesntHaveErrors();
-        $this->put(route('horarios.update', $horario), $this->datos(['hora_inicio' => '08:30', 'hora_fin' => '10:00', 'consultorio' => 'Consultorio 9']))
+        $this->put(route('horarios.update', $horario), $this->datos(['hora_inicio' => '08:30', 'hora_fin' => '10:00', 'consultorio_id' => $this->consultorio('Consultorio 9')->id]))
             ->assertSessionDoesntHaveErrors();
 
         $this->assertSame('10:00', $horario->fresh()->hasta());
@@ -564,7 +578,7 @@ class HorarioTest extends TestCase
         $medico = $this->medico();
         $this->bloque($medico, 1, '08:00', '12:00');
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         $this->bloque($medico, 1, '11:00', '13:00');
     }
 
@@ -575,5 +589,162 @@ class HorarioTest extends TestCase
         $this->bloque($medico, 1, '12:00', '14:00');
 
         $this->assertSame(2, HorarioAtencion::count());
+    }
+
+    // --- RN18: un consultorio no puede tener dos bloques superpuestos (ADR-002) ----------
+
+    public function test_otro_medico_no_puede_usar_el_mismo_consultorio_a_la_misma_hora(): void
+    {
+        $this->bloque($this->medico(['primer_nombre' => 'Rosa', 'apellido_paterno' => 'Luna']), 1, '08:00', '12:00', 'Consultorio 3');
+        $otro = $this->medico();
+
+        $this->actingAs($this->administrador())
+            ->post(route('horarios.store', $otro), $this->datos([
+                'hora_inicio' => '10:00', 'hora_fin' => '14:00', 'consultorio_id' => $this->consultorio()->id,
+            ]))
+            ->assertSessionHasErrors(['consultorio_id' => 'Consultorio 3 ya está ocupado ese día por Rosa Luna: Lunes 08:00–12:00.']);
+
+        $this->assertSame(0, $otro->horarios()->count());
+    }
+
+    public function test_el_consultorio_se_reserva_todo_el_bloque_aunque_el_medico_no_tenga_citas(): void
+    {
+        $this->bloque($this->medico(), 1, '08:00', '12:00', 'Consultorio 3');
+        $this->assertSame(0, Cita::count());
+
+        $this->actingAs($this->administrador())
+            ->post(route('horarios.store', $this->medico()), $this->datos([
+                'hora_inicio' => '11:00', 'hora_fin' => '11:30', 'consultorio_id' => $this->consultorio()->id,
+            ]))
+            ->assertSessionHasErrors('consultorio_id');
+    }
+
+    public function test_permite_el_mismo_consultorio_en_bloques_pegados_otro_dia_o_sin_consultorio(): void
+    {
+        $this->bloque($this->medico(), 1, '08:00', '12:00', 'Consultorio 3');
+        $consultorio = $this->consultorio()->id;
+        $this->actingAs($this->administrador());
+
+        // Pegado: empieza cuando termina el otro.
+        $this->post(route('horarios.store', $this->medico()), $this->datos([
+            'hora_inicio' => '12:00', 'hora_fin' => '16:00', 'consultorio_id' => $consultorio,
+        ]))->assertSessionDoesntHaveErrors();
+
+        // Mismo horario, otro día.
+        $this->post(route('horarios.store', $this->medico()), $this->datos([
+            'dia_semana' => 2, 'consultorio_id' => $consultorio,
+        ]))->assertSessionDoesntHaveErrors();
+
+        // Mismo horario y día, sin consultorio.
+        $this->post(route('horarios.store', $this->medico()), $this->datos())->assertSessionDoesntHaveErrors();
+
+        // Mismo horario y día, en otro consultorio.
+        $this->post(route('horarios.store', $this->medico()), $this->datos([
+            'consultorio_id' => $this->consultorio('Consultorio 4')->id,
+        ]))->assertSessionDoesntHaveErrors();
+
+        $this->assertSame(5, HorarioAtencion::count());
+    }
+
+    public function test_al_modificar_no_se_puede_pasar_a_un_consultorio_ocupado(): void
+    {
+        $this->bloque($this->medico(), 1, '08:00', '12:00', 'Consultorio 3');
+        $horario = $this->bloque($this->medico(), 1, '09:00', '11:00', 'Consultorio 4');
+
+        $this->actingAs($this->administrador())
+            ->put(route('horarios.update', $horario), $this->datos([
+                'hora_inicio' => '09:00', 'hora_fin' => '11:00', 'consultorio_id' => $this->consultorio()->id,
+            ]))
+            ->assertSessionHasErrors('consultorio_id');
+
+        $this->assertSame('Consultorio 4', $horario->fresh()->consultorio->nombre);
+    }
+
+    public function test_un_bloque_no_choca_con_su_propio_consultorio_al_modificarlo(): void
+    {
+        $horario = $this->bloque($this->medico(), 1, '08:00', '12:00', 'Consultorio 3');
+
+        $this->actingAs($this->administrador())
+            ->put(route('horarios.update', $horario), $this->datos([
+                'hora_inicio' => '08:00', 'hora_fin' => '13:00', 'consultorio_id' => $this->consultorio()->id,
+            ]))
+            ->assertSessionDoesntHaveErrors();
+
+        $this->assertSame('13:00', $horario->fresh()->hasta());
+    }
+
+    public function test_una_solicitud_simultanea_por_el_mismo_consultorio_se_informa_como_regla_de_negocio(): void
+    {
+        $this->bloque($this->medico(), 1, '08:00', '12:00', 'Consultorio 3');
+
+        // Se salta la validación del formulario: simula que otra solicitud ganó la carrera.
+        try {
+            app(HorarioService::class)->registrar(
+                $this->medico(), $this->datos(['consultorio_id' => $this->consultorio()->id]), $this->administrador()
+            );
+            $this->fail('Debió rechazar el consultorio ocupado.');
+        } catch (ReglaDeNegocioException $e) {
+            $this->assertSame('Este horario se superpone con el de otro médico en el mismo consultorio el mismo día.', $e->getMessage());
+        }
+
+        $this->assertSame(1, HorarioAtencion::count());
+    }
+
+    public function test_la_base_rechaza_el_consultorio_ocupado_aunque_se_salte_la_aplicacion(): void
+    {
+        $this->bloque($this->medico(), 1, '08:00', '12:00', 'Consultorio 3');
+
+        try {
+            $this->bloque($this->medico(), 1, '11:59', '13:00', 'Consultorio 3');
+            $this->fail('La base debió rechazar el bloque.');
+        } catch (QueryException $e) {
+            $this->assertSame('23P01', $e->errorInfo[0]);
+            $this->assertStringContainsString('horarios_consultorio_sin_superposicion', $e->getMessage());
+        }
+    }
+
+    public function test_la_base_rechaza_un_consultorio_de_otra_sucursal(): void
+    {
+        $otraSucursal = Sucursal::create(['nombre' => 'Norte']);
+        $ajeno = Consultorio::create(['sucursal_id' => $otraSucursal->id, 'nombre' => 'Consultorio 1']);
+
+        $this->expectException(QueryException::class);
+        HorarioAtencion::create([
+            'medico_id' => $this->medico()->id,
+            'sucursal_id' => Sucursal::where('nombre', 'Central')->firstOrFail()->id,
+            'dia_semana' => 1,
+            'hora_inicio' => '08:00',
+            'hora_fin' => '12:00',
+            'consultorio_id' => $ajeno->id,
+        ]);
+    }
+
+    public function test_no_se_puede_guardar_un_bloque_con_un_consultorio_desactivado(): void
+    {
+        $inactivo = $this->consultorio('Consultorio 8', false);
+
+        // Se salta la validación del formulario: el servicio también lo comprueba.
+        $this->expectException(ReglaDeNegocioException::class);
+        app(HorarioService::class)->registrar($this->medico(), $this->datos(['consultorio_id' => $inactivo->id]), $this->administrador());
+    }
+
+    public function test_el_formulario_ofrece_solo_los_consultorios_activos(): void
+    {
+        $this->consultorio('Consultorio 3');
+        $this->consultorio('Consultorio 8', false);
+
+        $this->actingAs($this->administrador())
+            ->get(route('horarios.medico', $this->medico()))
+            ->assertSee('Sin consultorio')
+            ->assertSee('Consultorio 3')
+            ->assertDontSee('Consultorio 8');
+    }
+
+    public function test_sin_consultorios_el_formulario_avisa_y_enlaza_a_la_gestion(): void
+    {
+        $this->actingAs($this->administrador())
+            ->get(route('horarios.medico', $this->medico()))
+            ->assertSee('Todavía no hay consultorios')
+            ->assertSee(route('consultorios.index'), false);
     }
 }

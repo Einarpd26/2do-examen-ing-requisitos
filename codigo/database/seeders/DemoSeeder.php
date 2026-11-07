@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Consultorio;
 use App\Models\Especialidad;
 use App\Models\HorarioAtencion;
 use App\Models\Medico;
@@ -93,7 +94,7 @@ class DemoSeeder extends Seeder
         foreach ([[1, '08:00', '12:00'], [3, '14:00', '18:00']] as [$dia, $inicio, $fin]) {
             HorarioAtencion::create([
                 'medico_id' => $medico->id, 'sucursal_id' => $sucursal->id, 'dia_semana' => $dia,
-                'hora_inicio' => $inicio, 'hora_fin' => $fin, 'consultorio' => 'Consultorio 1',
+                'hora_inicio' => $inicio, 'hora_fin' => $fin, 'consultorio_id' => $this->consultorio($sucursal)->id,
             ]);
         }
 
@@ -140,5 +141,11 @@ class DemoSeeder extends Seeder
             'rol_id' => Rol::where('codigo', $rol)->firstOrFail()->id,
             'password_hash' => self::CONTRASENA,
         ]);
+    }
+
+    /** El consultorio de demostración: se crea la primera vez y después se reutiliza (ADR-002). */
+    private function consultorio(Sucursal $sucursal): Consultorio
+    {
+        return Consultorio::firstOrCreate(['sucursal_id' => $sucursal->id, 'nombre' => 'Consultorio 1']);
     }
 }

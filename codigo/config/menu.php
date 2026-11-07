@@ -17,6 +17,7 @@ return [
         ['etiqueta' => 'Usuarios', 'permiso' => 'usuarios:gestionar', 'ruta' => 'usuarios.index'],
         ['etiqueta' => 'Médicos', 'permiso' => 'medicos:gestionar', 'ruta' => 'medicos.index'],
         ['etiqueta' => 'Especialidades', 'permiso' => 'especialidades:gestionar', 'ruta' => 'especialidades.index'],
+        ['etiqueta' => 'Consultorios', 'permiso' => 'consultorios:gestionar', 'ruta' => 'consultorios.index'],
         ['etiqueta' => 'Horarios de atención', 'permiso' => 'horarios:gestionar', 'ruta' => 'horarios.index'],
         ['etiqueta' => 'Registrar cita', 'permiso' => 'citas:gestionar', 'ruta' => 'citas.nueva'],
         ['etiqueta' => 'Reservar cita', 'permiso' => 'citas:gestionar_propias', 'ruta' => 'mis-citas.nueva'],

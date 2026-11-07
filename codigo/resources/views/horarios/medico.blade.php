@@ -51,7 +51,7 @@
                                                         <div>
                                                             <strong>{{ $horario->desde() }} – {{ $horario->hasta() }}</strong>
                                                             @if ($horario->consultorio)
-                                                                <span class="text-secondary small ms-2">{{ $horario->consultorio }}</span>
+                                                                <span class="text-secondary small ms-2">{{ $horario->consultorio->nombre }}</span>
                                                             @endif
                                                         </div>
                                                         @if ($medico->estado)

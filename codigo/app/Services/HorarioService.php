@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\ReglaDeNegocioException;
 use App\Models\Cita;
+use App\Models\Consultorio;
 use App\Models\HorarioAtencion;
 use App\Models\Medico;
 use App\Models\Sucursal;
@@ -15,12 +16,16 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * CU-07: reglas de la gestión de horarios de atención. Cada operación escribe en la bitácora.
+ * Dos médicos no pueden usar el mismo consultorio a la misma hora (RN18, ADR-002).
  * Un horario no se puede modificar ni eliminar si dejaría fuera de la atención a una cita
  * ya agendada; y no se toca el horario de un médico desactivado.
  */
 class HorarioService
 {
-    private const CAMPOS = ['dia_semana', 'hora_inicio', 'hora_fin', 'consultorio'];
+    private const CAMPOS = ['dia_semana', 'hora_inicio', 'hora_fin', 'consultorio_id'];
+
+    /** Restricción de exclusión por consultorio (database/sql/005, RN18). */
+    private const RESTRICCION_CONSULTORIO = 'horarios_consultorio_sin_superposicion';
 
     public function __construct(private readonly BitacoraService $bitacora) {}
 
@@ -31,6 +36,8 @@ class HorarioService
 
         return $this->conReglasDeLaBase(function () use ($medico, $datos, $actor) {
             return DB::transaction(function () use ($medico, $datos, $actor) {
+                $this->exigirConsultorioActivo($datos['consultorio_id'] ?? null);
+
                 $horario = HorarioAtencion::create(
                     ['medico_id' => $medico->id, 'sucursal_id' => Sucursal::predeterminada()->id] + Arr::only($datos, self::CAMPOS)
                 );
@@ -51,6 +58,7 @@ class HorarioService
 
         $this->conReglasDeLaBase(function () use ($horario, $medico, $datos, $actor) {
             DB::transaction(function () use ($horario, $medico, $datos, $actor) {
+                $this->exigirConsultorioActivo($datos['consultorio_id'] ?? null);
                 $antes = $horario->descripcion();
 
                 $this->sinDejarCitasFueraDelHorario($medico, 'modificar', function () use ($horario, $datos) {
@@ -82,6 +90,23 @@ class HorarioService
     {
         if (! $medico->estado) {
             throw new ReglaDeNegocioException('El médico está desactivado: reactívelo para modificar sus horarios.');
+        }
+    }
+
+    /**
+     * El consultorio elegido debe seguir activo al guardar. El bloqueo compartido impide que otra
+     * solicitud lo desactive hasta que termine esta transacción (ver ConsultorioService::cambiarEstado).
+     */
+    private function exigirConsultorioActivo(mixed $consultorioId): void
+    {
+        if ($consultorioId === null) {
+            return;
+        }
+
+        $activo = Consultorio::query()->whereKey((int) $consultorioId)->where('estado', true)->sharedLock()->exists();
+
+        if (! $activo) {
+            throw new ReglaDeNegocioException('El consultorio elegido no existe o está desactivado.');
         }
     }
 
@@ -138,15 +163,20 @@ class HorarioService
     /**
      * Si otra solicitud ganó la carrera entre la validación y el guardado, la base de datos
      * rechaza el bloque superpuesto (restricción de exclusión) y se informa como regla de negocio.
+     * El nombre de la restricción dice si chocó con el mismo médico o con el mismo consultorio.
      */
     private function conReglasDeLaBase(\Closure $operacion): mixed
     {
         try {
             return $operacion();
         } catch (QueryException $e) {
-            // 23P01: violación de la restricción de exclusión (bloques superpuestos del mismo médico).
+            // 23P01: violación de una restricción de exclusión.
             if (($e->errorInfo[0] ?? null) === '23P01') {
-                throw new ReglaDeNegocioException('Este horario se superpone con otro del mismo médico el mismo día.');
+                throw new ReglaDeNegocioException(
+                    str_contains($e->getMessage(), '"'.self::RESTRICCION_CONSULTORIO.'"')
+                        ? 'Este horario se superpone con el de otro médico en el mismo consultorio el mismo día.'
+                        : 'Este horario se superpone con otro del mismo médico el mismo día.'
+                );
             }
 
             throw $e;

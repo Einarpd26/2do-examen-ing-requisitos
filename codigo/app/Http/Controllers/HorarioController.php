@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\HorarioRequest;
+use App\Models\Consultorio;
 use App\Models\HorarioAtencion;
 use App\Models\Medico;
 use App\Services\HorarioService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /**
@@ -37,7 +39,8 @@ class HorarioController extends Controller
 
         return view('horarios.medico', [
             'medico' => $medico,
-            'horarios' => $medico->horarios()->orderBy('dia_semana')->orderBy('hora_inicio')->get()->groupBy('dia_semana'),
+            'horarios' => $medico->horarios()->with('consultorio')->orderBy('dia_semana')->orderBy('hora_inicio')->get()->groupBy('dia_semana'),
+            'consultorios' => $this->consultoriosParaElegir(),
         ]);
     }
 
@@ -53,7 +56,10 @@ class HorarioController extends Controller
     {
         $horario->load('medico.persona');
 
-        return view('horarios.edit', ['horario' => $horario]);
+        return view('horarios.edit', [
+            'horario' => $horario,
+            'consultorios' => $this->consultoriosParaElegir($horario->consultorio_id),
+        ]);
     }
 
     public function update(HorarioRequest $request, HorarioAtencion $horario, HorarioService $horarios): RedirectResponse
@@ -69,5 +75,20 @@ class HorarioController extends Controller
 
         return redirect()->route('horarios.medico', $horario->medico_id)
             ->with('exito', "Horario eliminado: {$horario->descripcion()}.");
+    }
+
+    /**
+     * Consultorios activos para el selector. Al editar se incluye también el del bloque, por si
+     * quedara inactivo, para que el formulario no lo pierda en silencio.
+     *
+     * @return Collection<int, Consultorio>
+     */
+    private function consultoriosParaElegir(?int $actual = null): Collection
+    {
+        return Consultorio::query()
+            ->where('estado', true)
+            ->when($actual, fn ($consulta) => $consulta->orWhere('id', $actual))
+            ->orderBy('nombre')
+            ->get();
     }
 }

@@ -6,8 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Bloque de atención de un médico: día de la semana (1 a 7), hora inicial y hora final.
- * La base impide bloques superpuestos del mismo médico en el mismo día.
+ * Bloque de atención de un médico: día de la semana (1 a 7), hora inicial, hora final y,
+ * opcionalmente, consultorio. La base impide bloques superpuestos del mismo médico en el mismo
+ * día y, con el mismo criterio, del mismo consultorio (RN18).
  */
 class HorarioAtencion extends Model
 {
@@ -33,7 +34,7 @@ class HorarioAtencion extends Model
         'dia_semana',
         'hora_inicio',
         'hora_fin',
-        'consultorio',
+        'consultorio_id',
     ];
 
     public function nombreDia(): string
@@ -67,5 +68,11 @@ class HorarioAtencion extends Model
     public function sucursal(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class);
+    }
+
+    /** Opcional: un bloque sin consultorio no choca con nadie (RN18). */
+    public function consultorio(): BelongsTo
+    {
+        return $this->belongsTo(Consultorio::class);
     }
 }
