@@ -128,6 +128,87 @@ class CitaTest extends TestCase
 
     // --- Pruebas 3, 4 y 5 del enunciado -------------------------------------------------
 
+    // --- Avisos previos del formulario --------------------------------------------------
+
+    public function test_sin_especialidades_activas_la_recepcion_ve_el_aviso_y_ningun_paso(): void
+    {
+        $this->especialidad->update(['estado' => false]);
+
+        $this->actingAs($this->recepcionista())
+            ->get(route('citas.nueva'))
+            ->assertOk()
+            ->assertSee('Todavía no hay especialidades disponibles')
+            ->assertSee('Pida al Administrador que registre al menos una especialidad')
+            ->assertDontSee('role="search"', false)
+            ->assertDontSee('id="especialidad"', false);
+    }
+
+    public function test_sin_especialidades_activas_el_paciente_ve_el_telefono_de_la_clinica(): void
+    {
+        $this->especialidad->update(['estado' => false]);
+        [$cuenta] = $this->cuentaPaciente();
+
+        $this->actingAs($cuenta)
+            ->get(route('mis-citas.nueva'))
+            ->assertOk()
+            ->assertSee('Todavía no hay especialidades disponibles')
+            ->assertSee(config('clinica.celular'))
+            ->assertDontSee('id="especialidad"', false);
+    }
+
+    public function test_un_medico_sin_horarios_se_avisa_apenas_se_lo_elige_y_no_se_pide_la_fecha(): void
+    {
+        $paciente = $this->crearPaciente();
+        $sinHorarios = $this->crearFichaMedico([], [], [$this->especialidad->id]);
+
+        $this->actingAs($this->recepcionista())
+            ->get(route('citas.nueva', [
+                'paciente' => $paciente->id,
+                'especialidad' => $this->especialidad->id,
+                'medico' => $sinHorarios->id,
+            ]))
+            ->assertOk()
+            ->assertSee('no tiene horarios de atención registrados')
+            ->assertDontSee('id="fecha"', false)
+            ->assertDontSee('Ver horarios disponibles');
+    }
+
+    public function test_un_medico_con_horarios_si_pide_la_fecha(): void
+    {
+        $paciente = $this->crearPaciente();
+
+        $this->actingAs($this->recepcionista())
+            ->get(route('citas.nueva', [
+                'paciente' => $paciente->id,
+                'especialidad' => $this->especialidad->id,
+                'medico' => $this->medico->id,
+            ]))
+            ->assertOk()
+            ->assertDontSee('no tiene horarios de atención registrados')
+            ->assertSee('id="fecha"', false);
+    }
+
+    public function test_sin_pacientes_activos_la_recepcion_ve_el_aviso_en_lugar_del_buscador(): void
+    {
+        $this->actingAs($this->recepcionista())
+            ->get(route('citas.nueva'))
+            ->assertOk()
+            ->assertSee('Todavía no hay pacientes activos')
+            ->assertSee(route('pacientes.create'))
+            ->assertDontSee('role="search"', false);
+    }
+
+    public function test_con_pacientes_activos_la_recepcion_ve_el_buscador(): void
+    {
+        $this->crearPaciente();
+
+        $this->actingAs($this->recepcionista())
+            ->get(route('citas.nueva'))
+            ->assertOk()
+            ->assertDontSee('Todavía no hay pacientes activos')
+            ->assertSee('role="search"', false);
+    }
+
     public function test_programa_una_cita_en_un_horario_disponible(): void
     {
         $paciente = $this->crearPaciente();

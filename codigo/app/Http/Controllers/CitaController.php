@@ -8,6 +8,7 @@ use App\Http\Requests\CitaRequest;
 use App\Http\Requests\ReprogramarCitaRequest;
 use App\Models\Cita;
 use App\Models\Especialidad;
+use App\Models\HorarioAtencion;
 use App\Models\Medico;
 use App\Models\Paciente;
 use App\Services\CitaService;
@@ -46,6 +47,10 @@ class CitaController extends Controller
             ->get();
         $medico = $medicos->firstWhere('id', (int) $request->query('medico'));
 
+        // Avisos previos: sin estos datos el formulario no puede avanzar, así que se dicen antes de pedir nada.
+        $hayPacientes = $propia || Paciente::query()->where('estado', true)->exists();
+        $medicoSinHorarios = $medico !== null && ! HorarioAtencion::query()->where('medico_id', $medico->id)->exists();
+
         $fecha = $this->textoDeLaConsulta($request, 'fecha');
         $horarios = [];
         $aviso = null;
@@ -69,6 +74,8 @@ class CitaController extends Controller
             'especialidad' => $especialidad,
             'medicos' => $medicos,
             'medico' => $medico,
+            'hayPacientes' => $hayPacientes,
+            'medicoSinHorarios' => $medicoSinHorarios,
             'fecha' => $fecha,
             'primeraFecha' => $citas->primeraFecha()->toDateString(),
             'ultimaFecha' => $citas->ultimaFecha()->toDateString(),

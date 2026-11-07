@@ -383,6 +383,13 @@ class UsuarioTest extends TestCase
             ->assertSee('No hay médicos activos sin cuenta');
     }
 
+    public function test_sin_medicos_sin_cuenta_la_opcion_de_rol_medico_queda_deshabilitada(): void
+    {
+        $this->actingAs($this->administrador())
+            ->get(route('usuarios.create'))
+            ->assertSee('(no hay médicos sin cuenta)');
+    }
+
     // --- Crear cuenta de médico ---------------------------------------------------------
 
     public function test_vincula_la_cuenta_a_un_medico_registrado_sin_pedir_datos_personales(): void

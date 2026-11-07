@@ -23,7 +23,10 @@
                         <select id="rol" name="rol" required class="form-select @error('rol') is-invalid @enderror">
                             <option value="">Elija el rol</option>
                             @foreach ($roles as $rol)
-                                <option value="{{ $rol->codigo }}" @selected($rolElegido === $rol->codigo)>{{ $rol->nombre }}</option>
+                                <option value="{{ $rol->codigo }}" @selected($rolElegido === $rol->codigo)
+                                        @disabled($rol->codigo === 'MEDICO' && $medicos->isEmpty() && $rolElegido !== 'MEDICO')>
+                                    {{ $rol->nombre }}@if ($rol->codigo === 'MEDICO' && $medicos->isEmpty() && $rolElegido !== 'MEDICO') (no hay médicos sin cuenta) @endif
+                                </option>
                             @endforeach
                         </select>
                         <div class="invalid-feedback">@error('rol') {{ $message }} @else Elija el rol de la cuenta. @enderror</div>
