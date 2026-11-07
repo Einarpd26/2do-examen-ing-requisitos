@@ -62,6 +62,7 @@
 
 <script src="{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ asset('js/validaciones.js') }}"></script>
+<script src="{{ asset('js/tablas-moviles.js') }}"></script>
 @stack('scripts')
 </body>
 </html>
