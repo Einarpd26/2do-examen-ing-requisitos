@@ -5,6 +5,7 @@ use App\Http\Controllers\AccesoPacienteController;
 use App\Http\Controllers\CambioPasswordController;
 use App\Http\Controllers\CitaController;
 use App\Http\Controllers\EspecialidadController;
+use App\Http\Controllers\HistorialController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MedicoController;
@@ -120,6 +121,14 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
             Route::patch('/estado', [EspecialidadController::class, 'estado'])->name('estado');
         });
     });
+
+    // CU-14: historial de citas (historial:consultar). La Recepcionista lo ve de cualquier paciente
+    // (además exige pacientes:consultar); el Paciente solo el suyo, en /mi-historial.
+    Route::get('/pacientes/{paciente}/historial', [HistorialController::class, 'paciente'])
+        ->where(['paciente' => '[0-9]+'])->middleware(['can:historial:consultar', 'can:pacientes:consultar'])
+        ->name('pacientes.historial');
+    Route::get('/mi-historial', [HistorialController::class, 'propio'])
+        ->middleware('can:historial:consultar')->name('historial.propio');
 
     // CU-04: gestionar pacientes. Todo el grupo exige pacientes:gestionar; las acciones
     // sensibles exigen además su propio permiso.

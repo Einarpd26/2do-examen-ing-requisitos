@@ -24,6 +24,11 @@ class Menu
                 continue;
             }
 
+            // Algunas opciones comparten el permiso con otro rol pero solo sirven a uno (p. ej. «Mi historial»).
+            if (isset($opcion['rol']) && $cuenta->rol->codigo !== $opcion['rol']) {
+                continue;
+            }
+
             $opciones[] = [
                 'etiqueta' => $opcion['etiqueta'],
                 'url' => Route::has($opcion['ruta']) ? route($opcion['ruta']) : null,
