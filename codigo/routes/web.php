@@ -7,6 +7,7 @@ use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\CambioPasswordController;
 use App\Http\Controllers\CitaController;
 use App\Http\Controllers\EspecialidadController;
+use App\Http\Controllers\FichaPacienteController;
 use App\Http\Controllers\HistorialController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\InicioController;
@@ -155,6 +156,11 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         Route::get('/', [NotaClinicaController::class, 'formulario'])->name('notas.formulario');
         Route::put('/', [NotaClinicaController::class, 'guardar'])->name('notas.guardar');
     });
+
+    // CU-13: ficha de solo lectura del paciente para su médico (pacientes:consultar; el controlador
+    // comprueba que el paciente tenga o haya tenido una cita no cancelada con él).
+    Route::get('/pacientes/{paciente}/ficha', FichaPacienteController::class)
+        ->where(['paciente' => '[0-9]+'])->middleware('can:pacientes:consultar')->name('pacientes.ficha');
 
     // CU-17: consultar notas clínicas (notas:consultar). La Recepcionista y el Médico ven las de un
     // paciente (además exigen pacientes:consultar); el Paciente ve las suyas en /mis-notas.

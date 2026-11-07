@@ -103,7 +103,11 @@
                                         @if ($cita->estado === 'ATENDIDA')
                                             <a href="{{ route('notas.formulario', $cita) }}" class="btn btn-outline-primary btn-sm">Nota clínica</a>
                                         @endif
-                                        <a href="{{ route('pacientes.notas', $cita->paciente_id) }}" class="btn btn-outline-secondary btn-sm">Notas del paciente</a>
+                                        {{-- Las citas canceladas no hacen «suyo» al paciente: no se ofrece su ficha ni sus notas. --}}
+                                        @if ($cita->estado !== 'CANCELADA')
+                                            <a href="{{ route('pacientes.ficha', $cita->paciente_id) }}" class="btn btn-outline-secondary btn-sm">Ficha del paciente</a>
+                                            <a href="{{ route('pacientes.notas', $cita->paciente_id) }}" class="btn btn-outline-secondary btn-sm">Notas del paciente</a>
+                                        @endif
                                     </td>
                                 @endif
                             </tr>
