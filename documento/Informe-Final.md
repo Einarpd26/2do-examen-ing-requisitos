@@ -810,15 +810,19 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 
 **Flujo principal**
 
-1. La Recepcionista abre «Agenda», elige al médico, la fecha (hoy por defecto) y, si quiere, un estado. El Médico abre «Agenda» y ve la suya.
+1. La Recepcionista abre «Agenda», elige la fecha (hoy por defecto) y, si quiere, un médico y un estado. El Médico abre «Agenda» y ve la suya.
 2. El sistema lista las citas de ese médico en esa fecha, en orden de hora, con la hora, el código, el paciente, la especialidad, el estado y el motivo breve.
+3. En su propia agenda, el Médico abre la «Ficha del paciente» de una cita no cancelada. El sistema muestra, en solo lectura, los datos básicos (CI, fecha de nacimiento con la edad, sexo y teléfono), la información médica, el contacto de emergencia y las citas del paciente con ese médico, con un enlace a sus notas clínicas (CU-17).
 
 **Flujos alternos**
 
-- 1a. La Recepcionista no eligió médico: el sistema le pide elegir uno.
+- 1a. La Recepcionista no eligió médico: el sistema muestra las citas de todos los médicos en esa fecha, con una columna que indica el médico de cada una (así consulta las citas por fecha y estado, como pide el enunciado en 3.2).
 - 2a. No hay citas en esa fecha (o con ese estado): el sistema lo indica con un aviso.
 - 2b. Las citas canceladas aparecen con su estado, para conservar la trazabilidad (RN10).
 - 2c. La fecha no tiene el formato AAAA-MM-DD o no existe: se muestra la agenda de hoy con un aviso. Un estado desconocido o un parámetro manipulado se ignora.
+- 3a. La ficha del paciente está pendiente de verificación: se muestran los datos básicos y se ocultan la información médica y el contacto de emergencia, con un aviso (igual que en el perfil del propio paciente, CU-08).
+- 3b. El paciente no tiene ni tuvo una cita no cancelada con ese médico: el sistema responde «no encontrado» (RN12). Las citas canceladas de la agenda no ofrecen ni la ficha ni las notas.
+- 3c. La ficha nunca muestra el correo, la dirección ni los datos de la cuenta, y no permite editar nada.
 - \*. El Médico solo ve su agenda: si pide el identificador de otro médico en la dirección, se ignora (RN12). Una cuenta de médico sin ficha de médico recibe «no encontrado».
 
 #### CU-15 Generar reportes
@@ -1294,7 +1298,7 @@ Los archivos de Bootstrap se sirven desde `public/`, sin depender de una conexi�
 
 ### 6.2 Diseño de casos de uso (diagramas de secuencia)
 
-Se diseñan CU-01, CU-02 y CU-04 (creación de cuenta con contraseña temporal). Los demás casos del Ciclo #1 siguen el mismo patrón de controlador, Form Request, servicio y modelo.
+Se diseñan CU-01, CU-02, CU-04 y CU-19 del Ciclo #1 y todos los casos del Ciclo #2 (CU-09 a CU-18). Los demás casos del Ciclo #1 siguen el mismo patrón de controlador, Form Request, servicio y modelo.
 
 **CU-01 Iniciar sesión**
 
@@ -1445,6 +1449,333 @@ sequenceDiagram
 ```
 
 El Administrador renueva las cuentas del personal con el mismo flujo desde CU-03. Si el único Administrador olvida su contraseña, el administrador del servidor usa el comando de consola `php artisan administrador:renovar-password {correo}`, que deja constancia en la bitácora.
+
+#### Ciclo #2: citas, agenda, historial, reportes, notas y recordatorio
+
+Los casos del Ciclo #2 comparten el patrón de 7.2. Los diagramas muestran el flujo principal y las decisiones del servidor; la restricción de la base de datos es siempre la última defensa contra los choques de horario.
+
+**CU-09 Registrar cita**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista o Paciente
+    participant V as FormCita (Blade)
+    participant C as CitaController
+    participant R as CitaRequest
+    participant S as CitaService
+    participant D as Base de datos
+    participant B as BitacoraService
+
+    U->>V: elige paciente (solo Recepcionista), especialidad, médico y fecha
+    V->>C: GET /citas/nueva o /mis-citas/nueva (parámetros)
+    C->>S: horariosDisponibles(paciente, médico, especialidad, fecha)
+    S->>D: citas no canceladas del médico y del paciente ese día, y bloques de atención
+    S-->>C: horarios libres de la cuadrícula
+    C-->>V: lista de horarios disponibles
+    U->>V: elige horario, modalidad y motivo
+    V->>C: POST /citas o /mis-citas
+    C->>R: validar la forma de los datos (la hora final no se recibe)
+    C->>S: registrar(paciente, médico, especialidad, datos, actor)
+    S->>D: transacción: releer paciente, médico y especialidad
+    S->>S: validar fecha, partes activas, médico con la especialidad, no ser el propio paciente
+    S->>S: recalcular la cuadrícula y comprobar que el horario esté libre
+    alt regla incumplida
+        S-->>V: mensaje de negocio, no se guarda nada
+    else
+        S->>D: insertar la cita con hora final y sucursal calculadas por el servidor
+        alt otra solicitud ganó la carrera (restricción de exclusión 23P01)
+            D-->>S: violación de la restricción del médico o del paciente
+            S-->>V: mensaje de negocio, elegir otra hora
+        else
+            S->>B: registrar cita_creada
+            S-->>C: cita registrada
+            C-->>U: redirigir al comprobante con el código de la cita
+        end
+    end
+```
+
+**CU-10 Reprogramar cita**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista o Paciente
+    participant V as FormReprogramar (Blade)
+    participant C as CitaController
+    participant R as ReprogramarCitaRequest
+    participant S as CitaService
+    participant D as Base de datos
+    participant B as BitacoraService
+
+    U->>V: abre «Reprogramar cita» desde el comprobante
+    V->>C: GET /citas/{id}/reprogramar o /mis-citas/{id}/reprogramar
+    C->>S: exigirReprogramable(cita, comoPaciente)
+    alt cancelada, atendida, ya comenzó o el Paciente con menos de 24 horas
+        S-->>V: mensaje de negocio
+    else
+        C->>S: horariosDisponibles(..., excluir la propia cita)
+        S-->>V: horarios libres de la nueva fecha
+    end
+    U->>V: elige nueva fecha y hora
+    V->>C: PUT /citas/{id} o /mis-citas/{id}
+    C->>R: validar fecha y hora (paciente, médico y estado no se reciben)
+    C->>S: reprogramar(cita, datos, actor, comoPaciente)
+    S->>D: transacción: bloquear y releer la cita
+    S->>S: exigirReprogramable, validar fecha y partes, comprobar el horario libre
+    alt mismo horario actual o regla incumplida
+        S-->>V: mensaje de negocio, no se cambia nada
+    else
+        S->>D: actualizar fecha, hora, hora final y sucursal, estado Programada
+        alt otra solicitud ganó la carrera (23P01)
+            D-->>S: violación de la restricción de exclusión
+            S-->>V: mensaje de negocio
+        else
+            S->>B: registrar cita_reprogramada con el horario anterior y el nuevo
+            C-->>U: redirigir al comprobante actualizado
+        end
+    end
+```
+
+**CU-11 Cancelar cita**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista o Paciente
+    participant V as Comprobante (Blade)
+    participant C as CitaController
+    participant R as CancelarCitaRequest
+    participant S as CitaService
+    participant D as Base de datos
+    participant B as BitacoraService
+
+    U->>V: escribe el motivo y confirma
+    V->>C: PATCH /citas/{id}/cancelar o /mis-citas/{id}/cancelar
+    C->>R: validar que el motivo exista y tenga hasta 500 caracteres
+    alt el Paciente pide la cita de otro paciente
+        C-->>V: 404 no encontrado
+    else
+        C->>S: cancelar(cita, motivo, actor, comoPaciente)
+        S->>D: transacción: bloquear y releer la cita
+        alt ya cancelada, atendida, con inasistencia o ya comenzó
+            S-->>V: mensaje de negocio
+        else el Paciente con menos de 24 horas de anticipación
+            S-->>V: pedir comunicarse con la clínica
+        else
+            S->>D: estado Cancelada y guardar el motivo (la fila no se elimina)
+            S->>B: registrar cita_cancelada
+            C-->>U: comprobante con estado Cancelada, el horario queda libre
+        end
+    end
+```
+
+**CU-12 Controlar asistencia**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista, Médico o Paciente
+    participant V as Comprobante o Agenda (Blade)
+    participant C as AsistenciaController
+    participant S as AsistenciaService
+    participant D as Base de datos
+    participant B as BitacoraService
+
+    V->>S: posibles(cita) para mostrar solo los botones que corresponden hoy
+    U->>V: elige confirmar, marcar atendida o registrar inasistencia
+    V->>C: PATCH /citas/{id}/asistencia, /agenda/{id}/atender o /mis-citas/{id}/confirmar
+    alt el Médico pide una cita de otro médico o el Paciente la de otro paciente
+        C-->>V: 404 no encontrado
+    else
+        C->>S: registrar(cita, acción, actor)
+        S->>D: transacción: bloquear y releer la cita
+        alt cancelada, atendida o con inasistencia
+            S-->>V: mensaje de negocio, el estado no cambia
+        else confirmar una cita que ya comenzó, o atendida o inasistencia antes de comenzar
+            S-->>V: mensaje de negocio
+        else
+            S->>D: pasar a Confirmada, Atendida o Inasistencia
+            S->>B: registrar cita_confirmada, cita_atendida o cita_inasistencia
+            C-->>U: resultado y botones actualizados
+        end
+    end
+```
+
+**CU-13 Consultar agenda médica**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista o Médico
+    participant V as Agenda (Blade)
+    participant C as AgendaController
+    participant S as AgendaService
+    participant D as Base de datos
+
+    U->>V: elige fecha, estado y, si quiere, médico (solo Recepcionista)
+    V->>C: GET /agenda (parámetros)
+    alt la cuenta es de Médico
+        C->>C: usar el médico de la sesión e ignorar el parámetro medico
+    else
+        C->>C: tomar el médico pedido, o ninguno para ver las citas de todos
+    end
+    C->>S: fechaValida(fecha), si no es válida usar hoy con un aviso
+    C->>S: del(médico o todos, fecha, estado)
+    S->>D: citas de ese día, por hora, con paciente, especialidad y médico
+    S-->>C: citas (incluye canceladas)
+    C-->>U: tabla con hora, código, paciente, especialidad, estado y motivo
+    opt el Médico abre la «Ficha del paciente» de una cita no cancelada
+        U->>C: GET /pacientes/{id}/ficha (pacientes:consultar)
+        C->>D: ¿tiene o tuvo el paciente una cita no cancelada con este médico?
+        alt no
+            C-->>U: 404 no encontrado
+        else
+            C-->>U: ficha de solo lectura (con la ficha pendiente se ocultan información médica y contacto de emergencia)
+        end
+    end
+```
+
+**CU-14 Consultar historial de citas**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista o Paciente
+    participant V as Historial (Blade)
+    participant C as HistorialController
+    participant S as HistorialService
+    participant D as Base de datos
+
+    U->>V: abre el historial y, si quiere, filtra por estado
+    alt Recepcionista
+        V->>C: GET /pacientes/{id}/historial (historial:consultar y pacientes:consultar)
+    else Paciente
+        V->>C: GET /mi-historial (sin identificador)
+        C->>C: usar el paciente de la sesión (sin ficha, 404)
+    end
+    C->>S: estadoValido(estado), un valor desconocido se ignora
+    C->>S: de(paciente, estado)
+    S->>D: citas del paciente, de la más reciente a la más antigua, de 15 en 15
+    S-->>C: página de citas y resumen por estado
+    C-->>U: fecha y hora, médico, especialidad, estado, motivo y fecha de registro
+```
+
+**CU-15 Generar reportes**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor A as Administrador
+    participant V as Reportes (Blade)
+    participant C as ReporteController
+    participant S as ReporteService
+    participant D as Base de datos
+
+    A->>V: elige el reporte, el rango de fechas y los filtros
+    V->>C: GET /reportes (reportes:consultar)
+    C->>S: fecha(desde) y fecha(hasta), si son inválidas o están al revés usar el período por defecto
+    alt reporte de pacientes registrados
+        C->>S: pacientes(desde, hasta) y totalesPacientes
+        S->>D: pacientes del rango y conteos de registrados, verificados y activos
+    else reporte de citas
+        C->>S: listado, porEstado y agrupadas por médico y por especialidad
+        S->>D: consultas con el rango y los filtros, totales calculados en la base
+    end
+    S-->>C: resultados y totales
+    C-->>A: reporte con totales y detalle paginado
+```
+
+**CU-16 Registrar nota clínica**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor M as Médico
+    participant V as FormNota (Blade)
+    participant C as NotaClinicaController
+    participant R as NotaClinicaRequest
+    participant S as NotaClinicaService
+    participant D as Base de datos
+    participant B as BitacoraService
+
+    M->>V: elige «Nota clínica» en una cita atendida de su agenda
+    V->>C: GET /agenda/{id}/nota (notas:registrar)
+    alt la cita es de otro médico
+        C-->>V: 404 no encontrado
+    else la cita no está atendida
+        C-->>V: mensaje de negocio
+    else
+        C-->>V: formulario, con la nota existente si la hay
+    end
+    M->>V: completa al menos un campo y guarda
+    V->>C: PUT /agenda/{id}/nota
+    C->>R: validar los cuatro textos (hasta 2000 caracteres, al menos uno con contenido)
+    C->>S: guardar(cita, datos, actor)
+    S->>D: transacción: bloquear y releer la cita
+    S->>S: comprobar que sea del médico de la sesión y esté atendida
+    S->>D: crear la nota, o sobrescribir la existente con modificado_por
+    S->>B: registrar nota_registrada o nota_modificada
+    C-->>M: volver a la agenda con la confirmación
+```
+
+**CU-17 Consultar notas clínicas**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor U as Recepcionista, Médico o Paciente
+    participant V as Notas (Blade)
+    participant C as NotaClinicaController
+    participant S as NotaClinicaService
+    participant D as Base de datos
+
+    alt Recepcionista o Médico
+        U->>V: abre las notas de un paciente
+        V->>C: GET /pacientes/{id}/notas (notas:consultar y pacientes:consultar)
+        opt la cuenta es de Médico
+            C->>S: atiende(médico, paciente)
+            S->>D: ¿tiene o tuvo una cita no cancelada con él?
+            S-->>C: si no, 404 no encontrado
+        end
+    else Paciente
+        U->>V: abre «Mis notas»
+        V->>C: GET /mis-notas (sin identificador)
+        C->>C: usar el paciente de la sesión, con la ficha pendiente no se muestran notas
+    end
+    C->>S: de(paciente)
+    S->>D: notas del paciente, de la cita más reciente a la más antigua
+    S-->>C: notas con médico y quién las modificó
+    C-->>U: notas en solo lectura, el autor ve «Editar» en las suyas
+```
+
+**CU-18 Ver recordatorio de citas**
+
+```mermaid
+%%{init: {"sequence": {"wrap": true, "width": 160}}}%%
+sequenceDiagram
+    actor P as Paciente
+    participant L as FormLogin (Blade)
+    participant C as InicioController
+    participant S as RecordatorioService
+    participant D as Base de datos
+    participant V as Inicio (Blade)
+
+    P->>L: inicia sesión (CU-01)
+    L->>C: GET /inicio
+    C->>C: comprobar el permiso recordatorios:consultar y la ficha de paciente
+    C->>S: proximas(paciente)
+    S->>D: citas Programadas o Confirmadas desde hoy hasta hoy más 2 días
+    S->>S: descartar las de hoy que ya comenzaron
+    S-->>C: próximas citas
+    alt hay citas
+        C->>V: banner «Sus próximas citas» con día, hora y médico (nunca el motivo)
+    else
+        C->>V: inicio sin banner
+    end
+    V-->>P: pantalla de inicio
+```
+
 
 ### 6.3 Diseño de datos
 
@@ -1949,7 +2280,7 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         $request->session()->regenerate();
 ```
 
-**Form Request.** La validación del servidor está en clases de `app/Http/Requests/` (RNF08); el cliente la refuerza con `public/js/validaciones.js`. Varias solicitudes comparten el trait `NormalizaDatosDePersona`, que deja el CI, el correo y los teléfonos en la forma en que se guardan antes de validarlos.
+**Form Request.** La validación del servidor está en clases de `app/Http/Requests/` (RNF08); el cliente la refuerza con `public/js/validaciones.js`. El script `public/js/validaciones.js` adelanta el aviso en el navegador con marcas `data-*` que cada formulario declara: contraseñas y casillas obligatorias, textos que no pueden quedar en blanco (`data-no-vacio`), al menos un texto de un grupo (`data-grupo-texto`, la nota clínica), al menos una opción (`data-al-menos-uno`, los horarios), rango de fechas (`data-fecha-desde` y `data-fecha-hasta`), contador de caracteres y confirmación antes de una acción que no se deshace (`data-confirmar`). Los formularios llevan `novalidate` para que los mensajes sean los del sistema y no los nativos del navegador; el servidor valida siempre, aunque el script falle. Varias solicitudes comparten el trait `NormalizaDatosDePersona`, que deja el CI, el correo y los teléfonos en la forma en que se guardan antes de validarlos.
 
 `app/Http/Requests/LoginRequest.php`
 
@@ -2637,17 +2968,21 @@ Reglas aplicadas:
 | ----------- | ----------------------------------------------------------------------------------------------- |
 | Controlador | `app/Http/Controllers/AgendaController.php`                                                     |
 | Servicio    | `app/Services/AgendaService.php`                                                                |
-| Vista       | `resources/views/agenda/index.blade.php`                                                        |
+| Controlador de la ficha | `app/Http/Controllers/FichaPacienteController.php`                                          |
+| Vista       | `resources/views/agenda/index.blade.php` y `resources/views/pacientes/ficha-medico.blade.php`   |
 | Menú        | `config/menu.php` (opción «Agenda», permiso `agenda:consultar`)                                 |
-| Pruebas     | `tests/Feature/Citas/AgendaTest.php`                                                            |
+| Pruebas     | `tests/Feature/Citas/AgendaTest.php` y `tests/Feature/Pacientes/FichaMedicoTest.php`            |
 
 Reglas aplicadas:
 
 - Una sola ruta `GET /agenda` con el permiso `agenda:consultar`, que conceden los roles Recepcionista y Médico (RN12, RNF19). El Paciente y el Administrador reciben 403.
-- La Recepcionista elige al médico con el parámetro `medico`. Para el rol Médico ese parámetro se ignora: la agenda siempre es la del médico de la sesión, y una cuenta de médico sin ficha recibe 404.
+- La Recepcionista puede elegir al médico con el parámetro `medico`; si no lo elige, `AgendaService::del` lista las citas de todos los médicos de esa fecha y la vista agrega la columna «Médico» (enunciado 3.2: consultar citas por fecha y estado). Para el rol Médico ese parámetro se ignora: la agenda siempre es la del médico de la sesión, y una cuenta de médico sin ficha recibe 404.
 - `AgendaService` devuelve las citas del médico en la fecha, ordenadas por hora, con el filtro opcional de estado. Incluye las canceladas (RN10). Los médicos desactivados conservan su agenda (RN11).
 - La fecha se valida con el formato AAAA-MM-DD; si no es válida se usa la de hoy (hora de La Paz) con un aviso. El estado solo acepta los cinco conocidos y los parámetros que llegan como arreglo se ignoran.
 - El motivo breve se muestra porque ambos roles que pueden abrir la agenda tienen el permiso `agenda:consultar`.
+- `GET /pacientes/{paciente}/ficha` exige `pacientes:consultar` y `FichaPacienteController` comprueba que la cuenta sea de un médico con una cita no cancelada con ese paciente (`NotaClinicaService::atiende`); si no, responde 404 (RN12). La ficha del Médico es de solo lectura y solo incluye lo necesario para atender: datos básicos, teléfono, información médica, contacto de emergencia y las citas con ese médico. No muestra el correo, la dirección ni los datos de la cuenta; la ficha completa con edición sigue siendo de la Recepcionista (CU-04).
+- Con la ficha pendiente de verificación, la ficha del Médico oculta la información médica y el contacto de emergencia, como el perfil del paciente (CU-08).
+- La agenda del Médico ofrece «Ficha del paciente» y «Notas del paciente» solo en las citas que no están canceladas, porque una cita cancelada no vuelve «suyo» al paciente.
 - La consulta no modifica datos.
 
 #### CU-14 Consultar historial de citas
@@ -2737,9 +3072,9 @@ Al escanear el código QR se abre la página del repositorio. La estructura de c
 
 ### 8.1 Plan de pruebas
 
-**Objetivo.** Comprobar que el sistema cumple los casos de uso y las reglas de negocio del Ciclo #1 (CU-01 a CU-08 y CU-19), que rechaza los datos y los accesos inválidos, y que la base de datos hace cumplir sus restricciones aunque la aplicación falle.
+**Objetivo.** Comprobar que el sistema cumple los casos de uso y las reglas de negocio de los Ciclos #1 y #2 (CU-01 a CU-19), que rechaza los datos y los accesos inválidos, y que la base de datos hace cumplir sus restricciones aunque la aplicación falle.
 
-**Alcance.** Ciclo #1: acceso y roles, usuarios, pacientes, médicos, especialidades, horarios y perfil del paciente. Las pruebas 3 a 8 del enunciado dependen de las citas (CU-09 en adelante) y se ejecutan en el Ciclo #2: las pruebas 3, 4 y 5 ya se ejecutaron con el CU-09 y las pruebas 6, 7 y 8 con el CU-11, el CU-14 y el CU-13 (sección 8.2.1).
+**Alcance.** Ciclo #1: acceso y roles, usuarios, pacientes, médicos, especialidades, horarios y perfil del paciente. Ciclo #2: registro, reprogramación y cancelación de citas, control de asistencia, agenda médica, historial, reportes, notas clínicas y recordatorio. Las pruebas 3 a 8 del enunciado dependen de las citas y se ejecutaron con el CU-09 (pruebas 3, 4 y 5), el CU-11 (prueba 6), el CU-14 (prueba 7) y el CU-13 (prueba 8), como muestra la sección 8.2.1.
 
 **Estrategia.** Cada caso de uso se prueba en tres frentes: automatizado, contra la base de datos real y de forma manual.
 
@@ -2761,7 +3096,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 5. **Concurrencia:** una solicitud simultánea que choca con la base se informa como regla de negocio, sin error técnico.
 6. **Auditoría:** la acción queda en la bitácora (RNF13).
 
-**Entorno.** PHP 8.4.27, Laravel 13, PHPUnit 12.5.40 y PostgreSQL 16 en un contenedor Docker, con la base `clinica_test` separada de la de desarrollo. Cada prueba parte de una base vacía y con los catálogos cargados.
+**Entorno.** PHP 8.4, Laravel 13, PHPUnit 12.5 y PostgreSQL 16 en un contenedor Docker, con la base `clinica_test` separada de la de desarrollo. La suite del Ciclo #1 se ejecutó con PHP 8.4.27 y la del Ciclo #2 (07/11/2026) con PHP 8.3.6, porque la máquina de ese día no tenía 8.4; el resultado se detalla en 8.3.1. Cada prueba parte de una base vacía y con los catálogos cargados.
 
 **Criterio de aprobación.** Un caso se aprueba cuando se obtiene el resultado esperado. El ciclo se da por probado cuando la suite completa pasa sin fallos.
 
@@ -2770,7 +3105,7 @@ Las pruebas funcionales usan la base de datos real y no una simulada, porque var
 | Ciclo | Pruebas                                                                                 | Estado                                                               |
 | ----- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | #1    | Pruebas 1, 2, 9 y 10 del enunciado y los casos por caso de uso de CU-01 a CU-08 y CU-19 | Ejecutadas (sección 8.2)                                             |
-| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18                                | Completo: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
+| #2    | Pruebas 3 a 8 del enunciado y los casos de CU-09 a CU-18 (CP-42 a CP-93)                | Ejecutadas (secciones 8.2 y 8.3). Detalle: pruebas 3, 4 y 5 ejecutadas con CU-09 y pruebas 6, 7 y 8 con CU-11, CU-14 y CU-13, y la asistencia y la reprogramación con CU-12 y CU-10, los reportes con CU-15, las notas clínicas con CU-16 y CU-17 y el recordatorio con CU-18 |
 
 ### 8.2 Casos de prueba
 
@@ -2836,6 +3171,58 @@ Los resultados obtenidos salen de la ejecución de la suite del 05/11/2026 (secc
 | CP-39 | CU-08         | Intentar cambiar otros datos                                | Solo el teléfono es editable; los demás datos no cambian aunque se envíen                                                                    | `PerfilTest::solo_el_telefono_es_editable_y_enlaza_al_cambio_de_contrasena`, `no_acepta_modificar_otros_datos_por_esta_via`                                                                                                                                                   | Aprobada |
 | CP-40 | Todos         | Un rol sin permiso abre una pantalla de otro rol            | Error 403                                                                                                                                    | `solo_el_administrador_gestiona_…` y `solo_la_recepcionista_gestiona_pacientes` en cada módulo; `PerfilTest::solo_el_paciente_tiene_perfil`                                                                                                                                   | Aprobada |
 | CP-41 | Todos | Páginas de error | Los errores 403, 404, 419 y 500 se muestran en español, con el diseño de la clínica y un botón para volver | `PaginasDeErrorTest` (6 pruebas) | Aprobada |
+| CP-42 | CU-09 | Programar una cita en un horario disponible | La cita queda «Programada» con la hora final calculada por el servidor y se muestra el comprobante; el formulario lista solo los horarios libres | `CitaTest::programa_una_cita_en_un_horario_disponible`, `rn08_la_hora_final_la_calcula_el_servidor` | Aprobada |
+| CP-43 | CU-09 | Horario fuera de la atención, ya pasado o fuera de la cuadrícula | Se rechaza; hoy no se ofrecen los horarios que ya pasaron y ningún horario termina fuera de su bloque | `CitaTest::rechaza_reservar_fuera_del_horario_del_medico`, `hoy_no_se_ofrecen_los_horarios_que_ya_pasaron`, `la_cuadricula_parte_de_cada_bloque_y_cada_horario_termina_dentro_de_su_bloque` | Aprobada |
+| CP-44 | CU-09 | Fechas pasadas y límite de 60 días | Se rechazan con un mensaje; el límite sale de la configuración | `CitaTest::rechaza_las_fechas_pasadas`, `el_limite_de_anticipacion_es_de_60_dias_y_sale_de_la_configuracion` | Aprobada |
+| CP-45 | CU-09 | Cita superpuesta del médico o del paciente (RN07, RN17) | Se rechaza con un mensaje; las canceladas no ocupan horario (RN09) | `CitaTest::impide_otra_cita_superpuesta_para_el_mismo_medico`, `rn17_un_paciente_no_puede_tener_dos_citas_superpuestas_con_medicos_distintos`, `las_citas_canceladas_no_ocupan_horario` | Aprobada |
+| CP-46 | CU-09 | Dos solicitudes compiten por el mismo horario | La base de datos acepta una sola y la otra recibe un mensaje de negocio; también rechaza la superposición si se salta la aplicación | `CitaTest::si_otra_solicitud_ocupa_al_medico_antes_de_guardar_la_base_lo_rechaza`, `si_otra_solicitud_ocupa_al_paciente_antes_de_guardar_la_base_lo_rechaza`, `la_base_rechaza_citas_superpuestas_del_mismo_paciente_aunque_se_salte_la_aplicacion` | Aprobada |
+| CP-47 | CU-09 | Partes inactivas, médico sin la especialidad o médico como su propio paciente (RN03, RN04, RN16) | Se rechaza | `CitaTest::rn04_y_rn03_rechaza_medico_especialidad_o_paciente_inactivos`, `rn03_el_medico_debe_ejercer_la_especialidad`, `rn16_un_medico_no_puede_agendarse_consigo_mismo` | Aprobada |
+| CP-48 | CU-09 | El Paciente reserva y manipula el formulario | Reserva siempre para sí mismo aunque envíe otro paciente; con la ficha pendiente también puede reservar; solo ve sus comprobantes | `CitaTest::el_paciente_reserva_para_si_mismo_aunque_envie_otro_paciente`, `un_paciente_con_la_ficha_pendiente_puede_reservar`, `el_paciente_solo_ve_el_comprobante_de_sus_propias_citas` | Aprobada |
+| CP-49 | CU-09 | Datos inválidos y parámetros manipulados | Error en el campo correspondiente; los parámetros manipulados no producen error 500 | `CitaTest::valida_los_datos_del_formulario`, `parametros_manipulados_en_la_url_no_rompen_el_formulario`, `un_id_fuera_de_rango_se_rechaza_como_dato_invalido` | Aprobada |
+| CP-50 | CU-09 | Cada rol entra solo a su grupo de rutas | Recepcionista a `/citas`, Paciente a `/mis-citas`; los demás reciben 403 y sin sesión se redirige al inicio de sesión | `CitaTest::cada_rol_solo_entra_a_su_propio_grupo_de_rutas`, `sin_sesion_se_redirige_al_login` | Aprobada |
+| CP-51 | CU-10 | Reprogramar una cita a otra fecha y hora | Cambia fecha, hora, hora final y sucursal; conserva paciente, médico y especialidad; una confirmada vuelve a «Programada»; el horario anterior queda libre y consta en la bitácora | `ReprogramarCitaTest::la_recepcionista_cambia_la_fecha_y_la_hora_de_una_cita`, `una_cita_confirmada_vuelve_a_programada_al_cambiar_de_horario`, `el_horario_anterior_queda_libre_y_el_nuevo_ocupado` | Aprobada |
+| CP-52 | CU-10 | Nuevo horario ocupado, fuera de la atención, pasado o igual al actual | Se rechaza y la cita no cambia; las canceladas no estorban; la propia cita no cuenta como ocupada | `ReprogramarCitaTest::rechaza_un_horario_ocupado_por_el_medico`, `rechaza_un_horario_que_se_superpone_con_otra_cita_del_paciente`, `rechaza_horas_fuera_del_horario_del_medico_o_fuera_de_la_grilla`, `rechaza_dejar_la_cita_en_el_mismo_horario`, `una_cita_cancelada_del_mismo_horario_no_estorba` | Aprobada |
+| CP-53 | CU-10 | Reprogramar una cita atendida, cancelada, con inasistencia o ya comenzada | Se rechaza (RF08, RN10) | `ReprogramarCitaTest::no_reprograma_citas_atendidas_canceladas_ni_con_inasistencia`, `no_reprograma_una_cita_que_ya_comenzo` | Aprobada |
+| CP-54 | CU-10 | Regla de 24 horas del Paciente (RN15) | El Paciente solo reprograma con al menos 24 horas de anticipación; la Recepcionista no tiene el límite | `ReprogramarCitaTest::el_paciente_reprograma_su_cita_con_mas_de_24_horas`, `el_paciente_no_reprograma_con_menos_de_24_horas`, `la_recepcionista_reprograma_sin_la_restriccion_de_24_horas` | Aprobada |
+| CP-55 | CU-10 | Permisos y formulario manipulado | El Paciente no reprograma citas ajenas (404); cada rol usa solo sus rutas; el formulario no cambia paciente, médico ni estado | `ReprogramarCitaTest::el_paciente_no_reprograma_la_cita_de_otro`, `cada_rol_solo_usa_sus_rutas`, `el_formulario_no_cambia_al_paciente_ni_al_medico` | Aprobada |
+| CP-56 | CU-11 | Cancelar una cita | Cambia a «Cancelada» con su motivo, conserva el registro, libera el horario y consta en la bitácora | `CancelarCitaTest::cancela_una_cita_y_conserva_el_historial`, `el_horario_cancelado_queda_disponible_otra_vez` | Aprobada |
+| CP-57 | CU-11 | Cancelar una cita atendida, con inasistencia, ya cancelada o ya comenzada | Se rechaza y el estado no cambia | `CancelarCitaTest::no_cancela_una_cita_atendida_ni_una_inasistencia`, `no_cancela_dos_veces_la_misma_cita`, `no_cancela_una_cita_que_ya_comenzo` | Aprobada |
+| CP-58 | CU-11 | Motivo de la cancelación | Es obligatorio, no se acepta solo con espacios y admite hasta 500 caracteres | `CancelarCitaTest::exige_un_motivo_de_cancelacion`, `un_motivo_de_solo_espacios_se_rechaza` | Aprobada |
+| CP-59 | CU-11 | Regla de 24 horas del Paciente (RN15) | Cancela con al menos 24 horas (el límite es exacto); la Recepcionista cancela sin restricción | `CancelarCitaTest::el_paciente_cancela_su_cita_con_mas_de_24_horas`, `el_paciente_no_cancela_con_menos_de_24_horas`, `el_limite_de_24_horas_es_exacto`, `la_recepcionista_cancela_sin_la_restriccion_de_24_horas` | Aprobada |
+| CP-60 | CU-11 | Permisos y propiedad | El Paciente no cancela citas ajenas (404); cada rol usa solo su ruta; el formulario no cambia el estado ni la fecha | `CancelarCitaTest::el_paciente_no_cancela_la_cita_de_otro`, `cada_rol_solo_entra_a_su_ruta_de_cancelacion`, `el_formulario_no_acepta_otro_estado_ni_otros_campos` | Aprobada |
+| CP-61 | CU-12 | Confirmar, marcar atendida y registrar inasistencia | Cada transición válida cambia el estado, conserva el registro y consta en la bitácora | `AsistenciaTest::la_recepcionista_confirma_una_cita_futura`, `marca_atendida_una_cita_que_ya_comenzo_conservando_el_registro`, `registra_la_inasistencia_de_una_cita_que_ya_comenzo` | Aprobada |
+| CP-62 | CU-12 | Transiciones inválidas | Una cita cancelada no puede marcarse como atendida; las atendidas y con inasistencia no cambian; no se registra asistencia de una cita futura ni se confirma una ya comenzada | `AsistenciaTest::una_cita_cancelada_no_puede_marcarse_como_atendida`, `no_cambia_el_estado_de_una_cita_atendida_ni_con_inasistencia`, `no_registra_asistencia_ni_inasistencia_de_una_cita_futura`, `no_confirma_una_cita_que_ya_comenzo_ni_una_ya_confirmada` | Aprobada |
+| CP-63 | CU-12 | El Médico marca atendida una cita | Solo las citas de su agenda (otra da 404), vigentes y ya comenzadas | `AsistenciaTest::el_medico_marca_atendida_una_cita_de_su_agenda`, `el_medico_no_marca_la_cita_de_otro_medico`, `el_medico_no_marca_una_cita_cancelada_ni_futura` | Aprobada |
+| CP-64 | CU-12 | El Paciente confirma su asistencia | Solo la propia cita; no puede marcar atendida ni inasistencia | `AsistenciaTest::el_paciente_confirma_su_propia_cita`, `el_paciente_no_confirma_la_cita_de_otro`, `el_paciente_no_puede_marcar_atendida_ni_inasistencia` | Aprobada |
+| CP-65 | CU-12 | Permisos, acción inventada y botones de la pantalla | Cada rol usa solo sus rutas; una acción desconocida se rechaza; las pantallas muestran solo las acciones que corresponden | `AsistenciaTest::cada_rol_solo_usa_sus_rutas`, `una_accion_inventada_se_rechaza`, `el_comprobante_ofrece_solo_las_acciones_que_corresponden` | Aprobada |
+| CP-66 | CU-13 | Consultar la agenda de un médico por fecha | Aparecen solo sus citas de ese día, por hora, con código, paciente, especialidad, estado y motivo; las canceladas figuran con su estado | `AgendaTest::muestra_las_citas_del_medico_en_la_fecha_pedida`, `las_canceladas_aparecen_en_la_agenda_con_su_estado`, `una_fecha_sin_citas_muestra_un_aviso` | Aprobada |
+| CP-67 | CU-13 | Filtros y parámetros manipulados | Filtra por estado; una fecha inválida usa hoy con un aviso y los demás parámetros se ignoran sin error | `AgendaTest::filtra_por_estado`, `los_parametros_manipulados_se_ignoran_sin_error` | Aprobada |
+| CP-68 | CU-13 | El Médico solo ve su propia agenda | Aunque pida otro médico en la URL; una cuenta de médico sin ficha recibe 404; el Paciente y el Administrador reciben 403 | `AgendaTest::el_medico_ve_su_propia_agenda_y_no_la_de_otro`, `una_cuenta_de_medico_sin_ficha_recibe_404`, `el_paciente_y_el_administrador_no_consultan_la_agenda` | Aprobada |
+| CP-69 | CU-14 | Consultar el historial de un paciente | Aparecen todas sus citas (pasadas, futuras y canceladas) de la más reciente a la más antigua, con fecha de registro y motivo de la cancelación; solo las de ese paciente | `HistorialTest::la_recepcionista_ve_las_citas_registradas_del_paciente`, `solo_aparecen_las_citas_de_ese_paciente`, `la_cita_cancelada_sigue_en_el_historial` | Aprobada |
+| CP-70 | CU-14 | Filtro por estado, paginación y paciente desactivado | Filtra por estado e ignora valores desconocidos; pagina de 15 en 15; el historial de un paciente desactivado se conserva | `HistorialTest::filtra_por_estado`, `un_estado_desconocido_o_manipulado_se_ignora`, `pagina_el_historial_de_15_en_15`, `el_historial_de_un_paciente_desactivado_se_conserva` | Aprobada |
+| CP-71 | CU-14 | El Paciente solo ve su propio historial | No puede abrir el de otro (403); Médico y Administrador reciben 403; una cuenta sin ficha recibe 404 | `HistorialTest::el_paciente_ve_su_propio_historial_y_no_el_de_otros`, `el_paciente_no_entra_al_historial_de_otro_paciente`, `el_medico_y_el_administrador_no_consultan_el_historial`, `una_cuenta_sin_ficha_de_paciente_recibe_404_en_mi_historial` | Aprobada |
+| CP-72 | CU-15 | Reporte de citas por rango de fechas con totales | Muestra el total y la cantidad por estado, por médico y por especialidad; el período por defecto es el mes en curso y los dos extremos se incluyen | `ReporteTest::el_periodo_por_defecto_es_el_mes_en_curso_con_sus_totales`, `filtra_por_rango_de_fechas`, `citas_de_una_sola_fecha_incluyen_los_dos_extremos`, `muestra_los_totales_por_medico_y_por_especialidad` | Aprobada |
+| CP-73 | CU-15 | Filtros por médico, especialidad y estado; agenda diaria | Cada filtro acota el resultado; un día y un médico equivalen a la agenda diaria de ese médico | `ReporteTest::filtra_por_medico_especialidad_y_estado`, `agenda_diaria_de_un_medico_es_un_reporte_de_un_dia_y_un_medico`, `sin_resultados_muestra_un_aviso` | Aprobada |
+| CP-74 | CU-15 | Pacientes registrados en un período | Cuenta registrados, verificados y activos dentro del rango y excluye los de otras fechas | `ReporteTest::pacientes_registrados_en_el_periodo_con_totales`, `pacientes_sin_registros_muestra_un_aviso` | Aprobada |
+| CP-75 | CU-15 | Fechas inválidas o al revés y parámetros manipulados | Se usa el período por defecto con un aviso y no hay error 500; el detalle se pagina de 25 en 25 | `ReporteTest::fechas_invalidas_o_al_reves_usan_el_periodo_por_defecto_con_aviso`, `los_parametros_manipulados_se_ignoran_sin_error`, `pagina_el_detalle_de_25_en_25` | Aprobada |
+| CP-76 | CU-15 | Solo el Administrador consulta los reportes | Recepcionista, Médico y Paciente reciben 403; sin sesión se redirige al inicio de sesión | `ReporteTest::solo_el_administrador_consulta_los_reportes`, `sin_sesion_redirige_al_login` | Aprobada |
+| CP-77 | CU-16 | Registrar y editar la nota clínica de una cita atendida | Se crea una sola nota por cita; al editarla se sobrescribe y se guarda quién y cuándo la modificó, sin versiones; consta en la bitácora | `NotaClinicaTest::el_medico_registra_la_nota_de_una_cita_atendida`, `editar_sobrescribe_la_nota_y_guarda_quien_y_cuando` | Aprobada |
+| CP-78 | CU-16 | Nota de una cita que no está atendida, o campos vacíos o demasiado largos | Se rechaza; basta con un campo con contenido | `NotaClinicaTest::solo_se_registra_la_nota_de_una_cita_atendida`, `exige_al_menos_un_campo_y_limita_el_largo`, `basta_con_un_campo` | Aprobada |
+| CP-79 | CU-16 | El Médico solo escribe las notas de sus propias citas | Otro médico recibe 404 y no cambia nada; el formulario no acepta autor ni cita; los demás roles reciben 403 | `NotaClinicaTest::el_medico_no_escribe_ni_edita_la_nota_de_otro_medico`, `el_formulario_no_acepta_autor_ni_cita`, `solo_el_medico_registra_notas` | Aprobada |
+| CP-80 | CU-17 | La Recepcionista y el Médico consultan las notas de un paciente | En solo lectura; el Médico ve también las notas de otros médicos pero solo edita las suyas; la lista va de la cita más reciente a la más antigua | `NotaClinicaTest::la_recepcionista_ve_las_notas_de_un_paciente_en_solo_lectura`, `el_medico_ve_las_notas_de_sus_pacientes_incluidas_las_de_otros_medicos`, `las_notas_van_de_la_cita_mas_reciente_a_la_mas_antigua` | Aprobada |
+| CP-81 | CU-17 | El Médico consulta un paciente que no atiende | Recibe 404; una cita cancelada no lo vuelve su médico | `NotaClinicaTest::el_medico_no_ve_pacientes_que_no_atiende` | Aprobada |
+| CP-82 | CU-17 | El Paciente consulta sus notas | Ve solo las suyas; con la ficha pendiente de verificación no ve ninguna; Administrador y Paciente no usan la ruta del personal | `NotaClinicaTest::el_paciente_ve_solo_sus_notas`, `con_la_ficha_pendiente_el_paciente_no_ve_sus_notas`, `permisos_de_consulta` | Aprobada |
+| CP-83 | CU-18 | Recordatorio de próximas citas en el inicio del Paciente | Muestra sus citas programadas o confirmadas de hoy y de los 2 días siguientes, con día, hora y médico, y también al iniciar sesión | `RecordatorioTest::el_paciente_ve_sus_citas_de_hoy_y_de_los_proximos_dos_dias`, `el_aviso_aparece_al_iniciar_sesion` | Aprobada |
+| CP-84 | CU-18 | Citas que no se recuerdan | Las lejanas, pasadas, ya comenzadas, canceladas, atendidas, con inasistencia o de otros pacientes | `RecordatorioTest::no_recuerda_citas_lejanas_pasadas_ni_que_ya_comenzaron`, `no_recuerda_citas_canceladas_atendidas_ni_con_inasistencia`, `no_muestra_las_citas_de_otros_pacientes` | Aprobada |
+| CP-85 | CU-18 | Privacidad y roles (RNF16) | Nunca muestra el motivo ni datos médicos; los demás roles no ven el banner; sin citas o sin ficha el inicio no falla | `RecordatorioTest::solo_muestra_fecha_hora_y_medico_nunca_el_motivo`, `el_resto_de_los_roles_no_ve_el_aviso`, `un_paciente_sin_citas_ve_el_inicio_sin_aviso`, `una_cuenta_de_paciente_sin_ficha_no_falla` | Aprobada |
+| CP-86 | CU-13 | El Médico abre la ficha de un paciente que atiende | Ve en solo lectura los datos básicos con la edad, el teléfono, la información médica, el contacto de emergencia y sus citas con él, con un enlace a las notas | `FichaMedicoTest::el_medico_ve_los_datos_necesarios_de_su_paciente`, `solo_lista_las_citas_de_este_medico` | Aprobada |
+| CP-87 | CU-13 | La ficha no expone lo que no hace falta | No muestra el correo, la dirección ni botones de edición | `FichaMedicoTest::no_muestra_el_correo_ni_la_direccion_ni_permite_editar` | Aprobada |
+| CP-88 | CU-13 | Ficha pendiente de verificación | Oculta la información médica y el contacto de emergencia con un aviso y conserva los datos básicos | `FichaMedicoTest::con_la_ficha_pendiente_oculta_la_informacion_medica_y_el_contacto_de_emergencia` | Aprobada |
+| CP-89 | CU-13 | Pacientes que el Médico no atiende, y otros roles | Un paciente sin cita, con cita solo cancelada o de otro médico responde 404; Paciente y Administrador reciben 403; la Recepcionista, 404; sin sesión se redirige al inicio de sesión | `FichaMedicoTest::el_medico_no_abre_la_ficha_de_un_paciente_que_no_atiende`, `los_demas_roles_no_usan_esta_ficha`, `sin_sesion_redirige_al_login_y_un_paciente_inexistente_da_404` | Aprobada |
+| CP-90 | CU-13 | Botones de la agenda del Médico | La ficha y las notas del paciente se ofrecen solo en citas no canceladas, sin enlaces que terminen en 404 | `FichaMedicoTest::la_agenda_ofrece_la_ficha_solo_en_citas_no_canceladas` | Aprobada |
+| CP-91 | CU-13 | La Recepcionista consulta las citas de una fecha sin elegir médico | Ve las citas de todos los médicos de ese día, ordenadas por hora y con el médico de cada una; puede filtrar por estado y, con un médico elegido, solo las suyas | `AgendaTest::la_recepcionista_sin_elegir_medico_ve_las_citas_de_todos_en_la_fecha`, `sin_medico_tambien_filtra_por_estado_y_avisa_si_no_hay_citas`, `con_un_medico_elegido_solo_muestra_las_de_ese_medico_sin_la_columna_medico` | Aprobada |
+| CP-92 | CU-11, CU-10, CU-16, CU-15 | Los formularios del Ciclo #2 declaran la validación del cliente | Cancelar pide el motivo y confirma desde el script; reprogramar pide fecha y horario; la nota avisa si todos los campos están vacíos y cuenta caracteres; reportes marca el rango de fechas | `ValidacionClienteTest::cancelar_valida_el_motivo_y_confirma_desde_el_script_no_con_onsubmit`, `reprogramar_pide_la_fecha_y_el_horario_con_mensajes_propios`, `la_nota_clinica_avisa_si_todos_los_campos_estan_vacios_y_cuenta_caracteres`, `reportes_marca_el_rango_de_fechas_y_el_servidor_corrige_el_rango_al_reves` | Aprobada |
+| CP-93 | CU-11 | El servidor rechaza lo que el cliente adelanta | Un motivo de cancelación en blanco se rechaza y la cita no cambia | `ValidacionClienteTest::el_servidor_rechaza_un_motivo_de_cancelacion_en_blanco_aunque_el_cliente_falle` | Aprobada |
 
 ### 8.3 Evidencias
 
@@ -2845,10 +3232,10 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 463         |
-| Pruebas aprobadas  | 463         |
+| Pruebas ejecutadas | 478         |
+| Pruebas aprobadas  | 478         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 3049        |
+| Aserciones         | 3131        |
 | Duración           | 21 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
@@ -2896,6 +3283,8 @@ Una revisión del código del Ciclo #1 encontró cuatro problemas reales, que se
 Lista de verificación para ejecutar en el navegador, por rol y por caso de uso. Complementa a las pruebas automatizadas: comprueba lo que ve y hace una persona, incluida la vista en un teléfono. Las columnas **Resultado obtenido** y **Estado** se completan al ejecutar cada prueba (Aprobada o Falló).
 
 **Ejecutadas hasta ahora (24/10/2026):** PM-02, PM-44, PM-56, PM-57 y PM-76, que corresponden a las pruebas 1, 2, 9 y 10 del enunciado. Se ejecutaron en el navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y se comprobó en la base de datos que los rechazos no dejaron registros. Las demás figuran como «Pendiente de ejecución».
+
+**Ejecutadas en el Ciclo #2 (06/11/2026, 23:51 hora de La Paz, y 07/11/2026 para las de validación en el cliente):** PM-88 a PM-108, el recorrido de CU-09 a CU-18 con una persona de cada rol. Se ejecutaron en un navegador sobre el servidor de desarrollo, con una herramienta de automatización que escribió los datos y pulsó los botones, y con los datos de demostración. Se prepararon tres cosas directamente en la base de datos, porque dependen del reloj: un bloque de atención del sábado (para reservar una cita para «mañana» y ver el recordatorio), y una cita de hoy a las 22:00 que ya había comenzado (para poder marcarla como atendida y escribir su nota). Las capturas están en la sección 8.3.5 (figuras 21 a 36).
 
 **Cuentas para probar**
 
@@ -3076,6 +3465,30 @@ Usuarios de prueba: los mismos de CU-01.
 | PM-86 | Provocar un error de validación en cualquier formulario.              | Los datos escritos se conservan y el mensaje está en español.          |                    | Pendiente de ejecución |
 | PM-87 | Mirar una hora guardada, como un horario o un ingreso en la bitácora. | Está en hora de La Paz.                                                |                    | Pendiente de ejecución |
 
+| N.º | CU | Rol | Prueba | Resultado esperado | Resultado obtenido (06/11/2026) | Estado |
+| --- | -- | --- | ------ | ------------------ | ------------------------------- | ------ |
+| PM-88 | CU-09 | Recepcionista | Registrar una cita para el lunes 09/11 con la especialidad y el médico de demostración. | La pantalla ofrece solo los horarios libres, y al elegir uno la cita queda registrada. | Ofreció 12 horarios de 20 minutos, de 08:00 a 11:40. Al elegir 08:00 mostró «Cita registrada con el código CM-000002» y el comprobante con estado Programada (figuras 21 y 22). | Aprobada |
+| PM-89 | CU-12 | Recepcionista | Confirmar la asistencia de la cita desde el comprobante. | La cita pasa a Confirmada. | Mostró «La cita CM-000002 quedó en estado confirmada». | Aprobada |
+| PM-90 | CU-10 | Recepcionista | Reprogramar la cita al miércoles 11/11 y elegir otro horario. | La cita cambia de fecha y hora y vuelve a Programada. | Mostró «La cita CM-000002 fue reprogramada»: 11/11/2026, 14:40 – 15:00, con el mismo paciente y médico (figuras 23 y 24). | Aprobada |
+| PM-91 | CU-11 | Recepcionista | Registrar otra cita (lunes 09:00) y cancelarla con un motivo. | La cita queda Cancelada, con su motivo, y se conserva. | Mostró «La cita CM-000003 fue cancelada», con el estado Cancelada y el motivo «El paciente viaja esa semana» (figura 25). | Aprobada |
+| PM-92 | CU-13 | Recepcionista | Abrir la agenda del médico el 11/11. | Aparece solo la cita de ese día. | Mostró una fila: 14:40–15:00, CM-000002, paciente, especialidad y estado Programada (figura 26). | Aprobada |
+| PM-93 | CU-14 | Recepcionista | Abrir el historial del paciente. | Aparecen todas sus citas, también la cancelada. | Mostró las tres citas (CM-000002, CM-000003 cancelada con su motivo y CM-000001) con su fecha de registro (figura 27). | Aprobada |
+| PM-94 | CU-09 | Paciente | Reservar una cita para el sábado 07/11 desde «Reservar cita». | La cita queda registrada para sí mismo, sin elegir paciente. | Ofreció 12 horarios y registró la cita CM-000004. | Aprobada |
+| PM-95 | CU-11 | Paciente | Cancelar esa cita, que empieza en menos de 24 horas. | Se rechaza por la regla de 24 horas. | Mostró «Solo puede cancelar su cita con al menos 24 horas de anticipación. Comuníquese con la clínica» y la cita siguió Programada (figura 28). | Aprobada |
+| PM-96 | CU-18 | Paciente | Abrir el inicio después de iniciar sesión. | Aparece el banner con la cita de mañana, sin el motivo. | Mostró «Sus próximas citas: Mañana a las 08:00 con Andrea Vaca Salvatierra» y el enlace «Ver cita» (figura 29). | Aprobada |
+| PM-97 | CU-14 | Paciente | Abrir «Mi historial». | Solo ve sus propias citas. | Mostró sus citas con estado y fecha de registro (figura 30). | Aprobada |
+| PM-98 | CU-12 | Médico | Abrir su agenda del 06/11 y marcar atendida la cita de las 22:00, que ya comenzó. | La cita pasa a Atendida. | Mostró «La cita CM-000001 quedó en estado atendida» y la fila con los botones «Nota clínica» y «Notas del paciente» (figura 31). | Aprobada |
+| PM-99 | CU-16 | Médico | Escribir y guardar la nota clínica de esa cita. | La nota queda guardada. | Mostró «Se guardó la nota clínica de la cita CM-000001» (figura 32). | Aprobada |
+| PM-100 | CU-17 | Médico | Abrir las notas del paciente. | Aparece la nota, con el botón «Editar» y quién y cuándo la modificó. | Mostró motivo de consulta, diagnóstico y tratamiento, el botón «Editar» y «Última modificación: Andrea Vaca Salvatierra» (figura 33). | Aprobada |
+| PM-101 | CU-17 | Paciente | Abrir «Mis notas». | Ve la nota de su cita atendida, en solo lectura. | Mostró la misma nota, sin botón «Editar» (figura 34). | Aprobada |
+| PM-102 | CU-15 | Administrador | Generar el reporte de citas de noviembre. | Muestra el total, los totales por estado, por médico y por especialidad, y el detalle. | Mostró «Total de citas: 4» (Programada 2, Atendida 1, Cancelada 1), 4 citas del médico, 4 de la especialidad y las cuatro filas del detalle (figura 35). | Aprobada |
+| PM-103 | CU-15 | Administrador | Abrir la pestaña «Pacientes registrados» de octubre y noviembre. | Muestra los pacientes registrados con sus totales. | Mostró «Registrados: 2, Verificados: 1, Activos: 2» (figura 36). | Aprobada |
+| PM-104 | CU-16 | Médico | Vaciar los cuatro campos de la nota clínica y pulsar «Guardar cambios». | El navegador no envía el formulario y muestra «Complete al menos un campo de la nota clínica». | El formulario no se envió y apareció el aviso en rojo con los cuatro campos marcados. Al escribir en «Diagnóstico» el aviso desapareció y el contador mostró «6 / 2000». | Aprobada |
+| PM-105 | CU-11 | Recepcionista | Escribir solo espacios como motivo de la cancelación y pulsar «Cancelar cita». | No se envía ni pide confirmación; muestra el aviso del motivo. | No se envió, no apareció la ventana de confirmación y se mostró «Indique el motivo de la cancelación». | Aprobada |
+| PM-106 | CU-11 | Recepcionista | Escribir un motivo válido, pulsar «Cancelar cita» y rechazar la confirmación. | Pide confirmación y, al rechazarla, no cancela. | Apareció la confirmación una sola vez y, al rechazarla, la cita siguió Programada. | Aprobada |
+| PM-107 | CU-10 | Recepcionista | En «Reprogramar cita», elegir una fecha y pulsar el botón sin elegir horario. | No se envía; avisa que hay que elegir un horario. | No se envió y se mostró «Elija un horario disponible»; el aviso desapareció al elegir uno. | Aprobada |
+| PM-108 | CU-15 | Administrador | Poner «Desde» el 20/11 y «Hasta» el 01/11 y pulsar «Generar». | No se envía; avisa que las fechas no son válidas. | No se envió y se marcó el campo «Hasta». Con «Desde» 01/11 y «Hasta» 30/11 el reporte se generó. | Aprobada |
+
 Total: 87 pruebas manuales.
 
 #### 8.3.5 Capturas de pantalla
@@ -3164,43 +3577,115 @@ Capturas del sistema en funcionamiento, tomadas el 24/10/2026 con las sesiones d
 
 **Adaptación a pantallas angostas.** Se midió el ancho de las pantallas con 390 px de ancho y ninguna desborda horizontalmente. Con la sesión del Administrador: inicio, usuarios (lista, alta y edición), médicos (lista, alta y edición), especialidades (lista y alta), horarios (índice y semana de un médico) y cambio de contraseña. Con la sesión del Paciente: inicio, perfil y cambio de contraseña. El login y el registro, que son públicos, tampoco desbordan. En la medición se encontraron y corrigieron dos defectos: el texto oculto de las cabeceras de las tablas ensanchaba la página en las listas de usuarios, médicos y especialidades, y el título de cada pantalla quedaba pegado a su botón de acción. Las pantallas de la Recepcionista no se midieron en este ancho.
 
+Las figuras 21 a 36 son del Ciclo #2. Se tomaron el 06/11/2026 sobre el servidor de desarrollo, con las sesiones de la Recepcionista, el Paciente, el Médico y el Administrador, y los datos de demostración.
+
+**Figura 21.** Registrar una cita: horarios disponibles del médico el lunes 09/11 para la Recepcionista (CU-09).
+
+![Registrar una cita: horarios disponibles del médico el lunes 09/11 para la Recepcionista](img/capturas/21-cita-nueva-horarios.jpg)
+
+**Figura 22.** Comprobante de la cita registrada, con el código, el horario y la sucursal (CU-09).
+
+![Comprobante de la cita registrada, con el código, el horario y la sucursal](img/capturas/22-cita-comprobante.jpg)
+
+**Figura 23.** Reprogramar la cita: la cita actual y los horarios libres de la nueva fecha (CU-10).
+
+![Reprogramar la cita: la cita actual y los horarios libres de la nueva fecha](img/capturas/23-cita-reprogramar.jpg)
+
+**Figura 24.** Comprobante de la cita reprogramada para el 11/11/2026 (CU-10).
+
+![Comprobante de la cita reprogramada para el 11/11/2026](img/capturas/24-cita-reprogramada.jpg)
+
+**Figura 25.** Cita cancelada con su motivo, que se conserva en el historial (CU-11).
+
+![Cita cancelada con su motivo, que se conserva en el historial](img/capturas/25-cita-cancelada.jpg)
+
+**Figura 26.** Agenda del médico del 11/11 vista por la Recepcionista, con el selector de médico, fecha y estado (CU-13).
+
+![Agenda del médico del 11/11 vista por la Recepcionista, con el selector de médico, fecha y estado](img/capturas/26-agenda-recepcion.jpg)
+
+**Figura 27.** Historial de citas del paciente, con la cita cancelada y su fecha de registro (CU-14).
+
+![Historial de citas del paciente, con la cita cancelada y su fecha de registro](img/capturas/27-historial-paciente.jpg)
+
+**Figura 28.** El Paciente intenta cancelar una cita que empieza en menos de 24 horas y el sistema lo rechaza (CU-11, RN15).
+
+![El Paciente intenta cancelar una cita que empieza en menos de 24 horas y el sistema lo rechaza](img/capturas/28-paciente-cancelar-24h.jpg)
+
+**Figura 29.** Inicio del Paciente con el recordatorio de su cita de mañana, sin el motivo (CU-18).
+
+![Inicio del Paciente con el recordatorio de su cita de mañana, sin el motivo](img/capturas/29-recordatorio-paciente.jpg)
+
+**Figura 30.** «Mi historial» del Paciente, solo con sus citas (CU-14).
+
+![«Mi historial» del Paciente, solo con sus citas](img/capturas/30-mi-historial.jpg)
+
+**Figura 31.** Agenda del Médico con los botones «Marcar atendida», «Nota clínica» y «Notas del paciente» (CU-12, CU-13).
+
+![Agenda del Médico con los botones «Marcar atendida», «Nota clínica» y «Notas del paciente»](img/capturas/31-agenda-medico.jpg)
+
+**Figura 32.** Formulario de la nota clínica de una cita atendida (CU-16).
+
+![Formulario de la nota clínica de una cita atendida](img/capturas/32-nota-formulario.jpg)
+
+**Figura 33.** Notas clínicas del paciente vistas por el Médico, con «Editar» en la suya y quién la modificó (CU-17).
+
+![Notas clínicas del paciente vistas por el Médico, con «Editar» en la suya y quién la modificó](img/capturas/33-notas-paciente-medico.jpg)
+
+**Figura 34.** «Mis notas clínicas» del Paciente, en solo lectura (CU-17).
+
+![«Mis notas clínicas» del Paciente, en solo lectura](img/capturas/34-mis-notas.jpg)
+
+**Figura 35.** Reporte de citas de noviembre, con los totales por estado, médico y especialidad y el detalle (CU-15).
+
+![Reporte de citas de noviembre, con los totales por estado, médico y especialidad y el detalle](img/capturas/35-reportes-citas.jpg)
+
+**Figura 36.** Reporte de pacientes registrados, con sus totales (CU-15).
+
+![Reporte de pacientes registrados, con sus totales](img/capturas/36-reportes-pacientes.jpg)
+
 ---
 
 ## Conclusión
 
-Con la Presentación 1 queda terminado el **Ciclo #1**: la base de datos con control de acceso por roles y los nueve casos de uso que sostienen al sistema, es decir, CU-01 (iniciar y cerrar sesión), CU-02 (registro propio del paciente), CU-03 (usuarios y roles), CU-04 (pacientes), CU-05 (médicos), CU-06 (especialidades), CU-07 (horarios de atención), CU-08 (mi perfil) y CU-19 (renovar contraseña temporal). Los diez casos de uso restantes (CU-09 a CU-18), que son las citas y todo lo que gira en torno a ellas, dependen de esa base y corresponden al Ciclo #2.
+Con la Presentación 2 queda terminado el **Ciclo #2** y, con él, el sistema completo: los diecinueve casos de uso. El Ciclo #1 entregó la base de datos con control de acceso por roles y los nueve casos que la sostienen: CU-01 (iniciar y cerrar sesión), CU-02 (registro propio del paciente), CU-03 (usuarios y roles), CU-04 (pacientes), CU-05 (médicos), CU-06 (especialidades), CU-07 (horarios de atención), CU-08 (mi perfil) y CU-19 (renovar contraseña temporal). El Ciclo #2 sumó las citas y todo lo que gira en torno a ellas: CU-09 (registrar), CU-10 (reprogramar), CU-11 (cancelar), CU-12 (controlar asistencia), CU-13 (agenda médica), CU-14 (historial), CU-15 (reportes), CU-16 y CU-17 (notas clínicas) y CU-18 (recordatorio de citas).
 
-Lo construido responde a los objetivos específicos que tocan a este ciclo:
+Lo construido responde a los objetivos específicos del enunciado:
 
 - **Base de datos relacional con claves primarias y foráneas:** el esquema en PostgreSQL se implementa con migraciones que ejecutan los archivos de `database/sql/`, con restricciones que hacen cumplir las reglas aunque falle la validación de la aplicación (sección 6.3).
 - **Registro, consulta, modificación y desactivación de pacientes y médicos:** los registros se desactivan y nunca se eliminan, de modo que el historial futuro de citas se conserva (RN11).
-- **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada que usará el cálculo de disponibilidad del Ciclo #2.
+- **Especialidades y horarios de atención:** con nombre único normalizado, duración de cita por especialidad y bloques horarios sin superposición, que son la entrada del cálculo de disponibilidad de las citas.
 - **Validaciones y seguridad básica:** validación en el cliente y en el servidor, contraseñas con hash, contraseñas temporales aleatorias de un solo uso, control de acceso por permisos, bloqueo de cuenta tras intentos fallidos, límite de solicitudes por IP, token CSRF y bitácora de auditoría (RNF04, RNF13 a RNF20).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con los CU-09 a CU-18 son 463 (sección 8 y Anexo C).
+- **Citas sin conflictos de horario:** el servidor calcula la disponibilidad, vuelve a comprobarla dentro de una transacción y las restricciones de exclusión de PostgreSQL rechazan la cita superpuesta del médico y del paciente aunque dos solicitudes compitan (RN07, RN13, RN17). La reprogramación usa las mismas reglas.
+- **Control de estados:** una cita pasa de programada a confirmada, atendida, con inasistencia o cancelada solo por transiciones válidas, nunca se elimina y el Paciente cancela o reprograma con 24 horas de anticipación (RN10, RN15).
+- **Consultas y reportes:** agenda por médico y fecha, historial por paciente y reportes de citas y de pacientes con rango de fechas, filtros y totales, cada uno limitado a los roles autorizados (RN12).
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 son 478 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
-Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogramación, cancelación, asistencia, agenda, historial y reportes), las notas clínicas y los recordatorios dentro del sistema. Son el contenido del Ciclo #2. La lista de espera y los recordatorios por SMS o correo quedaron descartados del alcance y se proponen como mejoras futuras (sección 4.1 y Recomendación).
+Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios por SMS o correo, que se proponen como mejoras futuras (sección 4.1 y Recomendación). Tampoco se implementó la exportación de reportes a CSV o PDF, que el enunciado marca como opcional.
 
 ### Limitaciones conocidas
 
 - **Persona compartida entre fichas.** Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico). Sus datos personales viven en una única fila de `personas`, de modo que al editar la ficha del paciente (CU-04) la Recepcionista también modifica el correo con el que el médico entra al sistema. CU-03 y CU-05 evitan este efecto porque reutilizan la persona sin modificar sus datos. Se acepta por ser un caso poco frecuente; evitarlo exigiría bloquear los datos personales en CU-04 cuando la persona tiene una cuenta con otro rol.
+- **Citas atendidas o canceladas.** No existe un procedimiento autorizado para corregir una cita atendida o reabrir una cancelada: el sistema las rechaza (RF08, RF10, RN10). El enunciado deja esa política a cargo del sistema y aquí se eligió la más estricta.
+- **Pruebas manuales del Ciclo #2.** Se ejecutó un recorrido por rol de CU-09 a CU-18 (PM-88 a PM-108), pero no se repitió en un teléfono ni se midieron las pantallas nuevas en un ancho de 390 px, como se hizo con el Ciclo #1.
 - **Nombres de especialidad con tildes.** La unicidad ignora mayúsculas y espacios, pero no las tildes: «Odontologia» y «Odontología» se aceptan como dos especialidades distintas. Resolverlo requiere la extensión `unaccent` de PostgreSQL.
 
 ## Recomendación
 
-**Para el Ciclo #2**
+**Aplicado en el Ciclo #2**
 
-- **Aprovechar la protección que ya tiene la base de datos.** El esquema incluye una restricción de exclusión de PostgreSQL sobre el médico y el intervalo de cada cita, que ignora las canceladas (`EXCLUDE USING gist` en `002_citas_y_notas.sql`, RNF17), igual que la de los bloques de horario en `001_esquema_base.sql`. Así dos solicitudes simultáneas no pueden registrar el mismo horario, aunque pasen la validación a la vez. En el Ciclo #2 hay que sumar la validación en PHP (RF07), ejecutar la comprobación final de disponibilidad dentro de una transacción, traducir el rechazo de la base a un mensaje claro y probarlo con un caso de citas superpuestas.
-- **Reutilizar los servicios del Ciclo #1.** Los horarios y la duración por especialidad ya están modelados; el cálculo de disponibilidad debe apoyarse en ellos y no duplicar reglas.
-- **Mantener la política de baja lógica.** Ninguna operación del módulo de citas debe eliminar registros: cancelar, reprogramar y marcar la asistencia cambian el estado de la cita y conservan el historial (RN10, RN11).
-- **Probar primero.** Los casos de prueba 3 a 8 del enunciado dependen de las citas; conviene escribir esas pruebas junto con cada caso de uso, como se hizo en este ciclo.
+- **Aprovechar la protección de la base de datos.** Se mantuvieron las restricciones de exclusión de PostgreSQL sobre el médico y, desde el CU-09, sobre el paciente (`004_citas_sin_superposicion_paciente.sql`). A ellas se sumó la validación en PHP (RF07), la comprobación final dentro de una transacción y la traducción del rechazo de la base a un mensaje claro, con pruebas de solicitudes que compiten.
+- **Reutilizar los servicios del Ciclo #1.** El cálculo de disponibilidad se apoya en los horarios y en la duración por especialidad, y la reprogramación reutiliza la misma cuadrícula.
+- **Mantener la política de baja lógica.** Cancelar, reprogramar y marcar la asistencia cambian el estado o la fecha de la cita y conservan el historial (RN10, RN11); ninguna operación la elimina.
+- **Probar primero.** Las pruebas 3 a 8 del enunciado se escribieron junto con cada caso de uso.
 
 **Para una versión posterior**
 
-- **Despliegue real.** Servir la aplicación con Apache o Nginx y PHP, con HTTPS, y programar copias de seguridad de la base de datos. El sistema guarda datos personales y médicos, de modo que el despliegue debe revisarse con ese criterio.
+- **Despliegue real.** Servir la aplicación con Apache o Nginx y PHP, con HTTPS, y programar copias de seguridad de la base de datos. El sistema guarda datos personales y médicos, de modo que el despliegue debe revisarse con ese criterio. En particular, el `.env` debe llevar `APP_ENV=production` y `APP_DEBUG=false`: con la depuración activa, un error mostraría detalles internos al usuario, y el enunciado exige no mostrarlos (sección 7). El `README.md` explica los pasos y cómo comprobarlos.
 - **Recuperación de contraseña por cuenta propia.** Exige un servicio de correo y verificar el correo del paciente, que hoy es opcional y no se verifica (sección 4.1).
 - **Recordatorios por SMS o correo y lista de espera,** descartados del alcance actual.
+- **Exportar los reportes a CSV o PDF,** opcional en el enunciado y no implementado.
 - **Unicidad de especialidades sin distinguir tildes,** con la extensión `unaccent` de PostgreSQL (limitación conocida).
 
 ## Bibliografía
@@ -3255,7 +3740,7 @@ Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogram
 | CU-10       | `GET /citas/{cita}/reprogramar`, `PUT /citas/{cita}` (Recepcionista, `citas:gestionar`); `GET /mis-citas/{cita}/reprogramar`, `PUT /mis-citas/{cita}` (Paciente, `citas:gestionar_propias`) |
 | CU-11       | `PATCH /citas/{cita}/cancelar` (Recepcionista, `citas:gestionar`); `PATCH /mis-citas/{cita}/cancelar` (Paciente, `citas:gestionar_propias`) |
 | CU-12       | `PATCH /citas/{cita}/asistencia` (Recepcionista, `citas:gestionar`); `PATCH /agenda/{cita}/atender` (Médico, `citas:atender`); `PATCH /mis-citas/{cita}/confirmar` (Paciente, `citas:gestionar_propias`) |
-| CU-13       | `GET /agenda` (Recepcionista y Médico, `agenda:consultar`) |
+| CU-13       | `GET /agenda` (Recepcionista y Médico, `agenda:consultar`); `GET /pacientes/{paciente}/ficha` (Médico, `pacientes:consultar`) |
 | CU-14       | `GET /pacientes/{paciente}/historial` (Recepcionista, `historial:consultar` y `pacientes:consultar`); `GET /mi-historial` (Paciente, `historial:consultar`) |
 | CU-15       | `GET /reportes` (Administrador, `reportes:consultar`) |
 | CU-16       | `GET /agenda/{cita}/nota`, `PUT /agenda/{cita}/nota` (Médico, `notas:registrar`) |
@@ -3263,11 +3748,11 @@ Quedan fuera del Ciclo #1, por diseño, el módulo de citas (registro, reprogram
 | CU-18       | Sin ruta propia: el aviso se muestra en `GET /inicio` (Paciente, `recordatorios:consultar`) |
 | Comunes     | `GET /inicio`, `GET /` (redirige a `/inicio`)                                                                                                                                                                                                                                                            |
 
-Son 71 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
+Son 72 rutas en total, según `php artisan route:list --except-vendor`. Solo el inicio de sesión (CU-01) y el registro (CU-02) son públicos. Todas las demás exigen una sesión válida y una cuenta vigente (RNF06) y, las de gestión de cada caso de uso, además el permiso correspondiente, por ejemplo `usuarios:gestionar`, `perfil:gestionar` o `citas:gestionar` (RNF19).
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **463 pruebas, 463 aprobadas, 3049 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **478 pruebas, 478 aprobadas, 3131 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -3278,7 +3763,7 @@ Resultado de `php artisan test`: **463 pruebas, 463 aprobadas, 3049 aserciones**
 | `Feature\Citas\CitaTest`                           | 31      | CU-09                                         |
 | `Feature\Citas\CancelarCitaTest`                    | 20      | CU-11                                         |
 | `Feature\Citas\HistorialTest`                        | 16      | CU-14                                         |
-| `Feature\Citas\AgendaTest`                           | 11      | CU-13                                         |
+| `Feature\Citas\AgendaTest`                           | 13      | CU-13                                         |
 | `Feature\Citas\AsistenciaTest`                       | 18      | CU-12                                         |
 | `Feature\Citas\ReprogramarCitaTest`                  | 22      | CU-10                                         |
 | `Feature\Reportes\ReporteTest`                       | 16      | CU-15                                         |
@@ -3286,6 +3771,8 @@ Resultado de `php artisan test`: **463 pruebas, 463 aprobadas, 3049 aserciones**
 | `Feature\Recordatorios\RecordatorioTest`             | 10      | CU-18                                         |
 | `Feature\Acceso\LoginTest`                         | 26      | CU-01                                         |
 | `Feature\Pacientes\PacienteTest`                   | 20      | CU-04                                         |
+| `Feature\Pacientes\FichaMedicoTest`                 | 8       | CU-13                                         |
+| `Feature\Interfaz\ValidacionClienteTest`             | 5       | CU-10, CU-11, CU-15 y CU-16 (cliente)         |
 | `Feature\Pacientes\AccesoPacienteTest`             | 20      | CU-04 y CU-19                                 |
 | `Feature\Acceso\RegistroTest`                      | 15      | CU-02                                         |
 | `Feature\Perfil\PerfilTest`                        | 13      | CU-08                                         |

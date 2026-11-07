@@ -10,7 +10,7 @@
     <div class="mb-3">
         <h1 class="h3 fw-semibold mb-1">{{ $propia ? 'Mi agenda' : 'Agenda médica' }}</h1>
         <p class="text-secondary mb-0">
-            {{ $propia ? 'Sus citas del día.' : 'Elija al médico y la fecha para ver sus citas.' }}
+            {{ $propia ? 'Sus citas del día.' : 'Elija la fecha y, si quiere, un médico para ver sus citas.' }}
         </p>
     </div>
 
@@ -23,7 +23,7 @@
             <div class="col-md-4">
                 <label for="medico" class="form-label">Médico</label>
                 <select id="medico" name="medico" class="form-select">
-                    <option value="">Elija un médico</option>
+                    <option value="">Todos los médicos</option>
                     @foreach ($medicos as $opcion)
                         <option value="{{ $opcion->id }}" @selected($medico?->id === $opcion->id)>
                             {{ $opcion->persona->nombre_completo }}{{ $opcion->estado ? '' : ' (inactivo)' }}
@@ -50,11 +50,8 @@
         </div>
     </form>
 
-    @if ($medico === null)
-        <div class="alert alert-info">Elija un médico para ver su agenda.</div>
-    @else
         <h2 class="h5">
-            {{ $medico->persona->nombre_completo }}
+            {{ $medico?->persona->nombre_completo ?? 'Todos los médicos' }}
             <small class="text-secondary">{{ $fecha->format('d/m/Y') }}</small>
         </h2>
 
@@ -70,6 +67,9 @@
                             <th>Hora</th>
                             <th>Código</th>
                             <th>Paciente</th>
+                            @unless ($medico)
+                                <th>Médico</th>
+                            @endunless
                             <th>Especialidad</th>
                             <th>Estado</th>
                             <th>Motivo</th>
@@ -84,6 +84,9 @@
                                 <td>{{ $cita->desde() }}–{{ $cita->hasta() }}</td>
                                 <td>{{ $cita->codigo }}</td>
                                 <td>{{ $cita->paciente->persona->nombre_completo }}</td>
+                                @unless ($medico)
+                                    <td>{{ $cita->medico->persona->nombre_completo }}</td>
+                                @endunless
                                 <td>{{ $cita->especialidad->nombre }}</td>
                                 <td><span class="badge {{ $insignia[$cita->estado] ?? 'text-bg-light' }}">{{ $estados[$cita->estado] ?? $cita->estado }}</span></td>
                                 <td>{{ filled($cita->motivo) ? $cita->motivo : '—' }}</td>
@@ -103,7 +106,11 @@
                                         @if ($cita->estado === 'ATENDIDA')
                                             <a href="{{ route('notas.formulario', $cita) }}" class="btn btn-outline-primary btn-sm">Nota clínica</a>
                                         @endif
-                                        <a href="{{ route('pacientes.notas', $cita->paciente_id) }}" class="btn btn-outline-secondary btn-sm">Notas del paciente</a>
+                                        {{-- Las citas canceladas no hacen «suyo» al paciente: no se ofrece su ficha ni sus notas. --}}
+                                        @if ($cita->estado !== 'CANCELADA')
+                                            <a href="{{ route('pacientes.ficha', $cita->paciente_id) }}" class="btn btn-outline-secondary btn-sm">Ficha del paciente</a>
+                                            <a href="{{ route('pacientes.notas', $cita->paciente_id) }}" class="btn btn-outline-secondary btn-sm">Notas del paciente</a>
+                                        @endif
                                     </td>
                                 @endif
                             </tr>
@@ -112,5 +119,4 @@
                 </table>
             </div>
         @endif
-    @endif
 @endsection

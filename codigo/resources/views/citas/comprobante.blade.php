@@ -88,13 +88,15 @@
                     <p class="small text-secondary">Puede cancelar con al menos {{ config('clinica.citas.horas_min_cancelacion_paciente') }} horas de anticipación.</p>
                 @endif
                 <form method="POST" action="{{ route($propia ? 'mis-citas.cancelar' : 'citas.cancelar', $cita) }}"
-                      onsubmit="return confirm('¿Cancelar la cita {{ $cita->codigo }}? Esta acción no se puede deshacer.');">
+                      class="needs-validation" novalidate
+                      data-confirmar="¿Cancelar la cita {{ $cita->codigo }}? Esta acción no se puede deshacer.">
                     @csrf
                     @method('PATCH')
                     <label for="motivo_cancelacion" class="form-label">Motivo de la cancelación</label>
                     <textarea id="motivo_cancelacion" name="motivo_cancelacion" rows="2" maxlength="500" required
+                              data-no-vacio="Indique el motivo de la cancelación."
                               class="form-control @error('motivo_cancelacion') is-invalid @enderror">{{ old('motivo_cancelacion') }}</textarea>
-                    @error('motivo_cancelacion')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="invalid-feedback">@error('motivo_cancelacion') {{ $message }} @else Indique el motivo de la cancelación. @enderror</div>
                     <button type="submit" class="btn btn-outline-danger btn-sm mt-3">Cancelar cita</button>
                 </form>
             </div>

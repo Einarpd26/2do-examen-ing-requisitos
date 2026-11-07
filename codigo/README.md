@@ -39,6 +39,17 @@ Crea un Administrador, una Recepcionista, un Médico con su cuenta, su especiali
 
 Las cuentas tienen una contraseña conocida, así que el seeder **solo corre con `APP_ENV=local`** y se niega en cualquier otro entorno. No modifica datos existentes: si el CI ya existe, esa cuenta se omite, de modo que se puede ejecutar más de una vez.
 
+## Antes de usarlo en un servidor real
+
+El `.env.example` está pensado para desarrollo: trae `APP_DEBUG=true`, y con eso un error muestra una página técnica con rutas, código y datos internos. En un servidor real hay que cambiar, en el `.env`:
+
+```
+APP_ENV=production
+APP_DEBUG=false
+```
+
+y limpiar la configuración guardada con `php artisan config:clear` (si se usa `php artisan serve`, reiniciarlo). Para comprobarlo, abrir una dirección que no existe: debe verse la página 404 en español con el diseño de la clínica y no una pantalla técnica. Con `APP_ENV=production` el `DemoSeeder` no corre, a propósito, para que las cuentas de prueba no existan en un sistema real; si se necesitan los datos de demostración para una presentación, se deja `APP_ENV=local` y solo se cambia `APP_DEBUG=false`.
+
 ## Si el Administrador olvida su contraseña
 
 Si no hay otro Administrador que se la renueve, quien administra el servidor puede generarle una contraseña temporal desde la consola:
