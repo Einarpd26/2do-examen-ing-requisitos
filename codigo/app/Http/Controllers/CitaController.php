@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exceptions\ReglaDeNegocioException;
 use App\Http\Requests\CancelarCitaRequest;
 use App\Http\Requests\CitaRequest;
+use App\Http\Requests\ReprogramarCitaRequest;
 use App\Models\Cita;
 use App\Models\Especialidad;
 use App\Models\Medico;
@@ -15,7 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * CU-09: registrar cita y CU-11: cancelarla. Lo usan dos roles con las mismas reglas:
+ * CU-09: registrar cita, CU-10: reprogramarla y CU-11: cancelarla. Lo usan dos roles con las mismas reglas:
  * - la Recepcionista (citas:gestionar), en /citas, elige al paciente;
  * - el Paciente (citas:gestionar_propias), en /mis-citas, siempre agenda para sí mismo.
  * El formulario avanza por pasos con parámetros GET (paciente, especialidad, médico y fecha)
@@ -106,6 +107,59 @@ class CitaController extends Controller
         $cita->load('paciente.persona', 'medico.persona', 'especialidad', 'sucursal');
 
         return view('citas.comprobante', ['cita' => $cita, 'propia' => $this->esPropia($request)]);
+    }
+
+    /** CU-10: pantalla para elegir la nueva fecha y hora. Funciona con parámetros GET, sin JavaScript. */
+    public function reprogramar(Request $request, Cita $cita, CitaService $citas): View
+    {
+        $propia = $this->esPropia($request);
+        $this->exigirCitaVisible($request, $cita);
+
+        // Si no se puede reprogramar, el mensaje vuelve a la pantalla anterior (ReglaDeNegocioException).
+        $citas->exigirReprogramable($cita, $propia);
+
+        $cita->load('paciente.persona', 'medico.persona', 'especialidad', 'sucursal');
+        $fecha = $this->textoDeLaConsulta($request, 'fecha');
+        $horarios = [];
+        $aviso = null;
+
+        if ($fecha !== '') {
+            try {
+                $horarios = $citas->horariosDisponibles($cita->paciente, $cita->medico, $cita->especialidad, $fecha, $cita);
+            } catch (ReglaDeNegocioException $e) {
+                $aviso = $e->getMessage();
+            }
+        }
+
+        return view('citas.reprogramar', [
+            'cita' => $cita,
+            'propia' => $propia,
+            'fecha' => $fecha,
+            'primeraFecha' => $citas->primeraFecha()->toDateString(),
+            'ultimaFecha' => $citas->ultimaFecha()->toDateString(),
+            'horarios' => $horarios,
+            'aviso' => $aviso,
+        ]);
+    }
+
+    /** CU-10: guarda la nueva fecha y hora. El Paciente solo las suyas y con 24 horas (RN15). */
+    public function actualizar(ReprogramarCitaRequest $request, Cita $cita, CitaService $citas): RedirectResponse
+    {
+        $propia = $this->esPropia($request);
+        $this->exigirCitaVisible($request, $cita);
+
+        $citas->reprogramar($cita, $request->validated(), $request->user(), $propia);
+
+        return redirect()->route($propia ? 'mis-citas.comprobante' : 'citas.comprobante', $cita)
+            ->with('exito', "La cita {$cita->codigo} fue reprogramada.");
+    }
+
+    /** El Paciente solo ve y modifica sus citas; la de otro responde 404. */
+    private function exigirCitaVisible(Request $request, Cita $cita): void
+    {
+        if ($this->esPropia($request)) {
+            abort_unless($this->pacienteDeLaCuenta($request)->id === $cita->paciente_id, 404);
+        }
     }
 
     /** CU-11: cancela la cita. El Paciente solo las suyas y con 24 horas de anticipación (RN15). */

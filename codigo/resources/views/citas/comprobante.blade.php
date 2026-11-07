@@ -72,6 +72,13 @@
         </div>
     @endif
 
+    {{-- CU-10: solo se reprograman las citas programadas o confirmadas. --}}
+    @if (in_array($cita->estado, ['PROGRAMADA', 'CONFIRMADA'], true))
+        <div class="mt-3">
+            <a href="{{ route($propia ? 'mis-citas.reprogramar' : 'citas.reprogramar', $cita) }}" class="btn btn-outline-primary btn-sm">Reprogramar cita</a>
+        </div>
+    @endif
+
     {{-- CU-11: solo se cancelan las citas programadas o confirmadas. --}}
     @if (in_array($cita->estado, ['PROGRAMADA', 'CONFIRMADA'], true))
         <div class="card shadow-sm mt-3">

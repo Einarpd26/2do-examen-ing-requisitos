@@ -58,12 +58,12 @@ class CitaService
      *
      * @return list<array{hora_inicio: string, hora_fin: string, sucursal_id: int}>
      */
-    public function horariosDisponibles(Paciente $paciente, Medico $medico, Especialidad $especialidad, string $fecha): array
+    public function horariosDisponibles(Paciente $paciente, Medico $medico, Especialidad $especialidad, string $fecha, ?Cita $excluir = null): array
     {
         $dia = $this->exigirFecha($fecha);
         $this->exigirPartes($paciente, $medico, $especialidad);
 
-        return collect($this->espacios($paciente, $medico, $especialidad, $dia))
+        return collect($this->espacios($paciente, $medico, $especialidad, $dia, $excluir))
             ->where('estado', self::LIBRE)
             ->map(fn (array $espacio) => [
                 'hora_inicio' => $espacio['hora_inicio'],
@@ -116,6 +116,87 @@ class CitaService
                 return $cita;
             });
         });
+    }
+
+    /**
+     * CU-10: reprograma una cita vigente que todavía no comenzó. Conserva al paciente, al médico y
+     * la especialidad; cambia la fecha y la hora (y con ellas la hora final y la sucursal del bloque).
+     * El Paciente debe hacerlo con al menos 24 horas de anticipación respecto de la cita actual (RN15).
+     * El nuevo horario pasa por las mismas reglas que una cita nueva (RN03 a RN08, RN13, RN17), dentro
+     * de una transacción; la cita queda «Programada» porque la nueva fecha debe confirmarse otra vez.
+     *
+     * @param  array{fecha: string, hora_inicio: string}  $datos
+     */
+    public function reprogramar(Cita $cita, array $datos, Usuario $actor, bool $comoPaciente): Cita
+    {
+        return $this->conReglasDeLaBase(function () use ($cita, $datos, $actor, $comoPaciente) {
+            return DB::transaction(function () use ($cita, $datos, $actor, $comoPaciente) {
+                // Se bloquea la fila y se lee de nuevo: pudo cancelarse o atenderse mientras se elegía.
+                $actual = Cita::query()->lockForUpdate()->findOrFail($cita->id);
+
+                $this->exigirReprogramable($actual, $comoPaciente);
+
+                $paciente = Paciente::findOrFail($actual->paciente_id);
+                $medico = Medico::findOrFail($actual->medico_id);
+                $especialidad = Especialidad::findOrFail($actual->especialidad_id);
+
+                $dia = $this->exigirFecha($datos['fecha']);
+                $this->exigirPartes($paciente, $medico, $especialidad);
+
+                $espacio = collect($this->espacios($paciente, $medico, $especialidad, $dia, $actual))
+                    ->firstWhere('hora_inicio', $datos['hora_inicio']);
+
+                $this->exigirEspacioLibre($espacio);
+
+                if ($dia->toDateString() === $actual->fecha->toDateString() && $espacio['hora_inicio'] === $actual->desde()) {
+                    throw new ReglaDeNegocioException('Ese ya es el horario actual de la cita: elija otra fecha u hora.');
+                }
+
+                $antes = "{$actual->fecha->format('d/m/Y')} {$actual->desde()}–{$actual->hasta()}";
+
+                $actual->update([
+                    'sucursal_id' => $espacio['sucursal_id'],
+                    'fecha' => $dia->toDateString(),
+                    'hora_inicio' => $espacio['hora_inicio'],
+                    'hora_fin' => $espacio['hora_fin'],
+                    'estado' => 'PROGRAMADA',
+                ]);
+                $actual->refresh();
+
+                $this->bitacora->registrar(
+                    'cita_reprogramada', $actor, 'citas', $actual->id,
+                    "{$actual->codigo}: de {$antes} a {$actual->fecha->format('d/m/Y')} {$actual->desde()}–{$actual->hasta()}"
+                );
+
+                return $actual;
+            });
+        });
+    }
+
+    /** Solo se reprograma una cita programada o confirmada que no comenzó; el Paciente, con 24 horas (RN15). */
+    public function exigirReprogramable(Cita $cita, bool $comoPaciente): void
+    {
+        if ($cita->estado === 'CANCELADA') {
+            throw new ReglaDeNegocioException('La cita está cancelada: no se puede reprogramar.');
+        }
+
+        if (! $cita->vigente()) {
+            throw new ReglaDeNegocioException('Solo se pueden reprogramar las citas programadas o confirmadas.');
+        }
+
+        $ahora = $this->ahora();
+
+        if ($cita->inicio()->lte($ahora)) {
+            throw new ReglaDeNegocioException('La cita ya comenzó o ya pasó: no se puede reprogramar.');
+        }
+
+        $horas = (int) config('clinica.citas.horas_min_cancelacion_paciente');
+
+        if ($comoPaciente && $cita->inicio()->lt($ahora->addHours($horas))) {
+            throw new ReglaDeNegocioException(
+                "Solo puede reprogramar su cita con al menos {$horas} horas de anticipación. Comuníquese con la clínica."
+            );
+        }
     }
 
     /**
@@ -243,7 +324,7 @@ class CitaService
      *
      * @return list<array{hora_inicio: string, hora_fin: string, sucursal_id: int, estado: string}>
      */
-    private function espacios(Paciente $paciente, Medico $medico, Especialidad $especialidad, CarbonImmutable $dia): array
+    private function espacios(Paciente $paciente, Medico $medico, Especialidad $especialidad, CarbonImmutable $dia, ?Cita $excluir = null): array
     {
         $duracion = (int) $especialidad->duracion_min;
         if ($duracion <= 0) {
@@ -253,6 +334,8 @@ class CitaService
         $citas = Cita::query()
             ->whereDate('fecha', $dia->toDateString())
             ->where('estado', '<>', 'CANCELADA')
+            // Al reprogramar, la propia cita no cuenta como ocupada: se está moviendo.
+            ->when($excluir !== null, fn ($consulta) => $consulta->where('id', '<>', $excluir->id))
             ->where(fn ($consulta) => $consulta->where('medico_id', $medico->id)->orWhere('paciente_id', $paciente->id))
             ->get(['medico_id', 'paciente_id', 'hora_inicio', 'hora_fin'])
             ->map(fn (Cita $cita) => [

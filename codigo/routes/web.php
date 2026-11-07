@@ -52,6 +52,11 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         Route::post('/', [CitaController::class, 'store'])->name('store');
         Route::get('/{cita}', [CitaController::class, 'comprobante'])
             ->where(['cita' => '[0-9]+'])->name('comprobante');
+        // CU-10: reprogramar la cita (nueva fecha y hora).
+        Route::get('/{cita}/reprogramar', [CitaController::class, 'reprogramar'])
+            ->where(['cita' => '[0-9]+'])->name('reprogramar');
+        Route::put('/{cita}', [CitaController::class, 'actualizar'])
+            ->where(['cita' => '[0-9]+'])->name('actualizar');
         // CU-11: cancelar la cita (no se elimina: pasa a CANCELADA).
         Route::patch('/{cita}/cancelar', [CitaController::class, 'cancelar'])
             ->where(['cita' => '[0-9]+'])->name('cancelar');
@@ -68,6 +73,11 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         // CU-11: cancelar la cita (no se elimina: pasa a CANCELADA).
         Route::patch('/{cita}/cancelar', [CitaController::class, 'cancelar'])
             ->where(['cita' => '[0-9]+'])->name('cancelar');
+        // CU-10: reprogramar la cita (nueva fecha y hora).
+        Route::get('/{cita}/reprogramar', [CitaController::class, 'reprogramar'])
+            ->where(['cita' => '[0-9]+'])->name('reprogramar');
+        Route::put('/{cita}', [CitaController::class, 'actualizar'])
+            ->where(['cita' => '[0-9]+'])->name('actualizar');
         // CU-12: el Paciente confirma su propia asistencia.
         Route::patch('/{cita}/confirmar', [AsistenciaController::class, 'paciente'])
             ->where(['cita' => '[0-9]+'])->name('confirmar');
