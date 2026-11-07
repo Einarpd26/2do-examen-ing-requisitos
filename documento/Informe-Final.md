@@ -18,17 +18,75 @@
 > Actualizar en cada presentación.
 
 1. [Perfil](#1-perfil)
+    - [1.1 Introducción](#11-introducción)
+    - [1.2 Objetivos](#12-objetivos)
+    - [1.3 Descripción del problema](#13-descripción-del-problema)
+    - [1.4 Alcance](#14-alcance)
+        - [1.4.1 Requisitos funcionales](#141-requisitos-funcionales)
+        - [1.4.2 Requisitos no funcionales](#142-requisitos-no-funcionales)
 2. [Marco teórico](#2-marco-teórico)
+    - [2.1 Proceso Unificado (PUDS) y UML](#21-proceso-unificado-puds-y-uml)
+    - [2.2 Aplicaciones web](#22-aplicaciones-web)
+    - [2.3 PHP y el patrón MVC con Laravel](#23-php-y-el-patrón-mvc-con-laravel)
+    - [2.4 PostgreSQL, PDO y consultas parametrizadas](#24-postgresql-pdo-y-consultas-parametrizadas)
+    - [2.5 Seguridad en aplicaciones web](#25-seguridad-en-aplicaciones-web)
+    - [2.6 Control de acceso basado en roles (RBAC)](#26-control-de-acceso-basado-en-roles-rbac)
+    - [2.7 Pruebas de software](#27-pruebas-de-software)
+    - [2.8 Contenedores para el entorno de desarrollo](#28-contenedores-para-el-entorno-de-desarrollo)
 3. [Modelo de negocio](#3-modelo-de-negocio)
+    - [3.1 Descripción del negocio](#31-descripción-del-negocio)
+    - [3.2 Actores del negocio](#32-actores-del-negocio)
+    - [3.3 Casos de uso del negocio](#33-casos-de-uso-del-negocio)
+    - [3.4 Diagrama de actividades / procesos del negocio](#34-diagrama-de-actividades--procesos-del-negocio)
+    - [3.5 Reglas del negocio](#35-reglas-del-negocio)
 4. [FT. Captura de requisitos](#4-ft-captura-de-requisitos)
+    - [4.1 Encontrar actores y casos de uso](#41-encontrar-actores-y-casos-de-uso)
+    - [4.2 Priorizar casos de uso](#42-priorizar-casos-de-uso)
+    - [4.3 Detallar un caso de uso](#43-detallar-un-caso-de-uso)
+    - [4.4 Priorizar casos de uso por ciclo](#44-priorizar-casos-de-uso-por-ciclo)
+    - [4.5 Estructurar el modelo de casos de uso](#45-estructurar-el-modelo-de-casos-de-uso)
+        - [4.5.1 Diagrama de casos de uso](#451-diagrama-de-casos-de-uso)
+        - [4.5.2 Control de acceso (RBAC)](#452-control-de-acceso-rbac)
 5. [FT. Análisis](#5-ft-análisis)
+    - [5.1 Análisis de arquitectura](#51-análisis-de-arquitectura)
+    - [5.2 Analizar casos de uso: diagramas de comunicación](#52-analizar-casos-de-uso-diagramas-de-comunicación)
+    - [5.3 Análisis de clases](#53-análisis-de-clases)
+        - [5.3.1 Diagrama de clases de análisis](#531-diagrama-de-clases-de-análisis)
+        - [5.3.2 Diagrama de estados de la cita](#532-diagrama-de-estados-de-la-cita)
+    - [5.4 Análisis de paquetes](#54-análisis-de-paquetes)
 6. [FT. Diseño](#6-ft-diseño)
+    - [6.1 Diseño de arquitectura](#61-diseño-de-arquitectura)
+        - [6.1.1 Arquitectura lógica](#611-arquitectura-lógica)
+        - [6.1.2 Arquitectura física (despliegue)](#612-arquitectura-física-despliegue)
+    - [6.2 Diseño de casos de uso (diagramas de secuencia)](#62-diseño-de-casos-de-uso-diagramas-de-secuencia)
+    - [6.3 Diseño de datos](#63-diseño-de-datos)
+        - [6.3.1 Modelo lógico](#631-modelo-lógico)
+        - [6.3.2 Modelo físico (DDL PostgreSQL)](#632-modelo-físico-ddl-postgresql)
+    - [6.4 Diseño de interfaces](#64-diseño-de-interfaces)
 7. [FT. Implementación](#7-ft-implementación)
+    - [7.1 Herramientas de desarrollo](#71-herramientas-de-desarrollo)
+    - [7.2 Implementación de la arquitectura del sistema](#72-implementación-de-la-arquitectura-del-sistema)
+    - [7.3 Implementación de la arquitectura de subsistemas](#73-implementación-de-la-arquitectura-de-subsistemas)
+    - [7.4 Repositorio](#74-repositorio)
 8. [FT. Pruebas](#8-ft-pruebas)
+    - [8.1 Plan de pruebas](#81-plan-de-pruebas)
+    - [8.2 Casos de prueba](#82-casos-de-prueba)
+        - [8.2.1 Pruebas mínimas del enunciado](#821-pruebas-mínimas-del-enunciado)
+        - [8.2.2 Casos por caso de uso](#822-casos-por-caso-de-uso)
+    - [8.3 Evidencias](#83-evidencias)
+        - [8.3.1 Resultado de la suite automatizada](#831-resultado-de-la-suite-automatizada)
+        - [8.3.2 Las pruebas detectan los defectos](#832-las-pruebas-detectan-los-defectos)
+        - [8.3.3 Hallazgos de la revisión de código y su corrección](#833-hallazgos-de-la-revisión-de-código-y-su-corrección)
+        - [8.3.4 Pruebas manuales](#834-pruebas-manuales)
+        - [8.3.5 Capturas de pantalla](#835-capturas-de-pantalla)
 9. [Conclusión](#conclusión)
+    - [Limitaciones conocidas](#limitaciones-conocidas)
 10. [Recomendación](#recomendación)
 11. [Bibliografía](#bibliografía)
 12. [Anexos](#anexos)
+    - [Anexo A. Estructura del repositorio](#anexo-a-estructura-del-repositorio)
+    - [Anexo B. Rutas](#anexo-b-rutas)
+    - [Anexo C. Pruebas automatizadas por módulo](#anexo-c-pruebas-automatizadas-por-módulo)
 
 ---
 
@@ -94,8 +152,89 @@ El sistema es una aplicación web accesible desde un navegador (PHP, PostgreSQL,
 
 | Ciclo    | Requisitos                                                                                                                                        | Estado    |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios · RF14 Cuenta y perfil del paciente                      | En curso  |
+| Ciclo #1 | RF01 Login y roles · RF02 Pacientes · RF03 Médicos · RF04 Especialidades · RF05 Horarios · RF14 Cuenta y perfil del paciente                      | Completo: CU-01 a CU-08 y CU-19 implementados |
 | Ciclo #2 | RF06–RF13 Citas, anti-duplicados, reprogramación, cancelación, asistencia, agenda, historial, reportes · RF15 Recordatorios · RF16 Notas clínicas | Completo: CU-09 a CU-18 implementados |
+
+
+#### 1.4.1 Requisitos funcionales
+
+RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4 del enunciado (perfil del paciente). Además, RF06, RF08, RF09 y RF12 se extienden para que el Paciente opere sobre **sus propias** citas.
+
+| Código | Requisito                                                                                                                                                                                              | Origen          | Ciclo |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- | ----- |
+| RF01   | Inicio de sesión y control de acceso por rol                                                                                                                                                           | Enunciado       | 1     |
+| RF02   | Gestión de pacientes (registrar, listar, buscar, modificar, desactivar)                                                                                                                                | Enunciado       | 1     |
+| RF03   | Gestión de médicos                                                                                                                                                                                     | Enunciado       | 1     |
+| RF04   | Gestión de especialidades médicas                                                                                                                                                                      | Enunciado       | 1     |
+| RF05   | Gestión de horarios de atención (la duración de la cita se define por especialidad)                                                                                                                    | Enunciado       | 1     |
+| RF14   | Cuenta y perfil del paciente: registro propio o alta por la Recepcionista (contraseña temporal), verificación de la ficha, y consulta de su información médica y contacto de emergencia (solo lectura) | Derivado de 3.4 | 1     |
+| RF06   | Registro de citas médicas (Recepcionista o Paciente)                                                                                                                                                   | Enunciado + 3.4 | 2     |
+| RF07   | Prevención de citas duplicadas                                                                                                                                                                         | Enunciado       | 2     |
+| RF08   | Reprogramación de citas                                                                                                                                                                                | Enunciado + 3.4 | 2     |
+| RF09   | Cancelación de citas                                                                                                                                                                                   | Enunciado + 3.4 | 2     |
+| RF10   | Control de asistencia y estados de la cita                                                                                                                                                             | Enunciado       | 2     |
+| RF11   | Consulta de agenda médica                                                                                                                                                                              | Enunciado       | 2     |
+| RF12   | Historial de citas por paciente                                                                                                                                                                        | Enunciado + 3.4 | 2     |
+| RF13   | Reportes                                                                                                                                                                                               | Enunciado       | 2     |
+| RF15   | Recordatorios de próximas consultas (aviso dentro del sistema)                                                                                                                                         | Derivado de 3.4 | 2     |
+| RF16   | Historial médico: notas clínicas por cita atendida                                                                                                                                                     | Derivado de 3.4 | 2     |
+
+**Decisiones de alcance** (tomadas para este proyecto, donde el enunciado no es explícito):
+
+- **Identificador de acceso:** el Paciente inicia sesión con su **CI**; el personal (Administrador, Recepcionista, Médico) con su correo. El correo del Paciente es opcional.
+- **Modelo de identidad:** una entidad `Persona` guarda los datos comunes (CI, primer nombre, segundo nombre, apellido paterno, apellido materno, fecha de nacimiento, sexo, teléfono, correo, dirección), más un nombre completo que la base calcula a partir de las partes. De ella cuelgan `Paciente` (ficha clínica y verificación), `Medico` (registro profesional) y `Usuario` (credenciales y rol). Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico); como paciente la atiende la Recepcionista. El personal administrativo es una persona con cuenta y sin ficha. El CI es único en `Persona`.
+- **Duración de la cita:** es un parámetro de la **especialidad** (en minutos), no del horario ni del médico. La cita hereda la duración de la especialidad elegida al reservar. Como la agenda de un médico puede mezclar duraciones, el anti-duplicados compara **intervalos**, no solo la hora de inicio (RF07, RNF17).
+- **Códigos:** el «código» de paciente, médico y cita que piden RF02, RF03 y RF06 es su identificador único (`id`). En pantallas e impresos se muestra con formato (`PAC-000001`, `MED-000001`, `CM-000001`), que arma la aplicación a partir del `id`; no se guarda ni se escribe a mano.
+- **Registro propio del Paciente:** primer nombre, apellido paterno, CI, celular y contraseña obligatorios; segundo nombre, apellido materno y correo opcionales. Se crea la cuenta y la ficha del paciente en estado **pendiente de verificación**. Si el CI ya tiene ficha, el registro propio se rechaza y se indica pedir el acceso en recepción.
+- **Alta de cuenta por la Recepcionista:** para reducir la fricción, la Recepcionista también puede crear la cuenta del Paciente. El sistema genera una **contraseña temporal** aleatoria con vigencia de **72 horas**, la muestra **una sola vez** en pantalla (botones Copiar e Imprimir) y la Recepcionista se la entrega impresa o por mensaje de texto o WhatsApp. El sistema no envía correos ni mensajes. En su primer ingreso el Paciente debe cambiarla; si venció, no puede entrar hasta que se renueve.
+- **Renovación y contraseña olvidada:** la Recepcionista o el Administrador pueden generar una nueva contraseña temporal en cualquier momento (porque venció o porque el titular olvidó la suya): se genera otra con nuevas 72 horas y la anterior deja de servir. El titular la solicita a recepción; la pantalla de inicio de sesión muestra el celular de la clínica para ese fin. Para evitar suplantaciones, la contraseña nueva se envía solo al celular registrado en la ficha del paciente (mensaje o WhatsApp) o se entrega en persona con documento, nunca a un número nuevo que indique quien llama. Es el caso de uso **CU-19**: la renovación exige indicar cómo se verificó la identidad y eso queda en la bitácora. La recuperación por cuenta propia del paciente (por correo) queda fuera del alcance: necesita un servicio de correo y el correo del paciente es opcional y no está verificado.
+- **Verificación de la ficha:** una ficha de registro propio queda pendiente hasta que la Recepcionista compare el documento en persona y la marque como verificada; en ese acto puede renovar la contraseña, para sacar de la cuenta a quien se haya registrado con un CI ajeno. Mientras está pendiente, el Paciente puede iniciar sesión, ver su perfil básico y reservar citas, pero **no ve su información médica ni sus notas clínicas**. Una ficha creada por la Recepcionista queda verificada de inmediato.
+- **Información médica y contacto de emergencia:** los registra y edita la Recepcionista. El Paciente los ve en solo lectura. El Médico los ve en solo lectura.
+- **Edición del Paciente:** solo teléfono y contraseña. No edita nombre (identidad) ni correo (usuario de acceso).
+- **RF15 Recordatorios:** aviso dentro del sistema, sin correo. Al iniciar sesión, el Paciente ve un banner con sus próximas citas (los siguientes 2 días).
+- **RF16 Historial médico:** el Médico registra una nota clínica por cada cita atendida con motivo de consulta, diagnóstico, tratamiento o indicaciones, y observaciones. Cada Médico edita solo sus propias notas; al editarla se sobrescribe y se guarda quién y cuándo la modificó por última vez, sin conservar versiones. Ven las notas: el Médico, el Paciente y la Recepcionista, todas en solo lectura salvo el autor.
+- **Acceso del Médico:** solo a los pacientes que tienen o tuvieron cita con él; ve sus datos básicos, información médica, contacto de emergencia y las notas clínicas, incluidas las de otros médicos.
+- **Modalidad:** la cita tiene un campo `modalidad` (presencial o virtual).
+- **Reserva de citas (CU-09):** la Recepcionista y el Paciente comparten las mismas reglas. Un Paciente con la ficha pendiente de verificación **puede reservar**; la verificación solo condiciona la información médica y las notas clínicas. Un paciente no puede tener citas superpuestas, ni siquiera con médicos distintos (RN17). Los horarios disponibles salen de una cuadrícula fija: dentro de cada bloque de atención del médico, desde su hora inicial y de a la duración de la especialidad; se quitan los que chocan con una cita no cancelada del médico o del paciente, los que ya pasaron y los que terminarían después del bloque. Pueden quedar huecos sin usar. Se puede reservar desde hoy hasta 60 días adelante, para todos los roles; el límite es un único valor de configuración (`config/clinica.php`). "Hoy" y "ahora" se miden en la hora de La Paz.
+- **Sucursal:** la base de datos incluye la tabla `sucursales` con una sola sucursal cargada y `sucursal_id` en horarios de atención y citas, para poder escalar. No hay pantalla de gestión de sucursales. El `consultorio` se registra en el horario de atención. No hay filtro por ubicación.
+
+**Opcionales abiertos** (el enunciado los marca como opcionales; se implementan solo si el tiempo del Ciclo #2 lo permite):
+
+- Feriados y bloqueos de agenda para excluir fechas de la disponibilidad (RF05).
+- Exportación de reportes a CSV o PDF (RF13).
+
+**Fuera del alcance** (descartado a propósito):
+
+- Lista de espera.
+- Recordatorios por SMS o correo (el aviso es solo dentro del sistema).
+- Seguros médicos, pagos y verificación en dos pasos.
+
+La lista de espera y los recordatorios por SMS o correo se mencionan como mejoras futuras en las conclusiones.
+
+#### 1.4.2 Requisitos no funcionales
+
+| Código | Categoría      | Requisito                                                                                                                                                                                                                                                                                                                                                                         |
+| ------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RNF01  | Tecnología     | Backend en PHP con el framework Laravel, base de datos PostgreSQL y acceso a datos sobre PDO (`pdo_pgsql`).                                                                                                                                                                                                                                                                       |
+| RNF02  | Tecnología     | Interfaz con HTML5 y CSS3 generados en el servidor mediante plantillas Blade de Laravel; JavaScript para validaciones e interacción.                                                                                                                                                                                                                                              |
+| RNF03  | Despliegue     | Ejecución en un entorno PHP local equivalente a Apache/XAMPP: en desarrollo, PHP 8.4 o superior (probado con 8.4.27) con su servidor embebido (`php artisan serve`) y PostgreSQL en un contenedor Docker; el directorio `public/` de Laravel es la raíz web. El servidor embebido es solo para desarrollo: un despliegue real usaría Apache o Nginx con PHP apuntando a `public/`. |
+| RNF04  | Seguridad      | Contraseñas almacenadas con un hash seguro (`password_hash()` de PHP, que usa internamente el hasher de Laravel) y verificadas con `password_verify()` o su equivalente.                                                                                                                                                                                                          |
+| RNF05  | Seguridad      | Consultas SQL parametrizadas para evitar inyección SQL.                                                                                                                                                                                                                                                                                                                           |
+| RNF06  | Seguridad      | Uso de sesiones; las páginas internas rechazan el acceso sin sesión válida.                                                                                                                                                                                                                                                                                                       |
+| RNF07  | Seguridad      | Los errores no muestran credenciales ni detalles internos al usuario.                                                                                                                                                                                                                                                                                                             |
+| RNF08  | Integridad     | Validación de datos en cliente y en servidor.                                                                                                                                                                                                                                                                                                                                     |
+| RNF09  | Datos          | Base de datos normalizada, sin duplicación innecesaria.                                                                                                                                                                                                                                                                                                                           |
+| RNF10  | Mantenibilidad | Separación razonable entre interfaz, lógica de negocio y acceso a datos.                                                                                                                                                                                                                                                                                                          |
+| RNF11  | Mantenibilidad | Código comentado, con buenas prácticas, publicado en GitHub.                                                                                                                                                                                                                                                                                                                      |
+| RNF12  | Usabilidad     | Diseño profesional y mensajes de error comprensibles.                                                                                                                                                                                                                                                                                                                             |
+| RNF13  | Seguridad      | Bitácora de auditoría: se registra usuario, acción, entidad afectada y fecha al iniciar sesión y al crear o modificar usuarios, pacientes, información médica y notas clínicas, y al crear o renovar cuentas y verificar fichas. Solo escrituras, sin registrar lecturas.                                                                                                         |
+| RNF14  | Seguridad      | Cierre automático de la sesión tras 30 minutos de inactividad.                                                                                                                                                                                                                                                                                                                    |
+| RNF15  | Seguridad      | Bloqueo de la cuenta durante 15 minutos tras 5 intentos fallidos seguidos de inicio de sesión, límite de 10 solicitudes de inicio de sesión por minuto desde una misma dirección IP, y token CSRF en los formularios que modifican datos.                                                                                                                                         |
+| RNF16  | Privacidad     | Los avisos y recordatorios muestran solo fecha, hora y médico, nunca motivo, diagnóstico ni datos médicos.                                                                                                                                                                                                                                                                        |
+| RNF17  | Integridad     | Además de la validación en PHP, la base de datos impide por restricción citas superpuestas del mismo médico y del mismo paciente.                                                                                                                                                                                                                                                 |
+| RNF18  | Seguridad      | Las contraseñas temporales se generan de forma aleatoria con un generador criptográfico, vencen a las 72 horas, se muestran una sola vez, se guardan solo como hash y obligan a cambiarlas en el primer ingreso.                                                                                                                                                                  |
+| RNF19  | Seguridad      | Control de acceso por permisos (RBAC): cada operación exige un permiso `recurso:accion` concedido por el rol de la cuenta. La interfaz oculta lo no permitido y el servidor lo verifica en cada solicitud (RN12).                                                                                                                                                                 |
+| RNF20  | Seguridad      | El registro propio del paciente es público, así que se limita a 10 solicitudes por minuto por dirección IP, y una contraseña escrita nunca se vuelve a mostrar en el formulario.                                                                                                                                                                                                  |
 
 ---
 
@@ -107,7 +246,7 @@ El Proceso Unificado de Desarrollo de Software es un proceso iterativo e increme
 
 UML (_Unified Modeling Language_) es el lenguaje de modelado con el que se expresan esos flujos: diagramas de casos de uso, de clases, de secuencia, de comunicación, de estados y de actividades (Object Management Group, s. f.).
 
-**En este proyecto:** el informe sigue los flujos del PUDS en el orden del índice del examen. El desarrollo se divide en dos ciclos: el Ciclo #1 entrega el acceso y los datos maestros (CU-01 a CU-08 y CU-19), y el Ciclo #2 el núcleo de citas, que depende de esa base (sección 4.5).
+**En este proyecto:** el informe sigue los flujos del PUDS en el orden del índice del examen. El desarrollo se divide en dos ciclos: el Ciclo #1 entrega el acceso y los datos maestros (CU-01 a CU-08 y CU-19), y el Ciclo #2 el núcleo de citas, que depende de esa base (sección 4.4).
 
 ### 2.2 Aplicaciones web
 
@@ -152,7 +291,7 @@ Los riesgos más frecuentes en aplicaciones web están catalogados por OWASP (OW
 
 En el control de acceso basado en roles los **permisos se asignan a roles** y los **roles a usuarios**, en lugar de asignar permisos usuario por usuario (Ferraiolo et al., 2001). Esto simplifica la administración y facilita comprobar quién puede hacer qué.
 
-**En este proyecto:** cada operación exige un permiso con la forma `recurso:accion`, concedido por el rol de la cuenta. La interfaz oculta lo no permitido, pero la verificación definitiva ocurre en el servidor en cada solicitud (RNF19, RN12), apoyada en el sistema de autorización de Laravel (Laravel, s. f.-e). La matriz completa está en la sección 4.7.
+**En este proyecto:** cada operación exige un permiso con la forma `recurso:accion`, concedido por el rol de la cuenta. La interfaz oculta lo no permitido, pero la verificación definitiva ocurre en el servidor en cada solicitud (RNF19, RN12), apoyada en el sistema de autorización de Laravel (Laravel, s. f.-e). La matriz completa está en la sección 4.5.2.
 
 ### 2.7 Pruebas de software
 
@@ -316,87 +455,9 @@ Se aplican independientemente de lo que el usuario escriba en los formularios.
 
 ## 4. FT. Captura de requisitos
 
-### 4.1 Requisitos funcionales
+### 4.1 Encontrar actores y casos de uso
 
-RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4 del enunciado (perfil del paciente). Además, RF06, RF08, RF09 y RF12 se extienden para que el Paciente opere sobre **sus propias** citas.
-
-| Código | Requisito                                                                                                                                                                                              | Origen          | Ciclo |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- | ----- |
-| RF01   | Inicio de sesión y control de acceso por rol                                                                                                                                                           | Enunciado       | 1     |
-| RF02   | Gestión de pacientes (registrar, listar, buscar, modificar, desactivar)                                                                                                                                | Enunciado       | 1     |
-| RF03   | Gestión de médicos                                                                                                                                                                                     | Enunciado       | 1     |
-| RF04   | Gestión de especialidades médicas                                                                                                                                                                      | Enunciado       | 1     |
-| RF05   | Gestión de horarios de atención (la duración de la cita se define por especialidad)                                                                                                                    | Enunciado       | 1     |
-| RF14   | Cuenta y perfil del paciente: registro propio o alta por la Recepcionista (contraseña temporal), verificación de la ficha, y consulta de su información médica y contacto de emergencia (solo lectura) | Derivado de 3.4 | 1     |
-| RF06   | Registro de citas médicas (Recepcionista o Paciente)                                                                                                                                                   | Enunciado + 3.4 | 2     |
-| RF07   | Prevención de citas duplicadas                                                                                                                                                                         | Enunciado       | 2     |
-| RF08   | Reprogramación de citas                                                                                                                                                                                | Enunciado + 3.4 | 2     |
-| RF09   | Cancelación de citas                                                                                                                                                                                   | Enunciado + 3.4 | 2     |
-| RF10   | Control de asistencia y estados de la cita                                                                                                                                                             | Enunciado       | 2     |
-| RF11   | Consulta de agenda médica                                                                                                                                                                              | Enunciado       | 2     |
-| RF12   | Historial de citas por paciente                                                                                                                                                                        | Enunciado + 3.4 | 2     |
-| RF13   | Reportes                                                                                                                                                                                               | Enunciado       | 2     |
-| RF15   | Recordatorios de próximas consultas (aviso dentro del sistema)                                                                                                                                         | Derivado de 3.4 | 2     |
-| RF16   | Historial médico: notas clínicas por cita atendida                                                                                                                                                     | Derivado de 3.4 | 2     |
-
-**Decisiones de alcance** (tomadas para este proyecto, donde el enunciado no es explícito):
-
-- **Identificador de acceso:** el Paciente inicia sesión con su **CI**; el personal (Administrador, Recepcionista, Médico) con su correo. El correo del Paciente es opcional.
-- **Modelo de identidad:** una entidad `Persona` guarda los datos comunes (CI, primer nombre, segundo nombre, apellido paterno, apellido materno, fecha de nacimiento, sexo, teléfono, correo, dirección), más un nombre completo que la base calcula a partir de las partes. De ella cuelgan `Paciente` (ficha clínica y verificación), `Medico` (registro profesional) y `Usuario` (credenciales y rol). Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico); como paciente la atiende la Recepcionista. El personal administrativo es una persona con cuenta y sin ficha. El CI es único en `Persona`.
-- **Duración de la cita:** es un parámetro de la **especialidad** (en minutos), no del horario ni del médico. La cita hereda la duración de la especialidad elegida al reservar. Como la agenda de un médico puede mezclar duraciones, el anti-duplicados compara **intervalos**, no solo la hora de inicio (RF07, RNF17).
-- **Códigos:** el «código» de paciente, médico y cita que piden RF02, RF03 y RF06 es su identificador único (`id`). En pantallas e impresos se muestra con formato (`PAC-000001`, `MED-000001`, `CM-000001`), que arma la aplicación a partir del `id`; no se guarda ni se escribe a mano.
-- **Registro propio del Paciente:** primer nombre, apellido paterno, CI, celular y contraseña obligatorios; segundo nombre, apellido materno y correo opcionales. Se crea la cuenta y la ficha del paciente en estado **pendiente de verificación**. Si el CI ya tiene ficha, el registro propio se rechaza y se indica pedir el acceso en recepción.
-- **Alta de cuenta por la Recepcionista:** para reducir la fricción, la Recepcionista también puede crear la cuenta del Paciente. El sistema genera una **contraseña temporal** aleatoria con vigencia de **72 horas**, la muestra **una sola vez** en pantalla (botones Copiar e Imprimir) y la Recepcionista se la entrega impresa o por mensaje de texto o WhatsApp. El sistema no envía correos ni mensajes. En su primer ingreso el Paciente debe cambiarla; si venció, no puede entrar hasta que se renueve.
-- **Renovación y contraseña olvidada:** la Recepcionista o el Administrador pueden generar una nueva contraseña temporal en cualquier momento (porque venció o porque el titular olvidó la suya): se genera otra con nuevas 72 horas y la anterior deja de servir. El titular la solicita a recepción; la pantalla de inicio de sesión muestra el celular de la clínica para ese fin. Para evitar suplantaciones, la contraseña nueva se envía solo al celular registrado en la ficha del paciente (mensaje o WhatsApp) o se entrega en persona con documento, nunca a un número nuevo que indique quien llama. Es el caso de uso **CU-19**: la renovación exige indicar cómo se verificó la identidad y eso queda en la bitácora. La recuperación por cuenta propia del paciente (por correo) queda fuera del alcance: necesita un servicio de correo y el correo del paciente es opcional y no está verificado.
-- **Verificación de la ficha:** una ficha de registro propio queda pendiente hasta que la Recepcionista compare el documento en persona y la marque como verificada; en ese acto puede renovar la contraseña, para sacar de la cuenta a quien se haya registrado con un CI ajeno. Mientras está pendiente, el Paciente puede iniciar sesión, ver su perfil básico y reservar citas, pero **no ve su información médica ni sus notas clínicas**. Una ficha creada por la Recepcionista queda verificada de inmediato.
-- **Información médica y contacto de emergencia:** los registra y edita la Recepcionista. El Paciente los ve en solo lectura. El Médico los ve en solo lectura.
-- **Edición del Paciente:** solo teléfono y contraseña. No edita nombre (identidad) ni correo (usuario de acceso).
-- **RF15 Recordatorios:** aviso dentro del sistema, sin correo. Al iniciar sesión, el Paciente ve un banner con sus próximas citas (los siguientes 2 días).
-- **RF16 Historial médico:** el Médico registra una nota clínica por cada cita atendida con motivo de consulta, diagnóstico, tratamiento o indicaciones, y observaciones. Cada Médico edita solo sus propias notas; al editarla se sobrescribe y se guarda quién y cuándo la modificó por última vez, sin conservar versiones. Ven las notas: el Médico, el Paciente y la Recepcionista, todas en solo lectura salvo el autor.
-- **Acceso del Médico:** solo a los pacientes que tienen o tuvieron cita con él; ve sus datos básicos, información médica, contacto de emergencia y las notas clínicas, incluidas las de otros médicos.
-- **Modalidad:** la cita tiene un campo `modalidad` (presencial o virtual).
-- **Reserva de citas (CU-09):** la Recepcionista y el Paciente comparten las mismas reglas. Un Paciente con la ficha pendiente de verificación **puede reservar**; la verificación solo condiciona la información médica y las notas clínicas. Un paciente no puede tener citas superpuestas, ni siquiera con médicos distintos (RN17). Los horarios disponibles salen de una cuadrícula fija: dentro de cada bloque de atención del médico, desde su hora inicial y de a la duración de la especialidad; se quitan los que chocan con una cita no cancelada del médico o del paciente, los que ya pasaron y los que terminarían después del bloque. Pueden quedar huecos sin usar. Se puede reservar desde hoy hasta 60 días adelante, para todos los roles; el límite es un único valor de configuración (`config/clinica.php`). "Hoy" y "ahora" se miden en la hora de La Paz.
-- **Sucursal:** la base de datos incluye la tabla `sucursales` con una sola sucursal cargada y `sucursal_id` en horarios de atención y citas, para poder escalar. No hay pantalla de gestión de sucursales. El `consultorio` se registra en el horario de atención. No hay filtro por ubicación.
-
-**Opcionales abiertos** (el enunciado los marca como opcionales; se implementan solo si el tiempo del Ciclo #2 lo permite):
-
-- Feriados y bloqueos de agenda para excluir fechas de la disponibilidad (RF05).
-- Exportación de reportes a CSV o PDF (RF13).
-
-**Fuera del alcance** (descartado a propósito):
-
-- Lista de espera.
-- Recordatorios por SMS o correo (el aviso es solo dentro del sistema).
-- Seguros médicos, pagos y verificación en dos pasos.
-
-La lista de espera y los recordatorios por SMS o correo se mencionan como mejoras futuras en las conclusiones.
-
-### 4.2 Requisitos no funcionales
-
-| Código | Categoría      | Requisito                                                                                                                                                                                                                                                                                                                                                                         |
-| ------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| RNF01  | Tecnología     | Backend en PHP con el framework Laravel, base de datos PostgreSQL y acceso a datos sobre PDO (`pdo_pgsql`).                                                                                                                                                                                                                                                                       |
-| RNF02  | Tecnología     | Interfaz con HTML5 y CSS3 generados en el servidor mediante plantillas Blade de Laravel; JavaScript para validaciones e interacción.                                                                                                                                                                                                                                              |
-| RNF03  | Despliegue     | Ejecución en un entorno PHP local equivalente a Apache/XAMPP: en desarrollo, PHP 8.4 o superior (probado con 8.4.27) con su servidor embebido (`php artisan serve`) y PostgreSQL en un contenedor Docker; el directorio `public/` de Laravel es la raíz web. El servidor embebido es solo para desarrollo: un despliegue real usaría Apache o Nginx con PHP apuntando a `public/`. |
-| RNF04  | Seguridad      | Contraseñas almacenadas con un hash seguro (`password_hash()` de PHP, que usa internamente el hasher de Laravel) y verificadas con `password_verify()` o su equivalente.                                                                                                                                                                                                          |
-| RNF05  | Seguridad      | Consultas SQL parametrizadas para evitar inyección SQL.                                                                                                                                                                                                                                                                                                                           |
-| RNF06  | Seguridad      | Uso de sesiones; las páginas internas rechazan el acceso sin sesión válida.                                                                                                                                                                                                                                                                                                       |
-| RNF07  | Seguridad      | Los errores no muestran credenciales ni detalles internos al usuario.                                                                                                                                                                                                                                                                                                             |
-| RNF08  | Integridad     | Validación de datos en cliente y en servidor.                                                                                                                                                                                                                                                                                                                                     |
-| RNF09  | Datos          | Base de datos normalizada, sin duplicación innecesaria.                                                                                                                                                                                                                                                                                                                           |
-| RNF10  | Mantenibilidad | Separación razonable entre interfaz, lógica de negocio y acceso a datos.                                                                                                                                                                                                                                                                                                          |
-| RNF11  | Mantenibilidad | Código comentado, con buenas prácticas, publicado en GitHub.                                                                                                                                                                                                                                                                                                                      |
-| RNF12  | Usabilidad     | Diseño profesional y mensajes de error comprensibles.                                                                                                                                                                                                                                                                                                                             |
-| RNF13  | Seguridad      | Bitácora de auditoría: se registra usuario, acción, entidad afectada y fecha al iniciar sesión y al crear o modificar usuarios, pacientes, información médica y notas clínicas, y al crear o renovar cuentas y verificar fichas. Solo escrituras, sin registrar lecturas.                                                                                                         |
-| RNF14  | Seguridad      | Cierre automático de la sesión tras 30 minutos de inactividad.                                                                                                                                                                                                                                                                                                                    |
-| RNF15  | Seguridad      | Bloqueo de la cuenta durante 15 minutos tras 5 intentos fallidos seguidos de inicio de sesión, límite de 10 solicitudes de inicio de sesión por minuto desde una misma dirección IP, y token CSRF en los formularios que modifican datos.                                                                                                                                         |
-| RNF16  | Privacidad     | Los avisos y recordatorios muestran solo fecha, hora y médico, nunca motivo, diagnóstico ni datos médicos.                                                                                                                                                                                                                                                                        |
-| RNF17  | Integridad     | Además de la validación en PHP, la base de datos impide por restricción citas superpuestas del mismo médico y del mismo paciente.                                                                                                                                                                                                                                                 |
-| RNF18  | Seguridad      | Las contraseñas temporales se generan de forma aleatoria con un generador criptográfico, vencen a las 72 horas, se muestran una sola vez, se guardan solo como hash y obligan a cambiarlas en el primer ingreso.                                                                                                                                                                  |
-| RNF19  | Seguridad      | Control de acceso por permisos (RBAC): cada operación exige un permiso `recurso:accion` concedido por el rol de la cuenta. La interfaz oculta lo no permitido y el servidor lo verifica en cada solicitud (RN12).                                                                                                                                                                 |
-| RNF20  | Seguridad      | El registro propio del paciente es público, así que se limita a 10 solicitudes por minuto por dirección IP, y una contraseña escrita nunca se vuelve a mostrar en el formulario.                                                                                                                                                                                                  |
-
-### 4.3 Actores del sistema
+Los actores salen de los cuatro roles del enunciado. Los casos de uso salen de los requisitos funcionales (sección 1.4.1): cada uno se lista con su requisito y su prioridad en la sección 4.2 y se grafica en la sección 4.5.1.
 
 | Actor             | Descripción                                                                                                                                                                                                            | Origen        |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
@@ -405,48 +466,7 @@ La lista de espera y los recordatorios por SMS o correo se mencionan como mejora
 | **Médico**        | Consulta su agenda, marca citas atendidas y registra sus notas clínicas.                                                                                                                                               | Enunciado 3.3 |
 | **Paciente**      | Tiene cuenta propia y entra con su CI; ve su perfil e información médica en solo lectura (una vez verificada su ficha), edita su teléfono y contraseña, y gestiona sus propias citas.                                  | Enunciado 3.4 |
 
-### 4.4 Diagrama de casos de uso
-
-```mermaid
-%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
-flowchart LR
-    Admin([Administrador])
-    Recep([Recepcionista])
-    Medico([Médico])
-    Pac([Paciente])
-
-    subgraph C1["Ciclo #1"]
-        CU01(CU-01 Iniciar y cerrar sesión)
-        CU02(CU-02 Registrarse como paciente)
-        CU03(CU-03 Gestionar usuarios y roles)
-        CU04(CU-04 Gestionar pacientes)
-        CU05(CU-05 Gestionar médicos)
-        CU06(CU-06 Gestionar especialidades)
-        CU07(CU-07 Gestionar horarios de atención)
-        CU08(CU-08 Gestionar mi perfil)
-        CU19(CU-19 Renovar contraseña temporal)
-    end
-
-    subgraph C2["Ciclo #2"]
-        CU09(CU-09 Registrar cita)
-        CU10(CU-10 Reprogramar cita)
-        CU11(CU-11 Cancelar cita)
-        CU12(CU-12 Controlar asistencia)
-        CU13(CU-13 Consultar agenda médica)
-        CU14(CU-14 Consultar historial de citas)
-        CU15(CU-15 Generar reportes)
-        CU16(CU-16 Registrar nota clínica)
-        CU17(CU-17 Consultar notas clínicas)
-        CU18(CU-18 Ver recordatorio de citas)
-    end
-
-    Admin --- CU01 & CU03 & CU05 & CU06 & CU07 & CU15 & CU19
-    Recep --- CU01 & CU04 & CU19 & CU09 & CU10 & CU11 & CU12 & CU13 & CU14 & CU17
-    Medico --- CU01 & CU12 & CU13 & CU16 & CU17
-    Pac --- CU01 & CU02 & CU08 & CU09 & CU10 & CU11 & CU14 & CU17 & CU18
-```
-
-### 4.5 Priorización y selección de casos de uso por ciclo
+### 4.2 Priorizar casos de uso
 
 | Caso de uso                          | RF         | Prioridad | Ciclo | Justificación                                                                                                                            |
 | ------------------------------------ | ---------- | --------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------- |
@@ -470,9 +490,7 @@ flowchart LR
 | CU-18 Ver recordatorio de citas      | RF15       | Baja      | 2     | Banner al iniciar sesión; depende de CU-09.                                                                                              |
 | CU-19 Renovar contraseña temporal    | RF01, RF14 | Alta      | 1     | Recupera el acceso sin servidor de correo; es la vía de quien olvidó su contraseña.                                                      |
 
-**Criterio:** el Ciclo #1 entrega la base (acceso y datos maestros) y el Ciclo #2 el núcleo de citas, que necesita esa base estable.
-
-### 4.6 Especificación de casos de uso
+### 4.3 Detallar un caso de uso
 
 Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados hasta ahora (CU-09 a CU-18), es decir, todos los del Ciclo #2.
 
@@ -846,7 +864,7 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 2a. Con un mismo día y un médico, el reporte de citas equivale a la agenda diaria de ese médico; con un solo estado equivale al reporte de citas por estado, y con una sola fecha, a las citas programadas para esa fecha.
 - 3a. No hay citas con esos filtros: el sistema lo indica con un aviso y los totales quedan en cero.
 - 2b. Una fecha no es válida, o la inicial es posterior a la final: se usa el período por defecto con un aviso. Si solo se indica una fecha, la otra la acompaña. Los filtros desconocidos o manipulados se ignoran.
-- \*. Solo el Administrador consulta los reportes (RN12). La exportación a CSV o PDF es un opcional abierto (sección 4.1) y no se implementó.
+- \*. Solo el Administrador consulta los reportes (RN12). La exportación a CSV o PDF es un opcional abierto (sección 1.4.1) y no se implementó.
 
 #### CU-14 Consultar historial de citas
 
@@ -913,7 +931,7 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 **Flujos alternos**
 
 - 2a. El paciente no tiene notas: el sistema lo indica con un aviso.
-- 2b. El Paciente tiene la ficha pendiente de verificación: no ve sus notas hasta que la Recepcionista la verifique (sección 4.1).
+- 2b. El Paciente tiene la ficha pendiente de verificación: no ve sus notas hasta que la Recepcionista la verifique (sección 1.4.1).
 - 1a. El Médico pide un paciente que no tiene ni tuvo una cita (no cancelada) con él: el sistema responde «no encontrado». Si lo tiene, ve todas sus notas, incluidas las de otros médicos.
 - 1b. El Paciente solo accede a las suyas: su ruta no recibe identificador. Una cuenta sin ficha de paciente recibe «no encontrado». El Administrador recibe 403 (RN12).
 
@@ -936,7 +954,7 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 
 - 2a. No hay citas en ese lapso: el inicio se muestra sin banner.
 - 2b. Las citas canceladas, atendidas, con inasistencia, pasadas o ya iniciadas hoy no se recuerdan.
-- 2c. El Paciente con la ficha pendiente de verificación también recibe el aviso, porque puede reservar (sección 4.1).
+- 2c. El Paciente con la ficha pendiente de verificación también recibe el aviso, porque puede reservar (sección 1.4.1).
 - \*. El aviso muestra solo la fecha, la hora y el médico, nunca el motivo, el diagnóstico ni datos médicos (RNF16). Los demás roles no ven el banner. No se envía ningún correo ni SMS.
 
 #### CU-19 Renovar contraseña temporal
@@ -971,7 +989,59 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 
 **Fuera del alcance:** la recuperación por cuenta propia del paciente mediante un enlace enviado por correo.
 
-### 4.7 Control de acceso (RBAC)
+### 4.4 Priorizar casos de uso por ciclo
+
+**Criterio:** el Ciclo #1 entrega la base (acceso y datos maestros) y el Ciclo #2 el núcleo de citas, que necesita esa base estable.
+
+| Ciclo | Casos de uso | Entrega |
+| ----- | ------------ | ------- |
+| 1 | CU-01 a CU-08 y CU-19 | Presentación 1 (24/10/2026): acceso, usuarios y datos maestros |
+| 2 | CU-09 a CU-18 | Presentación 2 (07/11/2026): citas, agenda, historial, reportes, notas y recordatorio |
+
+### 4.5 Estructurar el modelo de casos de uso
+
+#### 4.5.1 Diagrama de casos de uso
+
+```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
+flowchart LR
+    Admin([Administrador])
+    Recep([Recepcionista])
+    Medico([Médico])
+    Pac([Paciente])
+
+    subgraph C1["Ciclo #1"]
+        CU01(CU-01 Iniciar y cerrar sesión)
+        CU02(CU-02 Registrarse como paciente)
+        CU03(CU-03 Gestionar usuarios y roles)
+        CU04(CU-04 Gestionar pacientes)
+        CU05(CU-05 Gestionar médicos)
+        CU06(CU-06 Gestionar especialidades)
+        CU07(CU-07 Gestionar horarios de atención)
+        CU08(CU-08 Gestionar mi perfil)
+        CU19(CU-19 Renovar contraseña temporal)
+    end
+
+    subgraph C2["Ciclo #2"]
+        CU09(CU-09 Registrar cita)
+        CU10(CU-10 Reprogramar cita)
+        CU11(CU-11 Cancelar cita)
+        CU12(CU-12 Controlar asistencia)
+        CU13(CU-13 Consultar agenda médica)
+        CU14(CU-14 Consultar historial de citas)
+        CU15(CU-15 Generar reportes)
+        CU16(CU-16 Registrar nota clínica)
+        CU17(CU-17 Consultar notas clínicas)
+        CU18(CU-18 Ver recordatorio de citas)
+    end
+
+    Admin --- CU01 & CU03 & CU05 & CU06 & CU07 & CU15 & CU19
+    Recep --- CU01 & CU04 & CU19 & CU09 & CU10 & CU11 & CU12 & CU13 & CU14 & CU17
+    Medico --- CU01 & CU12 & CU13 & CU16 & CU17
+    Pac --- CU01 & CU02 & CU08 & CU09 & CU10 & CU11 & CU14 & CU17 & CU18
+```
+
+#### 4.5.2 Control de acceso (RBAC)
 
 Cada operación exige un permiso con formato `recurso:accion`. Los permisos se agrupan en roles y cada cuenta tiene un único rol. El catálogo es fijo en este proyecto: el Administrador asigna el rol de una cuenta (CU-03), pero no edita qué permisos concede cada rol.
 
@@ -1008,162 +1078,35 @@ Cada operación exige un permiso con formato `recurso:accion`. Los permisos se a
 
 ## 5. FT. Análisis
 
-### 5.1 Diagrama de clases de análisis
+### 5.1 Análisis de arquitectura
 
-Modelo del sistema completo (Ciclos #1 y #2), porque el diseño de datos del Ciclo #1 ya necesita las clases de citas y notas clínicas.
+El análisis organiza el sistema en tres tipos de clase, según su papel, y fija las reglas de quién se comunica con quién. Es la arquitectura conceptual del sistema: la sección 6.1 la materializa en Laravel.
+
+| Estereotipo | Responsabilidad | Ejemplos |
+| ----------- | --------------- | -------- |
+| «boundary» | Interfaz entre el actor y el sistema: muestra datos y recibe lo que el actor escribe | FormLogin, FormCita, VistaAgenda |
+| «control» | Coordina un caso de uso: valida, aplica las reglas del negocio y decide el flujo | ControlAcceso, ControlCita, ControlNota |
+| «entity» | Información persistente del negocio y sus reglas de integridad | Persona, Usuario, Paciente, Medico, Cita, NotaClinica |
 
 ```mermaid
-classDiagram
-    class Persona {
-        <<entity>>
-        ci
-        primerNombre
-        segundoNombre
-        apellidoPaterno
-        apellidoMaterno
-        nombreCompleto
-        fechaNacimiento
-        sexo
-        telefono
-        correo
-        direccion
-    }
-    class Usuario {
-        <<entity>>
-        contrasenaHash
-        estado
-        intentosFallidos
-        bloqueadoHasta
-        debeCambiarPassword
-        passwordTemporalVence
-    }
-    class Paciente {
-        <<entity>>
-        verificado
-        estado
-        tipoSangre
-        alergias
-        enfermedadesCronicas
-        medicamentos
-        antecedentes
-        emergenciaNombre
-        emergenciaParentesco
-        emergenciaTelefono
-    }
-    class Medico {
-        <<entity>>
-        nroRegistroProfesional
-        estado
-    }
-    class Especialidad {
-        <<entity>>
-        nombre
-        descripcion
-        duracionMin
-        estado
-    }
-    class Sucursal {
-        <<entity>>
-        nombre
-        direccion
-        estado
-    }
-    class HorarioAtencion {
-        <<entity>>
-        diaSemana
-        horaInicio
-        horaFin
-        consultorio
-    }
-    class Cita {
-        <<entity>>
-        fecha
-        horaInicio
-        horaFin
-        motivo
-        modalidad
-        estado
-        motivoCancelacion
-        fechaCreacion
-    }
-    class NotaClinica {
-        <<entity>>
-        motivoConsulta
-        diagnostico
-        tratamiento
-        observaciones
-        fechaRegistro
-        fechaUltimaModificacion
-    }
-    class Rol {
-        <<entity>>
-        codigo
-        nombre
-        descripcion
-    }
-    class Permiso {
-        <<entity>>
-        codigo
-        descripcion
-    }
-    class Bitacora {
-        <<entity>>
-        fecha
-        accion
-        entidad
-        entidadId
-        detalle
-    }
-
-    Persona "1" -- "0..1" Usuario : accede con
-    Persona "1" -- "0..1" Paciente : es
-    Persona "1" -- "0..1" Medico : es
-    Usuario "1" -- "*" Bitacora : genera
-    Rol "1" -- "*" Usuario : asignado a
-    Rol "*" -- "*" Permiso : concede
-    Paciente "1" -- "*" Cita : tiene
-    Medico "1" -- "*" Cita : atiende
-    Especialidad "1" -- "*" Cita : de
-    Sucursal "1" -- "*" Cita : en
-    Medico "*" -- "*" Especialidad : ejerce
-    Medico "1" -- "*" HorarioAtencion : atiende en
-    Sucursal "1" -- "*" HorarioAtencion : ubica
-    Cita "1" -- "0..1" NotaClinica : genera
-    Medico "1" -- "*" NotaClinica : autor
+flowchart LR
+    A([Actor]) --> B["«boundary»<br/>interfaz"]
+    B --> C["«control»<br/>caso de uso"]
+    C --> E["«entity»<br/>información"]
 ```
 
-**Clases de interfaz y de control del Ciclo #1** (cada caso de uso tiene su `«boundary»` y su `«control»`; las `«entity»` son las del diagrama):
+**Reglas de la arquitectura de análisis**
 
-| Caso de uso                          | «boundary»                             | «control»             | «entity»                                 |
-| ------------------------------------ | -------------------------------------- | --------------------- | ---------------------------------------- |
-| CU-01 Iniciar y cerrar sesión        | FormLogin, MenuPrincipal               | ControlAcceso         | Persona, Usuario, Rol, Permiso, Bitacora |
-| CU-02 Registrarse como paciente      | FormRegistro                           | ControlRegistro       | Persona, Paciente, Usuario               |
-| CU-03 Gestionar usuarios y roles     | ListaUsuarios, FormUsuario             | ControlUsuario        | Persona, Usuario, Rol, Medico, Bitacora  |
-| CU-04 Gestionar pacientes            | ListaPacientes, FormPaciente           | ControlPaciente       | Persona, Paciente, Usuario, Bitacora     |
-| CU-05 Gestionar médicos              | ListaMedicos, FormMedico               | ControlMedico         | Persona, Medico, Especialidad            |
-| CU-06 Gestionar especialidades       | ListaEspecialidades, FormEspecialidad  | ControlEspecialidad   | Especialidad                             |
-| CU-07 Gestionar horarios de atención | ListaHorarios, FormHorario             | ControlHorario        | HorarioAtencion, Medico, Sucursal        |
-| CU-08 Gestionar mi perfil            | VistaPerfil                            | ControlPerfil         | Persona, Paciente, Usuario               |
-| CU-19 Renovar contraseña temporal    | FichaPaciente, ComprobanteCredenciales | ControlAccesoPaciente | Persona, Paciente, Usuario, Bitacora     |
+- El actor solo se comunica con clases «boundary».
+- La «boundary» recibe la solicitud y la pasa a un «control»; el «control» devuelve el resultado a una «boundary».
+- Cada caso de uso tiene su propia «boundary» y su propio «control» (tablas de la sección 5.3.1); las «entity» se comparten entre casos de uso.
+- Solo el «control» lee y escribe las «entity», y las «entity» no conocen a las otras capas.
+- El sistema no depende de servicios externos: no envía correo ni SMS (sección 1.4.1).
+- Las clases se agrupan en seis paquetes de análisis (sección 5.4).
 
-**Clases de interfaz y de control del Ciclo #2:**
+### 5.2 Analizar casos de uso: diagramas de comunicación
 
-| Caso de uso                        | «boundary»                           | «control»          | «entity»                                                    |
-| ---------------------------------- | ------------------------------------ | ------------------ | ----------------------------------------------------------- |
-| CU-09 Registrar cita               | FormCita, ComprobanteCita            | ControlCita        | Paciente, Medico, Especialidad, HorarioAtencion, Cita, Bitacora |
-| CU-10 Reprogramar cita             | FormReprogramar, ComprobanteCita     | ControlCita        | Cita, HorarioAtencion, Bitacora                             |
-| CU-11 Cancelar cita                | ComprobanteCita                      | ControlCita        | Cita, Bitacora                                              |
-| CU-12 Controlar asistencia         | ComprobanteCita, VistaAgenda         | ControlAsistencia  | Cita, Bitacora                                              |
-| CU-13 Consultar agenda médica      | VistaAgenda, FichaLectura            | ControlAgenda      | Cita, Paciente, Medico                                      |
-| CU-14 Consultar historial de citas | VistaHistorial                       | ControlHistorial   | Cita, Paciente                                              |
-| CU-15 Generar reportes             | VistaReportes                        | ControlReporte     | Cita, Paciente, Medico, Especialidad                        |
-| CU-16 Registrar nota clínica       | FormNota                             | ControlNota        | Cita, NotaClinica, Bitacora                                 |
-| CU-17 Consultar notas clínicas     | VistaNotas                           | ControlNota        | NotaClinica, Cita, Paciente                                 |
-| CU-18 Ver recordatorio de citas    | BannerRecordatorio                   | ControlRecordatorio | Cita, Paciente                                             |
-
-### 5.2 Diagramas de comunicación / colaboración
-
-Se presentan CU-01, CU-02 y CU-04 del Ciclo #1 y todos los casos del Ciclo #2 (CU-09 a CU-18). Los demás casos del Ciclo #1 siguen el mismo patrón. Los números en las flechas indican el orden de los mensajes.
+Se presentan CU-01, CU-02 y CU-04 del Ciclo #1 y todos los casos del Ciclo #2 (CU-09 a CU-18). Los demás casos del Ciclo #1 siguen el mismo patrón. Los números en las flechas indican el orden de los mensajes. Las clases «boundary», «control» y «entity» de cada caso de uso están en la sección 5.3.1.
 
 **CU-01 Iniciar y cerrar sesión**
 
@@ -1346,7 +1289,164 @@ flowchart LR
     B -- "6: mostrar «Sus próximas citas»<br/>(sin el motivo)" --> U
 ```
 
-### 5.3 Diagrama de estados de la cita
+### 5.3 Análisis de clases
+
+El diagrama de clases reúne las entidades del sistema y sus relaciones, y las tablas indican las clases de interfaz y de control de cada caso de uso. El diagrama de estados describe el ciclo de vida de la clase Cita.
+
+#### 5.3.1 Diagrama de clases de análisis
+
+Modelo del sistema completo (Ciclos #1 y #2), porque el diseño de datos del Ciclo #1 ya necesita las clases de citas y notas clínicas.
+
+```mermaid
+classDiagram
+    class Persona {
+        <<entity>>
+        ci
+        primerNombre
+        segundoNombre
+        apellidoPaterno
+        apellidoMaterno
+        nombreCompleto
+        fechaNacimiento
+        sexo
+        telefono
+        correo
+        direccion
+    }
+    class Usuario {
+        <<entity>>
+        contrasenaHash
+        estado
+        intentosFallidos
+        bloqueadoHasta
+        debeCambiarPassword
+        passwordTemporalVence
+    }
+    class Paciente {
+        <<entity>>
+        verificado
+        estado
+        tipoSangre
+        alergias
+        enfermedadesCronicas
+        medicamentos
+        antecedentes
+        emergenciaNombre
+        emergenciaParentesco
+        emergenciaTelefono
+    }
+    class Medico {
+        <<entity>>
+        nroRegistroProfesional
+        estado
+    }
+    class Especialidad {
+        <<entity>>
+        nombre
+        descripcion
+        duracionMin
+        estado
+    }
+    class Sucursal {
+        <<entity>>
+        nombre
+        direccion
+        estado
+    }
+    class HorarioAtencion {
+        <<entity>>
+        diaSemana
+        horaInicio
+        horaFin
+        consultorio
+    }
+    class Cita {
+        <<entity>>
+        fecha
+        horaInicio
+        horaFin
+        motivo
+        modalidad
+        estado
+        motivoCancelacion
+        fechaCreacion
+    }
+    class NotaClinica {
+        <<entity>>
+        motivoConsulta
+        diagnostico
+        tratamiento
+        observaciones
+        fechaRegistro
+        fechaUltimaModificacion
+    }
+    class Rol {
+        <<entity>>
+        codigo
+        nombre
+        descripcion
+    }
+    class Permiso {
+        <<entity>>
+        codigo
+        descripcion
+    }
+    class Bitacora {
+        <<entity>>
+        fecha
+        accion
+        entidad
+        entidadId
+        detalle
+    }
+
+    Persona "1" -- "0..1" Usuario : accede con
+    Persona "1" -- "0..1" Paciente : es
+    Persona "1" -- "0..1" Medico : es
+    Usuario "1" -- "*" Bitacora : genera
+    Rol "1" -- "*" Usuario : asignado a
+    Rol "*" -- "*" Permiso : concede
+    Paciente "1" -- "*" Cita : tiene
+    Medico "1" -- "*" Cita : atiende
+    Especialidad "1" -- "*" Cita : de
+    Sucursal "1" -- "*" Cita : en
+    Medico "*" -- "*" Especialidad : ejerce
+    Medico "1" -- "*" HorarioAtencion : atiende en
+    Sucursal "1" -- "*" HorarioAtencion : ubica
+    Cita "1" -- "0..1" NotaClinica : genera
+    Medico "1" -- "*" NotaClinica : autor
+```
+
+**Clases de interfaz y de control del Ciclo #1** (cada caso de uso tiene su `«boundary»` y su `«control»`; las `«entity»` son las del diagrama):
+
+| Caso de uso                          | «boundary»                             | «control»             | «entity»                                 |
+| ------------------------------------ | -------------------------------------- | --------------------- | ---------------------------------------- |
+| CU-01 Iniciar y cerrar sesión        | FormLogin, MenuPrincipal               | ControlAcceso         | Persona, Usuario, Rol, Permiso, Bitacora |
+| CU-02 Registrarse como paciente      | FormRegistro                           | ControlRegistro       | Persona, Paciente, Usuario               |
+| CU-03 Gestionar usuarios y roles     | ListaUsuarios, FormUsuario             | ControlUsuario        | Persona, Usuario, Rol, Medico, Bitacora  |
+| CU-04 Gestionar pacientes            | ListaPacientes, FormPaciente           | ControlPaciente       | Persona, Paciente, Usuario, Bitacora     |
+| CU-05 Gestionar médicos              | ListaMedicos, FormMedico               | ControlMedico         | Persona, Medico, Especialidad            |
+| CU-06 Gestionar especialidades       | ListaEspecialidades, FormEspecialidad  | ControlEspecialidad   | Especialidad                             |
+| CU-07 Gestionar horarios de atención | ListaHorarios, FormHorario             | ControlHorario        | HorarioAtencion, Medico, Sucursal        |
+| CU-08 Gestionar mi perfil            | VistaPerfil                            | ControlPerfil         | Persona, Paciente, Usuario               |
+| CU-19 Renovar contraseña temporal    | FichaPaciente, ComprobanteCredenciales | ControlAccesoPaciente | Persona, Paciente, Usuario, Bitacora     |
+
+**Clases de interfaz y de control del Ciclo #2:**
+
+| Caso de uso                        | «boundary»                           | «control»          | «entity»                                                    |
+| ---------------------------------- | ------------------------------------ | ------------------ | ----------------------------------------------------------- |
+| CU-09 Registrar cita               | FormCita, ComprobanteCita            | ControlCita        | Paciente, Medico, Especialidad, HorarioAtencion, Cita, Bitacora |
+| CU-10 Reprogramar cita             | FormReprogramar, ComprobanteCita     | ControlCita        | Cita, HorarioAtencion, Bitacora                             |
+| CU-11 Cancelar cita                | ComprobanteCita                      | ControlCita        | Cita, Bitacora                                              |
+| CU-12 Controlar asistencia         | ComprobanteCita, VistaAgenda         | ControlAsistencia  | Cita, Bitacora                                              |
+| CU-13 Consultar agenda médica      | VistaAgenda, FichaLectura            | ControlAgenda      | Cita, Paciente, Medico                                      |
+| CU-14 Consultar historial de citas | VistaHistorial                       | ControlHistorial   | Cita, Paciente                                              |
+| CU-15 Generar reportes             | VistaReportes                        | ControlReporte     | Cita, Paciente, Medico, Especialidad                        |
+| CU-16 Registrar nota clínica       | FormNota                             | ControlNota        | Cita, NotaClinica, Bitacora                                 |
+| CU-17 Consultar notas clínicas     | VistaNotas                           | ControlNota        | NotaClinica, Cita, Paciente                                 |
+| CU-18 Ver recordatorio de citas    | BannerRecordatorio                   | ControlRecordatorio | Cita, Paciente                                             |
+
+#### 5.3.2 Diagrama de estados de la cita
 
 ```mermaid
 stateDiagram-v2
@@ -1375,7 +1475,7 @@ Una cita atendida, cancelada o con inasistencia no cambia de estado: el sistema 
 
 ### 5.4 Análisis de paquetes
 
-Un **paquete de análisis** agrupa las clases del análisis (sección 5.1) y los casos de uso que cambian juntos, de modo que cada paquete tenga una responsabilidad clara y pocas conexiones con los demás. El diagrama muestra los seis paquetes del sistema y las dependencias entre ellos: una flecha punteada de A a B significa que A necesita clases de B.
+Un **paquete de análisis** agrupa las clases del análisis (sección 5.3.1) y los casos de uso que cambian juntos, de modo que cada paquete tenga una responsabilidad clara y pocas conexiones con los demás. El diagrama muestra los seis paquetes del sistema y las dependencias entre ellos: una flecha punteada de A a B significa que A necesita clases de B.
 
 ```mermaid
 flowchart TB
@@ -2448,7 +2548,7 @@ Route::middleware(['auth', 'cuenta.vigente'])->group(function () {
         }
 ```
 
-**Control de acceso por permisos (RBAC).** Los permisos tienen el formato `recurso:accion` (sección 4.7) y se guardan en las tablas `permisos` y `rol_permisos`. Para que `can:usuarios:gestionar` funcione, `AppServiceProvider` registra un `Gate::before` que consulta el rol de la cuenta; lo mismo sirve para `@can()` en las vistas y para `Gate::allows()` en el código (RN12, RNF19).
+**Control de acceso por permisos (RBAC).** Los permisos tienen el formato `recurso:accion` (sección 4.5.2) y se guardan en las tablas `permisos` y `rol_permisos`. Para que `can:usuarios:gestionar` funcione, `AppServiceProvider` registra un `Gate::before` que consulta el rol de la cuenta; lo mismo sirve para `@can()` en las vistas y para `Gate::allows()` en el código (RN12, RNF19).
 
 `app/Providers/AppServiceProvider.php`
 
@@ -3014,7 +3114,7 @@ Reglas aplicadas:
 
 - Dos grupos de rutas con el mismo controlador: `/citas` exige `citas:gestionar` (Recepcionista) y `/mis-citas` exige `citas:gestionar_propias` (Paciente) (RN12, RNF19). Cada rol solo entra al suyo; las pruebas lo comprueban con los cuatro roles.
 - El Paciente siempre agenda para el paciente de su sesión: el campo `paciente_id` solo se pide y se lee en `/citas`; en `/mis-citas` se ignora. Una cuenta de paciente sin ficha recibe 404. El comprobante lo ve la Recepcionista (cualquiera) o el Paciente dueño de la cita; para otro paciente responde 404.
-- Un Paciente con la ficha pendiente de verificación puede reservar (sección 4.1).
+- Un Paciente con la ficha pendiente de verificación puede reservar (sección 1.4.1).
 - El formulario avanza por pasos con parámetros GET (paciente, especialidad, médico y fecha) y funciona sin JavaScript; `public/js/citas.js` solo envía el paso al elegir una opción.
 - `CitaService` calcula la cuadrícula de horarios (flujo 4) y, al guardar, vuelve a comprobar dentro de una transacción la fecha (no pasada y hasta el límite de `config/clinica.php`, en hora de La Paz), que las partes estén activas, que el médico ejerza la especialidad, que no sea el propio paciente (RN16) y que el horario esté libre (RN03 a RN07, RN09, RN13, RN17).
 - La hora final se calcula en el servidor con la duración de la especialidad y la sucursal sale del bloque de atención; ninguna de las dos viene del formulario (RN08).
@@ -3081,7 +3181,7 @@ Reglas aplicadas:
 - `NotaClinicaService::guardar` bloquea la cita (`lockForUpdate`) y comprueba que sea del médico de la sesión y esté atendida. Hay una sola nota por cita (`cita_id` es único): guardar de nuevo la sobrescribe, y `modificado_por` y `updated_at` indican quién y cuándo la modificó, sin versiones. La clave foránea `(cita_id, medico_id)` de la base impide que otro médico escriba la nota.
 - Al menos uno de los cuatro campos debe tener contenido y cada uno admite hasta 2000 caracteres. La cita, el médico y el autor no vienen del formulario.
 - El Médico solo ve las notas de pacientes que tienen o tuvieron una cita no cancelada con él (`NotaClinicaService::atiende`); allí ve también las de otros médicos, pero solo edita las suyas. La Recepcionista y el Paciente las ven en solo lectura.
-- El Paciente con la ficha pendiente de verificación no ve sus notas; la pantalla se lo explica (sección 4.1).
+- El Paciente con la ficha pendiente de verificación no ve sus notas; la pantalla se lo explica (sección 1.4.1).
 - Las operaciones quedan en la bitácora como `nota_registrada` y `nota_modificada`.
 
 #### CU-15 Generar reportes
@@ -3889,7 +3989,7 @@ Lo construido responde a los objetivos específicos del enunciado:
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
-Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios por SMS o correo, que se proponen como mejoras futuras (sección 4.1 y Recomendación). Tampoco se implementó la exportación de reportes a CSV o PDF, que el enunciado marca como opcional.
+Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios por SMS o correo, que se proponen como mejoras futuras (sección 1.4.1 y Recomendación). Tampoco se implementó la exportación de reportes a CSV o PDF, que el enunciado marca como opcional.
 
 ### Limitaciones conocidas
 
@@ -3910,7 +4010,7 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 **Para una versión posterior**
 
 - **Despliegue real.** Servir la aplicación con Apache o Nginx y PHP, con HTTPS, y programar copias de seguridad de la base de datos. El sistema guarda datos personales y médicos, de modo que el despliegue debe revisarse con ese criterio. En particular, el `.env` debe llevar `APP_ENV=production` y `APP_DEBUG=false`: con la depuración activa, un error mostraría detalles internos al usuario, y el enunciado exige no mostrarlos (sección 7). El `README.md` explica los pasos y cómo comprobarlos.
-- **Recuperación de contraseña por cuenta propia.** Exige un servicio de correo y verificar el correo del paciente, que hoy es opcional y no se verifica (sección 4.1).
+- **Recuperación de contraseña por cuenta propia.** Exige un servicio de correo y verificar el correo del paciente, que hoy es opcional y no se verifica (sección 1.4.1).
 - **Recordatorios por SMS o correo y lista de espera,** descartados del alcance actual.
 - **Exportar los reportes a CSV o PDF,** opcional en el enunciado y no implementado.
 - **Unicidad de especialidades sin distinguir tildes,** con la extensión `unaccent` de PostgreSQL (limitación conocida).
