@@ -1146,9 +1146,24 @@ classDiagram
 | CU-08 Gestionar mi perfil            | VistaPerfil                            | ControlPerfil         | Persona, Paciente, Usuario               |
 | CU-19 Renovar contraseña temporal    | FichaPaciente, ComprobanteCredenciales | ControlAccesoPaciente | Persona, Paciente, Usuario, Bitacora     |
 
+**Clases de interfaz y de control del Ciclo #2:**
+
+| Caso de uso                        | «boundary»                           | «control»          | «entity»                                                    |
+| ---------------------------------- | ------------------------------------ | ------------------ | ----------------------------------------------------------- |
+| CU-09 Registrar cita               | FormCita, ComprobanteCita            | ControlCita        | Paciente, Medico, Especialidad, HorarioAtencion, Cita, Bitacora |
+| CU-10 Reprogramar cita             | FormReprogramar, ComprobanteCita     | ControlCita        | Cita, HorarioAtencion, Bitacora                             |
+| CU-11 Cancelar cita                | ComprobanteCita                      | ControlCita        | Cita, Bitacora                                              |
+| CU-12 Controlar asistencia         | ComprobanteCita, VistaAgenda         | ControlAsistencia  | Cita, Bitacora                                              |
+| CU-13 Consultar agenda médica      | VistaAgenda, FichaLectura            | ControlAgenda      | Cita, Paciente, Medico                                      |
+| CU-14 Consultar historial de citas | VistaHistorial                       | ControlHistorial   | Cita, Paciente                                              |
+| CU-15 Generar reportes             | VistaReportes                        | ControlReporte     | Cita, Paciente, Medico, Especialidad                        |
+| CU-16 Registrar nota clínica       | FormNota                             | ControlNota        | Cita, NotaClinica, Bitacora                                 |
+| CU-17 Consultar notas clínicas     | VistaNotas                           | ControlNota        | NotaClinica, Cita, Paciente                                 |
+| CU-18 Ver recordatorio de citas    | BannerRecordatorio                   | ControlRecordatorio | Cita, Paciente                                             |
+
 ### 5.2 Diagramas de comunicación / colaboración
 
-Se presentan CU-01, CU-02 y CU-04 del Ciclo #1. Los números en las flechas indican el orden de los mensajes. Los demás casos se agregan en la segunda presentación.
+Se presentan CU-01, CU-02 y CU-04 del Ciclo #1 y todos los casos del Ciclo #2 (CU-09 a CU-18). Los demás casos del Ciclo #1 siguen el mismo patrón. Los números en las flechas indican el orden de los mensajes.
 
 **CU-01 Iniciar y cerrar sesión**
 
@@ -1191,6 +1206,146 @@ flowchart LR
     B -- "8: mostrar resultado" --> R
 ```
 
+**CU-09 Registrar cita**
+
+```mermaid
+flowchart LR
+    U([Recepcionista<br/>o Paciente]) -- "1: elegir médico,<br/>especialidad y fecha" --> B[FormCita]
+    B -- "2: horariosDisponibles<br/>(paciente, médico, fecha)" --> C[ControlCita]
+    C -- "3: bloques de atención" --> H[HorarioAtencion]
+    C -- "4: citas no canceladas<br/>del médico y del paciente" --> K[Cita]
+    C -- "5: horarios libres" --> B
+    U -- "6: elegir horario,<br/>modalidad y motivo" --> B
+    B -- "7: registrar(datos)" --> C
+    C -- "8: validar partes activas<br/>y médico con la especialidad" --> M[Medico]
+    C -- "9: crear(cita)" --> K
+    C -- "10: registrar(cita_creada)" --> L[Bitacora]
+    C -- "11: comprobante" --> P[ComprobanteCita]
+    P -- "12: mostrar código<br/>de la cita" --> U
+```
+
+**CU-10 Reprogramar cita**
+
+```mermaid
+flowchart LR
+    U([Recepcionista<br/>o Paciente]) -- "1: reprogramar" --> B[FormReprogramar]
+    B -- "2: exigirReprogramable(cita)" --> C[ControlCita]
+    C -- "3: estado y hora de inicio" --> K[Cita]
+    C -- "4: horarios libres<br/>sin contar la propia cita" --> H[HorarioAtencion]
+    C -- "5: horarios disponibles" --> B
+    U -- "6: elegir nueva fecha y hora" --> B
+    B -- "7: reprogramar(cita, datos)" --> C
+    C -- "8: actualizar horario,<br/>estado Programada" --> K
+    C -- "9: registrar(cita_reprogramada,<br/>horario anterior y nuevo)" --> L[Bitacora]
+    C -- "10: comprobante" --> P[ComprobanteCita]
+    P -- "11: mostrar nuevo horario" --> U
+```
+
+**CU-11 Cancelar cita**
+
+```mermaid
+flowchart LR
+    U([Recepcionista<br/>o Paciente]) -- "1: cancelar(motivo)" --> P[ComprobanteCita]
+    P -- "2: cancelar(cita, motivo)" --> C[ControlCita]
+    C -- "3: estado y anticipación<br/>(24 h si es Paciente)" --> K[Cita]
+    C -- "4: estado Cancelada<br/>y motivo, sin eliminar" --> K
+    C -- "5: registrar(cita_cancelada)" --> L[Bitacora]
+    C -- "6: resultado" --> P
+    P -- "7: mostrar cita cancelada,<br/>horario liberado" --> U
+```
+
+**CU-12 Controlar asistencia**
+
+```mermaid
+flowchart LR
+    U([Recepcionista,<br/>Médico o Paciente]) -- "1: confirmar, atendida<br/>o inasistencia" --> P[ComprobanteCita<br/>o VistaAgenda]
+    P -- "2: registrar(cita, acción)" --> C[ControlAsistencia]
+    C -- "3: verificar que la cita<br/>sea del actor y su estado" --> K[Cita]
+    C -- "4: pasar a Confirmada,<br/>Atendida o Inasistencia" --> K
+    C -- "5: registrar(acción)" --> L[Bitacora]
+    C -- "6: resultado" --> P
+    P -- "7: mostrar estado<br/>y botones actualizados" --> U
+```
+
+**CU-13 Consultar agenda médica**
+
+```mermaid
+flowchart LR
+    U([Recepcionista<br/>o Médico]) -- "1: elegir fecha,<br/>estado y médico" --> V[VistaAgenda]
+    V -- "2: del(médico o todos,<br/>fecha, estado)" --> C[ControlAgenda]
+    C -- "3: citas del día" --> K[Cita]
+    K -- "4: paciente, especialidad<br/>y médico de cada cita" --> C
+    C -- "5: citas ordenadas por hora" --> V
+    V -- "6: mostrar agenda" --> U
+    U -- "7: abrir ficha<br/>del paciente (Médico)" --> F[FichaLectura]
+    F -- "8: ¿tiene o tuvo cita<br/>con este médico?" --> C
+    C -- "9: datos del paciente" --> P[Paciente]
+    C -- "10: ficha de solo lectura" --> F
+```
+
+**CU-14 Consultar historial de citas**
+
+```mermaid
+flowchart LR
+    U([Recepcionista<br/>o Paciente]) -- "1: abrir historial,<br/>filtrar por estado" --> V[VistaHistorial]
+    V -- "2: de(paciente, estado)" --> C[ControlHistorial]
+    C -- "3: identificar al paciente<br/>(el de la sesión si es Paciente)" --> P[Paciente]
+    C -- "4: citas del paciente,<br/>de la más reciente a la más antigua" --> K[Cita]
+    C -- "5: página de citas<br/>y resumen por estado" --> V
+    V -- "6: mostrar historial" --> U
+```
+
+**CU-15 Generar reportes**
+
+```mermaid
+flowchart LR
+    A([Administrador]) -- "1: elegir reporte,<br/>rango y filtros" --> V[VistaReportes]
+    V -- "2: generar(reporte,<br/>desde, hasta, filtros)" --> C[ControlReporte]
+    C -- "3: citas del rango<br/>por médico, especialidad y estado" --> K[Cita]
+    C -- "4: pacientes registrados<br/>en el rango" --> P[Paciente]
+    C -- "5: calcular totales" --> C
+    C -- "6: resultados y totales" --> V
+    V -- "7: mostrar reporte" --> A
+```
+
+**CU-16 Registrar nota clínica**
+
+```mermaid
+flowchart LR
+    M([Médico]) -- "1: nota clínica<br/>de una cita atendida" --> F[FormNota]
+    F -- "2: guardar(cita, nota)" --> C[ControlNota]
+    C -- "3: ¿es de este médico<br/>y está atendida?" --> K[Cita]
+    C -- "4: crear o sobrescribir nota" --> N[NotaClinica]
+    C -- "5: registrar(nota_registrada<br/>o nota_modificada)" --> L[Bitacora]
+    C -- "6: confirmación" --> F
+    F -- "7: volver a la agenda" --> M
+```
+
+**CU-17 Consultar notas clínicas**
+
+```mermaid
+flowchart LR
+    U([Recepcionista,<br/>Médico o Paciente]) -- "1: abrir notas" --> V[VistaNotas]
+    V -- "2: de(paciente)" --> C[ControlNota]
+    C -- "3: ¿el Médico atiende<br/>a este paciente?" --> K[Cita]
+    C -- "4: ficha verificada<br/>(si es Paciente)" --> P[Paciente]
+    C -- "5: notas del paciente" --> N[NotaClinica]
+    C -- "6: notas con autor" --> V
+    V -- "7: mostrar notas<br/>en solo lectura" --> U
+```
+
+**CU-18 Ver recordatorio de citas**
+
+```mermaid
+flowchart LR
+    U([Paciente]) -- "1: iniciar sesión (CU-01)" --> B[BannerRecordatorio]
+    B -- "2: proximas(paciente)" --> C[ControlRecordatorio]
+    C -- "3: citas Programadas<br/>o Confirmadas de hoy<br/>a 2 días" --> K[Cita]
+    C -- "4: descartar las que<br/>ya comenzaron" --> C
+    C -- "5: próximas citas" --> B
+    B -- "6: mostrar «Sus próximas citas»<br/>(sin el motivo)" --> U
+```
+
 ### 5.3 Diagrama de estados de la cita
 
 ```mermaid
@@ -1216,7 +1371,53 @@ stateDiagram-v2
 | Cancelada    | No (RN09)      | No            | No         |
 | Inasistencia | Sí (histórico) | No            | No         |
 
-Una cita cancelada no puede marcarse como atendida sin un procedimiento autorizado (RF10); ese procedimiento queda por definir en el Ciclo #2.
+Una cita atendida, cancelada o con inasistencia no cambia de estado: el sistema rechaza el intento y no existe un procedimiento para corregirla o reabrirla (RF10, RN10). Es una limitación conocida que se elige por ser la política más estricta (ver Conclusión).
+
+### 5.4 Análisis de paquetes
+
+Un **paquete de análisis** agrupa las clases del análisis (sección 5.1) y los casos de uso que cambian juntos, de modo que cada paquete tenga una responsabilidad clara y pocas conexiones con los demás. El diagrama muestra los seis paquetes del sistema y las dependencias entre ellos: una flecha punteada de A a B significa que A necesita clases de B.
+
+```mermaid
+flowchart TB
+    CR["Consultas y reportes<br/>CU-13, CU-14, CU-15"]
+    NC["Atención clínica<br/>CU-16, CU-17"]
+    CI["Citas<br/>CU-09, CU-10, CU-11, CU-12, CU-18"]
+    PA["Pacientes<br/>CU-02, CU-04, CU-19"]
+    MH["Médicos y horarios<br/>CU-05, CU-06, CU-07"]
+    IA["Identidad y acceso<br/>CU-01, CU-03, CU-08"]
+
+    CR -.-> CI
+    CR -.-> NC
+    CR -.-> PA
+    NC -.-> CI
+    CI -.-> PA
+    CI -.-> MH
+    PA -.-> IA
+    MH -.-> IA
+```
+
+| Paquete | Clases de entidad | Servicios (control) | Casos de uso |
+| --- | --- | --- | --- |
+| Identidad y acceso | Persona, Usuario, Rol, Permiso, Bitacora | Autenticacion, ContrasenaTemporal, Usuario, Bitacora | CU-01, CU-03, CU-08 |
+| Pacientes | Paciente | Paciente, RegistroPaciente | CU-02, CU-04, CU-19 |
+| Médicos y horarios | Medico, Especialidad, Sucursal, HorarioAtencion | Medico, Especialidad, Horario | CU-05, CU-06, CU-07 |
+| Citas | Cita | Cita, Asistencia, Recordatorio | CU-09, CU-10, CU-11, CU-12, CU-18 |
+| Atención clínica | NotaClinica | NotaClinica | CU-16, CU-17 |
+| Consultas y reportes | (ninguna propia; lee las de los demás) | Agenda, Historial, Reporte | CU-13, CU-14, CU-15 |
+
+**Criterios de agrupación**
+
+- **Identidad y acceso** es la base: toda persona y toda cuenta pasan por ahí, y la bitácora es transversal, porque todos los paquetes registran sus acciones en ella.
+- **Pacientes** y **Médicos y horarios** son los datos maestros. Ambos dependen de la identidad porque cada paciente y cada médico es una persona, y crean su cuenta con las reglas del primer paquete.
+- **Citas** es el núcleo: une al paciente con el médico y su horario. Es el único paquete que conoce a ambos.
+- **Atención clínica** depende de las citas, porque una nota solo existe sobre una cita atendida.
+- **Consultas y reportes** solo lee; por eso queda en lo más alto de las dependencias y nada depende de él.
+
+**Lectura del diagrama.** Las flechas apuntan siempre hacia la base (de consultas hacia identidad), así que no hay dependencias circulares entre los paquetes y cada uno puede probarse con los de abajo. Esto es el orden en que se construyó el sistema: el Ciclo #1 entregó los paquetes de Identidad y acceso, Pacientes y Médicos y horarios; el Ciclo #2, los de Citas, Atención clínica y Consultas y reportes.
+
+**Dos lecturas hacia arriba.** A nivel de análisis son consultas de solo lectura y no cambian la estructura: `UsuarioService` consulta la ficha del Médico para crear o reactivar una cuenta de médico solo si el médico está activo (CU-03), y `MedicoService` consulta las citas del médico antes de quitarle una especialidad con la que ya tiene citas (CU-05). En el diseño no se modelan como dependencias estructurales.
+
+Cada paquete es la base del subsistema que se describe en la sección 7.3.
 
 ---
 
@@ -3232,11 +3433,11 @@ Comando: `php artisan test`, ejecutado el 07/11/2026 en el repositorio del proye
 
 | Resultado          | Valor       |
 | ------------------ | ----------- |
-| Pruebas ejecutadas | 478         |
-| Pruebas aprobadas  | 478         |
+| Pruebas ejecutadas | 480         |
+| Pruebas aprobadas  | 480         |
 | Pruebas fallidas   | 0           |
-| Aserciones         | 3131        |
-| Duración           | 21 segundos |
+| Aserciones         | 3141        |
+| Duración           | 37 segundos |
 
 La distribución por módulo está en el Anexo C. Extracto del informe de PHPUnit en formato `--testdox`, con las pruebas de los casos 1 a 5, 9 y 10 del enunciado:
 
@@ -3643,6 +3844,32 @@ Las figuras 21 a 36 son del Ciclo #2. Se tomaron el 06/11/2026 sobre el servidor
 
 ![Reporte de pacientes registrados, con sus totales](img/capturas/36-reportes-pacientes.jpg)
 
+**Pantallas del Ciclo #2 en un ancho de teléfono (390 px).** Las figuras 37 a 42 se tomaron el 07/11/2026 con un viewport de 390 px de ancho, con los datos de demostración y las sesiones del Paciente, el Médico y el Administrador. En las seis pantallas el ancho del contenido es igual al de la ventana (390 px), es decir, no hay desplazamiento horizontal de la página; las tablas se desplazan dentro de su propio recuadro, como en la figura 8. El menú se pliega en un botón y los campos de los formularios se ajustan al ancho de la pantalla.
+
+**Figura 37.** Reservar una cita desde un teléfono: horarios disponibles del martes 10/11 como botones de dos columnas (CU-09).
+
+![Reservar una cita en un teléfono](img/capturas/37-cita-nueva-telefono-390px.png)
+
+**Figura 38.** Comprobante de la cita en un teléfono, con «Confirmar mi asistencia», «Reprogramar cita» y el formulario para cancelar (CU-10, CU-11 y CU-12).
+
+![Comprobante de la cita en un teléfono](img/capturas/38-cita-comprobante-telefono-390px.png)
+
+**Figura 39.** Agenda del Médico en un teléfono: la tabla de citas se desplaza dentro de su recuadro (CU-13).
+
+![Agenda del Médico en un teléfono](img/capturas/39-agenda-telefono-390px.png)
+
+**Figura 40.** «Mi historial» del Paciente en un teléfono, con el resumen por estado y el filtro (CU-14).
+
+![Historial de citas en un teléfono](img/capturas/40-historial-telefono-390px.png)
+
+**Figura 41.** Reporte de citas en un teléfono, con los totales por estado, médico y especialidad (CU-15).
+
+![Reporte de citas en un teléfono](img/capturas/41-reportes-telefono-390px.png)
+
+**Figura 42.** Formulario de la nota clínica en un teléfono (CU-16).
+
+![Nota clínica en un teléfono](img/capturas/42-nota-telefono-390px.png)
+
 ---
 
 ## Conclusión
@@ -3658,7 +3885,7 @@ Lo construido responde a los objetivos específicos del enunciado:
 - **Citas sin conflictos de horario:** el servidor calcula la disponibilidad, vuelve a comprobarla dentro de una transacción y las restricciones de exclusión de PostgreSQL rechazan la cita superpuesta del médico y del paciente aunque dos solicitudes compitan (RN07, RN13, RN17). La reprogramación usa las mismas reglas.
 - **Control de estados:** una cita pasa de programada a confirmada, atendida, con inasistencia o cancelada solo por transiciones válidas, nunca se elimina y el Paciente cancela o reprograma con 24 horas de anticipación (RN10, RN15).
 - **Consultas y reportes:** agenda por médico y fecha, historial por paciente y reportes de citas y de pacientes con rango de fechas, filtros y totales, cada uno limitado a los roles autorizados (RN12).
-- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 son 478 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
+- **Pruebas:** al cierre del Ciclo #1 la suite automatizada tenía **298 pruebas, y las 298 pasaban**; con el Ciclo #2 son 480 (sección 8 y Anexo C). Las pruebas 1 a 10 del enunciado están cubiertas.
 
 La decisión de modelar a la persona como una entidad separada de la cuenta, el paciente y el médico permitió que una misma persona tenga ficha clínica y cuenta de personal sin duplicar sus datos. También obligó a documentar una limitación (la primera de la lista siguiente).
 
@@ -3668,7 +3895,7 @@ Quedan fuera del alcance, por diseño, la lista de espera y los recordatorios po
 
 - **Persona compartida entre fichas.** Una persona puede ser paciente y médico a la vez, pero su cuenta tiene un solo rol (Médico). Sus datos personales viven en una única fila de `personas`, de modo que al editar la ficha del paciente (CU-04) la Recepcionista también modifica el correo con el que el médico entra al sistema. CU-03 y CU-05 evitan este efecto porque reutilizan la persona sin modificar sus datos. Se acepta por ser un caso poco frecuente; evitarlo exigiría bloquear los datos personales en CU-04 cuando la persona tiene una cuenta con otro rol.
 - **Citas atendidas o canceladas.** No existe un procedimiento autorizado para corregir una cita atendida o reabrir una cancelada: el sistema las rechaza (RF08, RF10, RN10). El enunciado deja esa política a cargo del sistema y aquí se eligió la más estricta.
-- **Pruebas manuales del Ciclo #2.** Se ejecutó un recorrido por rol de CU-09 a CU-18 (PM-88 a PM-108), pero no se repitió en un teléfono ni se midieron las pantallas nuevas en un ancho de 390 px, como se hizo con el Ciclo #1.
+- **Pruebas manuales del Ciclo #2.** Se ejecutó un recorrido por rol de CU-09 a CU-18 (PM-88 a PM-108), pero en un ancho de 390 px solo se revisaron seis pantallas del Ciclo #2 (reservar y comprobante de la cita, agenda, historial, reportes y nota clínica, figuras 37 a 42), con un viewport emulado en el navegador y no con un teléfono físico. No se midieron en ese ancho las pantallas de la Recepcionista, la reprogramación, «Mis notas» ni el recordatorio.
 - **Nombres de especialidad con tildes.** La unicidad ignora mayúsculas y espacios, pero no las tildes: «Odontologia» y «Odontología» se aceptan como dos especialidades distintas. Resolverlo requiere la extensión `unaccent` de PostgreSQL.
 
 ## Recomendación
@@ -3752,7 +3979,7 @@ Son 72 rutas en total, según `php artisan route:list --except-vendor`. Solo el 
 
 ### Anexo C. Pruebas automatizadas por módulo
 
-Resultado de `php artisan test`: **478 pruebas, 478 aprobadas, 3131 aserciones**, en unos 21 segundos, contra la base `clinica_test`.
+Resultado de `php artisan test`: **480 pruebas, 480 aprobadas, 3141 aserciones**, en unos 37 segundos, contra la base `clinica_test`.
 
 | Módulo                                             | Pruebas | Cubre                                         |
 | -------------------------------------------------- | ------- | --------------------------------------------- |
@@ -3779,6 +4006,7 @@ Resultado de `php artisan test`: **478 pruebas, 478 aprobadas, 3131 aserciones**
 | `Feature\Acceso\CambioPasswordTest`                | 9       | CU-01 y CU-08                                 |
 | `Feature\Consola\RenovarPasswordAdministradorTest` | 8       | Comando `administrador:renovar-password`      |
 | `Feature\Consola\DemoSeederTest`                   | 4       | Datos de demostración (solo en entorno local) |
+| `Feature\Consola\DemoCitasSeederTest`              | 2       | Citas y notas de demostración (solo en entorno local) |
 | `Feature\Acceso\PaginasDeErrorTest` | 6 | Páginas de error 403, 404, 419, 429 y 500 en español |
 | `Unit\CodigoFormateadoTest`                        | 13      | Códigos con formato (`PAC-`, `MED-`, `CM-`)   |
 | `Unit\ContrasenaTemporalServiceTest`               | 5       | Contraseñas temporales (RNF18)                |
