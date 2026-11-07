@@ -190,7 +190,11 @@ RF01 a RF13 provienen del enunciado. **RF14 a RF16 son derivados** del punto 3.4
 - **Renovación y contraseña olvidada:** la Recepcionista o el Administrador pueden generar una nueva contraseña temporal en cualquier momento (porque venció o porque el titular olvidó la suya): se genera otra con nuevas 72 horas y la anterior deja de servir. El titular la solicita a recepción; la pantalla de inicio de sesión muestra el celular de la clínica para ese fin. Para evitar suplantaciones, la contraseña nueva se envía solo al celular registrado en la ficha del paciente (mensaje o WhatsApp) o se entrega en persona con documento, nunca a un número nuevo que indique quien llama. Es el caso de uso **CU-19**: la renovación exige indicar cómo se verificó la identidad y eso queda en la bitácora. La recuperación por cuenta propia del paciente (por correo) queda fuera del alcance: necesita un servicio de correo y el correo del paciente es opcional y no está verificado.
 - **Verificación de la ficha:** una ficha de registro propio queda pendiente hasta que la Recepcionista compare el documento en persona y la marque como verificada; en ese acto puede renovar la contraseña, para sacar de la cuenta a quien se haya registrado con un CI ajeno. Mientras está pendiente, el Paciente puede iniciar sesión, ver su perfil básico y reservar citas, pero **no ve su información médica ni sus notas clínicas**. Una ficha creada por la Recepcionista queda verificada de inmediato.
 - **Información médica y contacto de emergencia:** los registra y edita la Recepcionista. El Paciente los ve en solo lectura. El Médico los ve en solo lectura.
-- **Edición del Paciente:** solo teléfono y contraseña. No edita nombre (identidad) ni correo (usuario de acceso).
+- **Edición del Paciente:** solo teléfono y contraseña. No edita nombre (identidad) ni correo (usuario de acceso). El correo, la dirección y el resto de los datos los modifica la Recepcionista, que verifica la identidad en persona; así el enunciado (3.4, «actualización de datos personales y de contacto») se cumple con ese paso de verificación.
+- **Cuenta del Paciente (enunciado 3.4):** la contraseña se cambia desde «Cambiar contraseña». Las «notificaciones» se resuelven con el aviso dentro del sistema de RF15, porque el sistema no envía correo ni SMS. Las «preferencias de privacidad» no se implementaron como opciones que el Paciente configure: la privacidad la garantiza el control de acceso por rol (RN12, RNF16), donde el Paciente solo ve sus propios datos.
+- **Teléfono del Paciente:** es obligatorio en el registro propio, porque es el medio de contacto de la clínica. Cuando lo registra la Recepcionista es opcional (el enunciado marca como opcionales solo el correo y la dirección, pero un paciente puede no tener teléfono propio).
+- **Consulta de médicos y horarios por la Recepcionista (enunciado 3.2):** la Recepcionista consulta los médicos y sus horarios disponibles al registrar una cita (por especialidad, médico y fecha) y en la agenda. El listado, el alta y la modificación de médicos son del Administrador.
+- **Activar o desactivar registros (enunciado 3.1):** el Administrador activa o desactiva usuarios, médicos y especialidades; los pacientes los activa o desactiva la Recepcionista, que es quien los administra.
 - **RF15 Recordatorios:** aviso dentro del sistema, sin correo. Al iniciar sesión, el Paciente ve un banner con sus próximas citas (los siguientes 2 días).
 - **RF16 Historial médico:** el Médico registra una nota clínica por cada cita atendida con motivo de consulta, diagnóstico, tratamiento o indicaciones, y observaciones. Cada Médico edita solo sus propias notas; al editarla se sobrescribe y se guarda quién y cuándo la modificó por última vez, sin conservar versiones. Ven las notas: el Médico, el Paciente y la Recepcionista, todas en solo lectura salvo el autor.
 - **Acceso del Médico:** solo a los pacientes que tienen o tuvieron cita con él; ve sus datos básicos, información médica, contacto de emergencia y las notas clínicas, incluidas las de otros médicos.
@@ -843,29 +847,6 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 3c. La ficha nunca muestra el correo, la dirección ni los datos de la cuenta, y no permite editar nada.
 - \*. El Médico solo ve su agenda: si pide el identificador de otro médico en la dirección, se ignora (RN12). Una cuenta de médico sin ficha de médico recibe «no encontrado».
 
-#### CU-15 Generar reportes
-
-|                   |                                                                                                                                |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Actores**       | Administrador                                                                                                                  |
-| **Requisito**     | RF13                                                                                                                           |
-| **Precondición**  | El Administrador inició sesión.                                                                                                |
-| **Postcondición** | El sistema muestra el reporte pedido con sus totales, sin modificar ningún dato.                                               |
-
-**Flujo principal**
-
-1. El Administrador abre «Reportes». El sistema muestra el reporte de citas del mes en curso, hasta hoy.
-2. Elige el rango de fechas y, si quiere, un médico, una especialidad y un estado, y pulsa «Generar».
-3. El sistema muestra el total de citas y la cantidad por estado (programadas, confirmadas, atendidas, canceladas e inasistencias), el total por médico y por especialidad, y el detalle de las citas en orden cronológico, de 25 en 25.
-4. Elige la pestaña «Pacientes registrados» y el sistema muestra los pacientes registrados en el rango, con los totales de registrados, verificados y activos.
-
-**Flujos alternos**
-
-- 2a. Con un mismo día y un médico, el reporte de citas equivale a la agenda diaria de ese médico; con un solo estado equivale al reporte de citas por estado, y con una sola fecha, a las citas programadas para esa fecha.
-- 3a. No hay citas con esos filtros: el sistema lo indica con un aviso y los totales quedan en cero.
-- 2b. Una fecha no es válida, o la inicial es posterior a la final: se usa el período por defecto con un aviso. Si solo se indica una fecha, la otra la acompaña. Los filtros desconocidos o manipulados se ignoran.
-- \*. Solo el Administrador consulta los reportes (RN12). La exportación a CSV o PDF es un opcional abierto (sección 1.4.1) y no se implementó.
-
 #### CU-14 Consultar historial de citas
 
 |                   |                                                                                                                                                                           |
@@ -888,6 +869,29 @@ Se especifican los casos de uso del Ciclo #1 y los del Ciclo #2 implementados ha
 - 2b. El paciente está desactivado: la Recepcionista ve su historial completo con un aviso (RN10, RN11).
 - 4a. El estado de la URL no es uno de los cinco conocidos o llega como arreglo (`?estado[]=`): se ignora y se muestran todas las citas.
 - \*. Una cuenta de paciente nunca ve citas de otro paciente: su ruta no recibe el identificador (RN12). Una cuenta sin ficha de paciente recibe «no encontrado».
+
+#### CU-15 Generar reportes
+
+|                   |                                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Actores**       | Administrador                                                                                                                  |
+| **Requisito**     | RF13                                                                                                                           |
+| **Precondición**  | El Administrador inició sesión.                                                                                                |
+| **Postcondición** | El sistema muestra el reporte pedido con sus totales, sin modificar ningún dato.                                               |
+
+**Flujo principal**
+
+1. El Administrador abre «Reportes». El sistema muestra el reporte de citas del mes en curso, hasta hoy.
+2. Elige el rango de fechas y, si quiere, un médico, una especialidad y un estado, y pulsa «Generar».
+3. El sistema muestra el total de citas y la cantidad por estado (programadas, confirmadas, atendidas, canceladas e inasistencias), el total por médico y por especialidad, y el detalle de las citas en orden cronológico, de 25 en 25.
+4. Elige la pestaña «Pacientes registrados» y el sistema muestra los pacientes registrados en el rango, con los totales de registrados, verificados y activos.
+
+**Flujos alternos**
+
+- 2a. Con un mismo día y un médico, el reporte de citas equivale a la agenda diaria de ese médico; con un solo estado equivale al reporte de citas por estado, y con una sola fecha, a las citas programadas para esa fecha.
+- 2b. Una fecha no es válida, o la inicial es posterior a la final: se usa el período por defecto con un aviso. Si solo se indica una fecha, la otra la acompaña. Los filtros desconocidos o manipulados se ignoran.
+- 3a. No hay citas con esos filtros: el sistema lo indica con un aviso y los totales quedan en cero.
+- \*. Solo el Administrador consulta los reportes (RN12). La exportación a CSV o PDF es un opcional abierto (sección 1.4.1) y no se implementó.
 
 #### CU-16 Registrar nota clínica
 
@@ -1403,7 +1407,7 @@ classDiagram
     Persona "1" -- "0..1" Usuario : accede con
     Persona "1" -- "0..1" Paciente : es
     Persona "1" -- "0..1" Medico : es
-    Usuario "1" -- "*" Bitacora : genera
+    Usuario "0..1" -- "*" Bitacora : genera
     Rol "1" -- "*" Usuario : asignado a
     Rol "*" -- "*" Permiso : concede
     Paciente "1" -- "*" Cita : tiene
@@ -1414,6 +1418,7 @@ classDiagram
     Medico "1" -- "*" HorarioAtencion : atiende en
     Sucursal "1" -- "*" HorarioAtencion : ubica
     Cita "1" -- "0..1" NotaClinica : genera
+    Usuario "0..1" -- "*" NotaClinica : modificó
     Medico "1" -- "*" NotaClinica : autor
 ```
 
