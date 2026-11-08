@@ -1143,7 +1143,7 @@ flowchart LR
 
 ### 5.2 Analizar casos de uso: diagramas de comunicación
 
-Se presentan CU-01, CU-02 y CU-04 del Ciclo #1 y todos los casos del Ciclo #2 (CU-09 a CU-18). Los demás casos del Ciclo #1 siguen el mismo patrón. Los números en las flechas indican el orden de los mensajes. Las clases «boundary», «control» y «entity» de cada caso de uso están en la sección 5.3.1.
+Se presentan CU-01, CU-02 y CU-04 del Ciclo #1 y todos los casos del Ciclo #2 (CU-09 a CU-18). Los demás casos del Ciclo #1 y CU-20 siguen el mismo patrón. Los números en las flechas indican el orden de los mensajes. Las clases «boundary», «control» y «entity» de cada caso de uso están en la sección 5.3.1.
 
 **CU-01 Iniciar y cerrar sesión**
 
@@ -1584,7 +1584,7 @@ flowchart TB
     end
     subgraph Aplicacion["Aplicación"]
         R["Rutas (routes/web.php)"]
-        M["Middleware: guest (rutas públicas),<br/>auth (sesión válida), throttle (límite<br/>de solicitudes), cuenta.vigente (cuenta activa y cambio<br/>obligatorio de contraseña),<br/>can: (permiso de cada operación)"]
+        M["Middleware: guest (rutas públicas),<br/>auth (sesión válida), throttle (límite<br/>de solicitudes), cuenta.vigente (cuenta activa y cambio<br/>obligatorio de contraseña),<br/>can: (permiso de cada operación),<br/>SinCacheConSesion (páginas con sesión<br/>fuera de la caché del navegador)"]
         C["Controladores + Form Requests<br/>(«control»)"]
         S["Servicios: uno por módulo, más<br/>Autenticación, ContrasenaTemporal<br/>y Bitácora"]
     end
@@ -1607,6 +1607,7 @@ flowchart TB
 | Reglas de negocio y transversales (autenticación, contraseña temporal, bitácora) | Servicios                                                                                                       | `app/Services/`                                                                     |
 | Formato de los códigos (`PAC-`, `MED-`, `CM-`)                                   | _Trait_ de los modelos                                                                                          | `app/Models/Concerns/TieneCodigoFormateado.php`                                     |
 | Control de acceso (RNF06, RNF19)                                                 | Middleware `auth`, `cuenta.vigente` y `can:`, con el `Gate` de permisos                                         | `app/Http/Middleware/`, `bootstrap/app.php`, `app/Providers/AppServiceProvider.php` |
+| Páginas con sesión fuera de la caché del navegador (botón «Atrás» tras cerrar sesión) | Middleware `SinCacheConSesion` en el grupo `web` (`Cache-Control: no-store, private`)                    | `app/Http/Middleware/SinCacheConSesion.php`, `bootstrap/app.php`                    |
 | Cierre por inactividad y bloqueo por intentos (RNF14, RNF15)                     | Configuración de la sesión (`SESSION_LIFETIME`), límite de solicitudes en las rutas y servicio de autenticación | `config/session.php`, `routes/web.php`, `app/Services/AutenticacionService.php`     |
 
 **Reglas de la arquitectura**
@@ -1624,14 +1625,20 @@ flowchart LR
     subgraph Cliente["Equipo del usuario"]
         N["Navegador web<br/>HTML5 · Bootstrap 5 · JavaScript"]
     end
-    subgraph Servidor["Servidor local"]
+    subgraph Servidor["Servidor local (desarrollo)"]
         A["PHP 8.4+ · servidor embebido<br/>Laravel (public/ como raíz web)<br/>Entorno equivalente a XAMPP"]
     end
     subgraph BD["Base de datos (Docker)"]
         P[("PostgreSQL 16<br/>(pdo_pgsql)")]
     end
+    subgraph Nube["Railway (demostración)"]
+        AR["Contenedor del Dockerfile<br/>PHP 8.4 · Laravel<br/>migrate --force al arrancar"]
+        PR[("Servicio PostgreSQL")]
+    end
     N -- "HTTP(S)" --> A
     A -- "PDO" --> P
+    N -- "HTTPS" --> AR
+    AR -- "PDO" --> PR
 ```
 
 | Nodo                   | Software                                                                    | Responsabilidad                                                                |
