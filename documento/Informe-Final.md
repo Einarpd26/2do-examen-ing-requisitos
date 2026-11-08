@@ -10,6 +10,7 @@
 | **Presentación** | 2 — Ciclo #2 (07/11/2026)                              |
 | **Repositorio**  | https://github.com/Einarpd26/2do-examen-ing-requisitos |
 | **Código QR**    | ![Código QR del repositorio](img/qr-repositorio.png)   |
+| **Sistema en línea** | https://2do-examen-ing-requisitos-einar-daniel.up.railway.app/login |
 
 ---
 
@@ -1640,6 +1641,8 @@ flowchart LR
 | Servidor de datos      | PostgreSQL 16 en un contenedor Docker (`docker-compose.yml`)                | Almacena los datos de forma persistente (RN14).                                |
 
 El servidor embebido es solo para desarrollo. Un despliegue real sustituiría ese nodo por Apache o Nginx con PHP apuntando a `public/`, sin cambiar el código ni la base de datos (RNF03).
+
+Para la demostración el sistema corre además en Railway (sección 7.4) con los mismos tres nodos. El servidor de aplicación es un contenedor construido con el `Dockerfile` del repositorio. Al arrancar aplica las migraciones pendientes (`php artisan migrate --force`) y sirve la aplicación con el mismo servidor embebido. El servidor de datos es un servicio PostgreSQL de Railway. Es un entorno de prueba, no de producción.
 
 Los archivos de Bootstrap se sirven desde `public/`, sin depender de una conexión a internet.
 
@@ -3591,6 +3594,20 @@ El código fuente está publicado en GitHub, con la historia de commits atómico
 ![Código QR del repositorio](img/qr-repositorio.png)
 
 Al escanear el código QR se abre la página del repositorio. La estructura de carpetas se describe en el Anexo A.
+
+**Sistema en línea (demostración)**
+
+El sistema también está desplegado en la nube, en Railway, para probarlo sin instalar nada.
+
+|                   |                                                                       |
+| ----------------- | --------------------------------------------------------------------- |
+| **URL**           | https://2do-examen-ing-requisitos-einar-daniel.up.railway.app/login   |
+| **Plataforma**    | Railway: contenedor con la aplicación y servicio PostgreSQL           |
+| **Datos**         | De prueba; no es un entorno de producción con pacientes reales        |
+
+![Código QR del sistema en línea](img/qr-sistema-en-linea.png)
+
+Al escanear el código QR se abre la pantalla de inicio de sesión. La base empieza con los catálogos y un único Administrador con contraseña temporal; las especialidades, los médicos, los consultorios y los pacientes se registran desde la aplicación. Las cuentas de demostración (`DemoSeeder`) no se cargan en la nube, porque usan una contraseña conocida y ese seeder solo corre con `APP_ENV=local`.
 
 ---
 
