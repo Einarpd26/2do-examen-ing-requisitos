@@ -36,6 +36,20 @@ def ajustar(m):
 
 xml = re.sub(r"<w:drawing>.*?</w:drawing>", ajustar, xml, flags=re.S)
 
+
+def tabla_de_portada(m):
+    """La primera tabla es la de los códigos QR de la portada: sin bordes, centrada y sin fila de título."""
+    tabla = m.group(0)
+    sin_bordes = "<w:tblBorders>" + "".join(
+        f'<w:{lado} w:val="nil"/>' for lado in ("top", "left", "bottom", "right", "insideH", "insideV")
+    ) + "</w:tblBorders>"
+    tabla = re.sub(r'<w:tblW [^>]*/>', '<w:tblW w:type="pct" w:w="3500" /><w:jc w:val="center" />' + sin_bordes, tabla, count=1)
+    tabla = tabla.replace('w:firstRow="1"', 'w:firstRow="0"', 1)
+    return tabla.replace('<w:trPr><w:tblHeader w:val="on" /></w:trPr>', "", 1)
+
+
+xml = re.sub(r"<w:tbl>.*?</w:tbl>", tabla_de_portada, xml, count=1, flags=re.S)
+
 temporal = ruta + ".tmp"
 destino = zipfile.ZipFile(temporal, "w", zipfile.ZIP_DEFLATED)
 for item in origen.infolist():

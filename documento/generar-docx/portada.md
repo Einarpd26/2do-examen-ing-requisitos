@@ -30,6 +30,10 @@ Acosta Roca Daniel
 
 **Repositorio:** https://github.com/Einarpd26/2do-examen-ing-requisitos
 
-![Código QR del repositorio](img/qr-repositorio.png)
+**Sistema en línea:** https://2do-examen-ing-requisitos-einar-daniel.up.railway.app/login
+
+| Repositorio | Sistema en línea |
+| :---------: | :--------------: |
+| ![Código QR del repositorio](img/qr-repositorio.png) | ![Código QR del sistema en línea](img/qr-sistema-en-linea.png) |
 
 <!-- fin-portada -->

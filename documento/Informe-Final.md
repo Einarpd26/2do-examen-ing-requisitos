@@ -9,8 +9,11 @@
 | **Docente**      | Angeliza Garzon Cuellar                                |
 | **Presentación** | 2 — Ciclo #2 (07/11/2026)                              |
 | **Repositorio**  | https://github.com/Einarpd26/2do-examen-ing-requisitos |
-| **Código QR**    | ![Código QR del repositorio](img/qr-repositorio.png)   |
 | **Sistema en línea** | https://2do-examen-ing-requisitos-einar-daniel.up.railway.app/login |
+
+| Repositorio | Sistema en línea |
+| :---------: | :--------------: |
+| ![Código QR del repositorio](img/qr-repositorio.png) | ![Código QR del sistema en línea](img/qr-sistema-en-linea.png) |
 
 ---
 

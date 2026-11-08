@@ -206,7 +206,7 @@ function Pandoc(doc)
     elseif cover and b.t == "Para" then
       local texto = pandoc.utils.stringify(b)
       local centrado = texto:match("^Docente") or texto:match("^Empresa") or texto:match("^Lugar")
-        or texto:match("^Repositorio") or b.content[1] and b.content[1].t == "Image"
+        or texto:match("^Repositorio") or texto:match("^Sistema en línea") or b.content[1] and b.content[1].t == "Image"
       out[#out + 1] = pandoc.Div({ b }, { ["custom-style"] = centrado and "PortadaCentro" or "PortadaDato" })
     elseif cover and b.t == "RawBlock" then
       out[#out + 1] = pandoc.Para({}) -- sin saltos de pagina dentro de la portada
